@@ -5,5 +5,3 @@ services:
     build:
       context: ./
       dockerfile: ./qemu/Dockerfile
-#    stdin_open: true
-#    tty: true
