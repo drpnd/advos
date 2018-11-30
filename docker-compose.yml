@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  qemu:
+    build:
+      context: ./
+      dockerfile: ./qemu/Dockerfile
+#    stdin_open: true
+#    tty: true
