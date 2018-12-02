@@ -22,6 +22,8 @@
  */
 
 #define VGA_TEXT_COLOR_80x25    0x03
+#define NUM_RETRIES     3               /* # of retries for disk read */
+#define ERRCODE_TIMEOUT 0x80            /* Error code: Timeout */
 
 	.globl	start
 
@@ -84,10 +86,91 @@ halt:
 
 /*
  * Load sectors from the disk
- *
+ * Parameters:
+ *   %dl: drive
+ *   %cx: # of sectors to read
+ *   %ax: Position in LBA
+ *   %es:(%bx): Buffer
  */
 read:
+	pushw	%bp
+	movw	%sp,%bp
+	/* Save registers */
+	movw	%ax,-2(%bp)
+	movw	%bx,-4(%bp)
+	movw	%cx,-6(%bp)
+	movw	%dx,-8(%bp)
+	/* Prepare space for local variables */
+	/* u16 counter -10(%bp) */
+	subw	$10,%sp
+	/* Reset counter */
+	xorw	%ax,%ax
+	movw	%ax,-10(%bp)
+1:
+	movw	-2(%bp),%ax	/* Restore %ax */
+	addw	-10(%bp),%ax	/* Current LBA */
+	call	lba2chs		/* Convert LBA (%ax) to CHS (%cx,%dh) */
+	call	read_sector	/* Read a sector */
+	/* Next 512-byte buffer */
+	addw	$512,%bx
+	/* Increment the counter */
+	movw	-10(%bp),%ax
+	incw	%ax
+	movw	%ax,-10(%bp)
+	/* More sectors to read? */
+	cmpw	-6(%bp),%ax
+	jb	1b		/* Read more sectors */
+	/* Restore the saved registers */
+	movw	-8(%bp),%dx
+	movw	-6(%bp),%cx
+	movw	-4(%bp),%bx
+	movw	-2(%bp),%ax
+	movw	%bp,%sp
+	popw	%bp
 	ret
+
+/*
+ * Load one sector from the disk
+ * Parameters:
+ *   %dl: drive
+ *   %cx, %dh: CHS (%cx[7:6]%cx[15:8] ,%dh, %cx[5:0])
+ *   %es:(%bx): Buffer
+ */
+read_sector:
+	pushw	%bp
+	movw	%sp,%bp
+	/* Save registers */
+	movw	%ax,-2(%bp)
+	/* Prepare space for local variables */
+	/* u16 retries -4(%bp); retry counter  */
+	/* u16 error -6(%bp); error code  */
+	subw	$-6,%sp
+	/* Reset retry counter */
+	xorw	%ax,%ax
+	movw	%ax,-4(%bp)
+1:
+	/* Read a sector from the drive */
+	movb	$0x02,%ah
+	movb	$1,%al
+	int	$0x13
+	jnc	2f		/* Jump if success */
+	movw	%ax,-6(%bp)	/* Save the error code */
+	movw	-4(%bp),%ax
+	incw	%ax
+	movw	%ax,-4(%bp)
+	cmpw	$NUM_RETRIES,%ax
+	movw	-6(%bp),%ax	/* Restore the error code */
+	ja	disk_error	/* Exceeded the maximum number of retries */
+	cmpb	$ERRCODE_TIMEOUT,%ah
+	je	disk_error	/* Immediately give up if timeout */
+	jmp	1b
+2:
+	/* Restore saved registers */
+	movw	-2(%bp),%ax
+	movw	%bp,%sp
+	popw	%bp
+	ret
+
 
 /*
  * LBA to CHS
