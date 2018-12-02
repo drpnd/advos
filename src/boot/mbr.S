@@ -24,6 +24,9 @@
 #define VGA_TEXT_COLOR_80x25    0x03
 #define NUM_RETRIES     3               /* # of retries for disk read */
 #define ERRCODE_TIMEOUT 0x80            /* Error code: Timeout */
+#define BOOTMON_SEG             0x0900  /* Memory where to load boot monitor */
+#define BOOTMON_OFF             0x0000  /*  segment and offset [0900:0000] */
+#define BOOTMON_SIZE            0x0037  /* Boot monitor size in sector */
 
 	.globl	start
 
@@ -74,14 +77,19 @@ start:
 	incw	%ax		/*  N.B., cylinder starting with 0 */
 	movw	%ax,cylinders
 
-	/* Display welcome message */
-	movw	$msg_welcome,%ax
-	movw	%ax,%si
-	call	putstr
+	/* Load boot monitor*/
+	movb	drive,%dl
+	//movw	$BOOTMON_SIZE,%cx/* Specify boot monitor size */
+	movw	$1,%cx
+	movw	$1,%ax
+	movw	$BOOTMON_SEG,%bx
+	movw	%bx,%es		/* Buffer address pointer (Segment) */
+	movw	$BOOTMON_OFF,%bx/* Buffer address pointer (Offset) */
+	call	read		/* Read %cx sectors starting at LBA %ax on */
+				/*  drive %dl into %es:[%bx] */
 
-halt:
-	hlt
-	jmp	halt
+	/* Jump to boot monitor */
+	ljmp	$BOOTMON_SEG,$BOOTMON_OFF
 
 
 /*
@@ -144,7 +152,7 @@ read_sector:
 	/* Prepare space for local variables */
 	/* u16 retries -4(%bp); retry counter  */
 	/* u16 error -6(%bp); error code  */
-	subw	$-6,%sp
+	subw	$6,%sp
 	/* Reset retry counter */
 	xorw	%ax,%ax
 	movw	%ax,-4(%bp)
