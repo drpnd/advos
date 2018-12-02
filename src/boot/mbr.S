@@ -65,7 +65,8 @@ halt:
 	hlt
 	jmp	halt
 
-/* Display a null-terminated string
+/*
+ * Display a null-terminated string
  * Parameters:
  *   %ds:(%si): Pointer to the string
  * Unpreserved registers: %ax
@@ -88,7 +89,8 @@ putc:
 	popw	%bx
 	ret
 
-/* Display the read error message (%ah = error codee)
+/*
+ * Display the read error message (%ah = error codee)
  * Parameters:
  *   %ds:(%si): Pointer to the string
  * Unpreserved registers: %es, %ax, %di
