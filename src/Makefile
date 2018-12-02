@@ -3,7 +3,6 @@
 #      Hirochika Asai  <asai@jar.jp>
 #
 all:
-	@echo "Testing..."
 	make -C boot mbr
 	make -C boot bootmon
 	cp boot/mbr advos.img
