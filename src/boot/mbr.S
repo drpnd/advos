@@ -51,14 +51,31 @@ start:
 	movb	$0x00,%ah
 	int	$0x10
 
+	/* Get drive parameters */
+	xorw	%ax,%ax
+	movw	%ax,%es
+	movw	%ax,%di
+	movb	$0x08,%ah
+	int	$0x13
+	jc	disk_error
+
+	/* Save the drive information (CHS) */
+	incb	%dh		/* Get # of heads (%dh: last index of heads) */
+	movb	%dh,heads
+	movb	%cl,%al		/* %cl[5:0]: last index of sectors per track */
+	andb	$0x3f,%al	/*  N.B., sector is 1-based numbering */
+	movb	%al,sectors
+	movb	%ch,%al         /* %cx[7:6]%cx[15:8]: last index of cylinders */
+				/*  then copy %cx[15:8] to %al */
+	movb	%cl,%ah		/* Lower byte to higher byte */
+	shrb	$6,%ah		/* Pick most significant two bits */
+	incw	%ax		/*  N.B., cylinder starting with 0 */
+	movw	%ax,cylinders
+
 	/* Display welcome message */
 	movw	$msg_welcome,%ax
 	movw	%ax,%si
 	call	putstr
-
-	/* Test error message */
-	movb	$0xab,%ah
-	call	disk_error
 
 halt:
 	hlt
@@ -132,9 +149,16 @@ hex8.allsb:
 
 drive:
 	.byte	0
+heads:
+	.byte	0
+cylinders:
+	.word	0
+sectors:
+	.byte	0
 msg_error:
 	.ascii	"Disk error: 0x"
 error_code:
 	.asciz	"00\r"
 msg_welcome:
 	.asciz	"Welcome to advos\r\n\n"
+
