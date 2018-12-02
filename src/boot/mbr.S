@@ -63,7 +63,7 @@ start:
 	incb	%dh		/* Get # of heads (%dh: last index of heads) */
 	movb	%dh,heads
 	movb	%cl,%al		/* %cl[5:0]: last index of sectors per track */
-	andb	$0x3f,%al	/*  N.B., sector is 1-based numbering */
+	andb	$0x3f,%al	/*  N.B., sector is one-based numbering */
 	movb	%al,sectors
 	movb	%ch,%al         /* %cx[7:6]%cx[15:8]: last index of cylinders */
 				/*  then copy %cx[15:8] to %al */
@@ -80,6 +80,50 @@ start:
 halt:
 	hlt
 	jmp	halt
+
+
+/*
+ * Load sectors from the disk
+ *
+ */
+read:
+	ret
+
+/*
+ * LBA to CHS
+ * Parameters:
+ *   %ax: LBA
+ * Return values:
+ *   %cx, %dh: CHS (%cx[7:6]%cx[15:8] ,%dh, %cx[5:0])
+ */
+lba2chs:
+	/* Save registers */
+	pushw	%ax
+	pushw	%bx
+	pushw	%dx
+	/* Compute sector number */
+	xorw	%bx,%bx
+	movw	%bx,%dx
+	movw	%bx,%cx
+	movb	sectors,%bl
+	divw	%bx		/* %dx:%ax / %bx; %ax:quotient, %dx:remainder */
+	incw	%dx		/* Sector number is one-based numbering */
+	movb	%dl,%cl		/* Sector: %cx[5:0] */
+	/* Compute head and track (cylinder) numbers */
+	xorw	%bx,%bx
+	movw	%bx,%dx
+	movb	heads,%bl
+	divw	%bx		/* %dx:%ax / %bx; %ax:quotient, %dx:remainder */
+	movb	%al,%ch		/* Cylinder[7:0]: %cx[7:6]%cx[15:8] */
+	shlb	$6,%ah
+	orb	%ah,%cl
+	movw	%dx,%bx		/* %dl: Head */
+	popw	%dx		/* Restore %dx */
+	movb	%bl,%dh		/* Head */
+	/* Restore registers */
+	popw	%bx
+	popw	%ax
+	ret
 
 /*
  * Display a null-terminated string
