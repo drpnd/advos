@@ -51,15 +51,14 @@ start:
 	movb	$0x00,%ah
 	int	$0x10
 
-	/* Test error message */
-	movb	$0xab,%ah
-	call	disk_error
-	jmp	halt
-
 	/* Display welcome message */
 	movw	$msg_welcome,%ax
 	movw	%ax,%si
 	call	putstr
+
+	/* Test error message */
+	movb	$0xab,%ah
+	call	disk_error
 
 halt:
 	hlt
@@ -136,6 +135,6 @@ drive:
 msg_error:
 	.ascii	"Disk error: 0x"
 error_code:
-	.asciz	"00\r\r"
+	.asciz	"00\r"
 msg_welcome:
-	.asciz	"Welcome to advos"
+	.asciz	"Welcome to advos\r\n\n"
