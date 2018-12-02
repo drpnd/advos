@@ -91,7 +91,6 @@ start:
 	/* Jump to boot monitor */
 	ljmp	$BOOTMON_SEG,$BOOTMON_OFF
 
-
 /*
  * Load sectors from the disk
  * Parameters:
@@ -178,7 +177,6 @@ read_sector:
 	movw	%bp,%sp
 	popw	%bp
 	ret
-
 
 /*
  * LBA to CHS
@@ -294,6 +292,4 @@ msg_error:
 	.ascii	"Disk error: 0x"
 error_code:
 	.asciz	"00\r"
-msg_welcome:
-	.asciz	"Welcome to advos\r\n\n"
 
