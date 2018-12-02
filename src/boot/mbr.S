@@ -51,6 +51,12 @@ start:
 	movb	$0x00,%ah
 	int	$0x10
 
+	/* Test error message */
+	movb	$0xab,%ah
+	call	disk_error
+	jmp	halt
+
+	/* Display welcome message */
 	movw	$msg_welcome,%ax
 	movw	%ax,%si
 	call	putstr
@@ -59,17 +65,17 @@ halt:
 	hlt
 	jmp	halt
 
-
 /* Display a null-terminated string
- * Parameters: %ds:%(si)
- * Return value: %ax
- * Preserved Registers:
+ * Parameters:
+ *   %ds:(%si): Pointer to the string
+ * Unpreserved registers: %ax
  */
 putstr:
 putstr.load:
-	lodsb		/* Load %ds:(%si) to %al, then incl %si */
+	lodsb			/* Load %ds:(%si) to %al, then incl %si */
 	testb	%al,%al
 	jnz	putstr.putc
+	xorw	%ax,%ax
 	ret
 putstr.putc:
 	call	putc
@@ -82,10 +88,52 @@ putc:
 	popw	%bx
 	ret
 
+/* Display the read error message (%ah = error codee)
+ * Parameters:
+ *   %ds:(%si): Pointer to the string
+ * Unpreserved registers: %es, %ax, %di
+ */
+disk_error:
+	pushw	%bx
+	movb	%ah,%al
+	movw	$error_code,%di
+	xorw	%bx,%bx
+	movw	%bx,%es
+	call	hex8
+	movw	$msg_error,%si
+	call	putstr
+	popw	%bx
+	ret
+
+/*
+ * Convert %al to hex characters, and save the result to %es:(%di)
+ * Parameters:
+ *   %es:(%di): Pointer to the buffer to store the result (2 bytes)
+ *   %al: Byte to be converted to hex characters
+ * Unpreserved registers: %al, %di
+ */
+hex8:
+	pushw	%ax
+	shrb	$4,%al		/* Get the most significant 4 bits in %al */
+	call	hex8.allsb
+	popw	%ax
+hex8.allsb:
+	andb	$0xf,%al	/* Get the least significant 4 bits in %al */
+	cmpb	$0xa,%al	/* CF=1 if %al < 10 */
+	sbbb	$0x69,%al	/* %al <= %al - (0x69 + CF) */
+	das			/* Adjust BCD */
+	orb	$0x20,%al	/* To lower case */
+	stosb			/* Save chars to %es:(%di) and inc %di */
+	ret
+
 	/* Data segment */
 	.data
 
 drive:
 	.byte	0
+msg_error:
+	.ascii	"Disk error: 0x"
+error_code:
+	.asciz	"00\r\r"
 msg_welcome:
 	.asciz	"Welcome to advos"
