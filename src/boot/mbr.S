@@ -167,8 +167,6 @@ read_sector:
 	cmpw	$NUM_RETRIES,%ax
 	movw	-6(%bp),%ax	/* Restore the error code */
 	ja	disk_error	/* Exceeded the maximum number of retries */
-	cmpb	$ERRCODE_TIMEOUT,%ah
-	je	disk_error	/* Immediately give up if timeout */
 	jmp	1b
 2:
 	/* Restore saved registers */
