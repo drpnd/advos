@@ -338,7 +338,6 @@ hex8.allsb:
 	stosb			/* Save chars to %es:(%di) and inc %di */
 	ret
 
-
 	/* Data segment */
 	.data
 
