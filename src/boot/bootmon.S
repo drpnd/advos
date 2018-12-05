@@ -23,7 +23,7 @@
 
 #define VGA_TEXT_COLOR_80x25    0x03
 #define NUM_RETRIES             3       /* # of retries for disk read */
-#define BOOT_TIMEOUT            10      /* Boot timeout in seconds */
+#define BOOT_TIMEOUT            10      /* Boot timeout in second */
 /* IRQ */
 #define IVT_IRQ0                0x08    /* IRQ0 = 0x08 (BIOS default) */
 #define IVT_IRQ8                0x70    /* IRQ8 = 0x70 (BIOS default) */
@@ -37,6 +37,22 @@
 #define KBD_LEFT                0x4b    /* Left */
 #define KBD_RIGHT               0x4d    /* Right */
 #define KBD_DOWN                0x50    /* Down */
+/* PIT */
+#define PIT_CHANNEL0            (0x0 << 6)
+#define PIT_CHANNEL1            (0x1 << 6)
+#define PIT_CHANNEL2            (0x2 << 6)
+#define PIT_LOONLY              (0x1 << 4)
+#define PIT_HIONLY              (0x2 << 4)
+#define PIT_HILO                (0x3 << 4)
+#define PIT_MODE0               (0x0 << 1)
+#define PIT_MODE1               (0x1 << 1)
+#define PIT_MODE2               (0x2 << 1)
+#define PIT_MODE3               (0x3 << 1)
+#define PIT_MODE4               (0x4 << 1)
+#define PIT_MODE5               (0x5 << 1)
+#define PIT_BINARY              (0)
+#define PIT_BCD                 (1)
+
 
 	.globl	bootmon
 
@@ -88,13 +104,84 @@ bootmon:
 	/* Setup programmable interrupt controller (PIC) */
 	xorw	%ax,%ax
 	movw	%ax,%es
+	movw	$intr_irq0,%ax
+	movw	$(IVT_IRQ0+0),%bx
+	call	setup_intvec
+
+	xorw	%ax,%ax
+	movw	%ax,%es
 	movw	$intr_irq1,%ax
 	movw	$(IVT_IRQ0+1),%bx
 	call	setup_intvec
 
+	movw	$BOOT_TIMEOUT*100,boottimer	/* in centisecond */
+
+	/* Initialize programmable interval timer (PIT) */
+	call	init_pit
+
+	/* Wait until the timer reached zero or keyboard input */
+1:
+	sti
+	hlt
+	cli
+	movb	bootmode,%al
+	cmpb	$'1',%al
+	je	boot
+	cmpb	$'2',%al
+	je	poweroff
+	cmpw	$0,boottimer
+	je	boot
+	jmp	1b
+
+boot:
+	movw	$msg_boot,%si
+	call	putbstr
+	jmp	halt
+poweroff:
+	movw	$msg_poweroff,%si
+	call	putbstr
+	jmp	halt
+
 halt:
 	hlt
 	jmp	halt
+
+/*
+ * Timer interrupt handler
+ */
+intr_irq0:
+	pushw	%ax
+	pushw	%bx
+	pushw	%cx
+	pushw	%dx
+	pushw	%si
+
+	movw	boottimer,%ax
+	testw	%ax,%ax
+	jz	1f
+	decw	%ax
+	movw	%ax,boottimer
+1:
+	movb	$100,%dl	/* Convert centisecond to second */
+	divb	%dl		/* Q=%al, R=%ah */
+	xorb	%ah,%ah
+	movb	$10,%dl
+	divb	%dl		/* Q(%al) = tens digit, R(%ah) = unit digit */
+	addb	$'0',%al
+	addb	$'0',%ah
+	movw	%ax,msg_count
+	movw	$msg_countdown,%si
+	call	putbstr
+
+	movb	$0x20,%al	/* Notify */
+	outb	%al,$0x20	/*  End-Of-Interrupt (EOI) */
+
+	popw	%si
+	popw	%dx
+	popw	%cx
+	popw	%bx
+	popw	%ax
+	iret
 
 /*
  * Keyboard interrupt handler
@@ -123,7 +210,10 @@ intr_irq1:
 3:
 	addw	%ax,%bx
 	movb	(%bx),%al	/* Get ascii code from the keyboard code */
+	movb	%al,bootmode
 	call	putc		/* Print the character */
+	movb	$0x08,%al	/* Print backspace */
+	call	putc		/*  for the next input */
 	jmp	6f
 4:
 	testb	$0x80,%al	/* Released? */
@@ -152,6 +242,20 @@ setup_intvec:
 	addw	$2,%bx
 	movw	%es,(%bx)
 	popw	%bx
+	ret
+
+/*
+ * Initialize programmable interval timer (PIT)
+ */
+init_pit:
+	pushw	%ax
+	movb	$(PIT_BINARY|PIT_MODE3|PIT_HILO|PIT_CHANNEL0),%al
+	outb	%al,$0x43
+	movw	$0x2e9b,%ax	/* Frequency=100Hz: 1193181.67/100 */
+	outb	%al,$0x40	/* Counter 0 (least significant 4 bits) */
+	movb	%ah,%al		/* Get most significant 4 bits */
+	outb	%al,$0x40	/* Counter 0 (most significant 4 bits) */
+	popw	%ax
 	ret
 
 /*
@@ -300,6 +404,32 @@ putc:
 	ret
 
 /*
+ * Display a null-terminated string at the bottom-line
+ * Parameters:
+ *   %ds:%si --> 0xb800:**
+ */
+putbstr:
+	pushw	%ax
+	pushw	%es
+	pushw	%di
+	movw	$0xb800,%ax	/* Memory 0xb8000 */
+	movw	%ax,%es
+	movw	$(80*24*2),%di  /* 24th (zero-numbering) line */
+putbstr.load:
+	lodsb			/* Load %al from %ds:(%si) , then incl %si */
+	testb	%al,%al		/* Stop at null */
+	jnz	putbstr.putc    /* Call the function to output %al */
+	popw	%di
+	popw	%es
+	popw	%ax
+	ret
+putbstr.putc:
+	movb	$0x7,%ah
+	stosw			/* Write %ax to [%di], then add 2 to %di */
+	jmp	putbstr.load
+
+
+/*
  * Display the read error message (%ah = error codee)
  * Parameters:
  *   %ds:(%si): Pointer to the string
@@ -350,15 +480,30 @@ cylinders:
 sectors:
 	.byte	0
 
+boottimer:
+	.word	0
+bootmode:
+	.byte	0
+
 msg_bootopt:
-	.asciz	"Welcome to advos!\r\n\n"
+	.ascii	"Welcome to advos!\r\n\n"
+	.ascii	"Select one:\r\n"
+	.ascii	"    1: Boot (64 bit mode)\r\n"
+	.ascii	"    2: Power off\r\n"
+	.asciz	"Press key:[ ]\x08\x08"
+msg_countdown:
+	.ascii	"advos will boot in "
 msg_count:
 	.asciz	"00 sec."
-
 msg_error:
 	.ascii	"Disk error: 0x"
 error_code:
 	.asciz	"00\r"
+
+msg_boot:
+	.asciz	"WILL IMPLEMENT BOOT CODE HERE."
+msg_poweroff:
+	.asciz	"WILL IMPLEMENT POWER OFF CODE HERE."
 
 /* Keymap (US) */
 keymap_base:
