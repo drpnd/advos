@@ -133,14 +133,15 @@ bootmon:
 	je	boot
 	jmp	1b
 
+halt:
+	hlt
+	jmp	halt
+
 boot:
 	movw	$msg_boot,%si
 	call	putbstr
 	jmp	halt
 
-halt:
-	hlt
-	jmp	halt
 
 /*
  * Timer interrupt handler
