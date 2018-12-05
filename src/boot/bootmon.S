@@ -107,9 +107,9 @@ intr_irq1:
 1:
 	movb	%al,%bl		/* Ignore the flag */
 	and	$0x7f,%bl	/*  indicating released in %bl */
-	cmpb	$KBD_LSHIFT,%al	/* Left shift */
+	cmpb	$KBD_LSHIFT,%bl	/* Left shift */
 	je	4f		/* Jump if left shift */
-	cmpb	$KBD_RSHIFT,%al	/* Right shift */
+	cmpb	$KBD_RSHIFT,%bl	/* Right shift */
 	je	4f		/* Jump if right shift */
 	/* Otherwise */
 	testb	$0x80,%al	/* Released? */
