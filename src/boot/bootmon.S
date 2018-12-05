@@ -137,10 +137,6 @@ boot:
 	movw	$msg_boot,%si
 	call	putbstr
 	jmp	halt
-poweroff:
-	movw	$msg_poweroff,%si
-	call	putbstr
-	jmp	halt
 
 halt:
 	hlt
@@ -245,6 +241,18 @@ setup_intvec:
 	ret
 
 /*
+ * Disable i8259 PIC
+ */
+disable_pic:
+	pushw	%ax
+	movb	$0xff,%al
+	outb	%al,$0xa1
+	movb	$0xff,%al
+	outb	%al,$0x21
+	popw	%ax
+	ret
+
+/*
  * Initialize programmable interval timer (PIT)
  */
 init_pit:
@@ -257,6 +265,37 @@ init_pit:
 	outb	%al,$0x40	/* Counter 0 (most significant 4 bits) */
 	popw	%ax
 	ret
+
+/*
+ * Power off via APM
+ */
+poweroff:
+	/* Disable PIC */
+	call	disable_pic
+
+	/* Power off with APM */
+	movw	$0x5301,%ax	/* Connect APM interface */
+	movw	$0x0,%bx	/* Specify system BIOS */
+	int	$0x15		/* Return error code in %ah with CF */
+	jc	1f		/* Error */
+
+	movw	$0x530e,%ax	/* Set APM version */
+	movw	$0x0,%bx	/* Specify system BIOS */
+	movw	$0x102,%cx	/* Version 1.2 */
+	int	$0x15		/* Return error code in %ah with CF */
+	jc	1f		/* Error */
+
+	movw	$0x5308,%ax	/* Enable power management */
+	movw	$0x1,%bx	/* All devices managed by the system BIOS */
+	movw	$0x1,%cx	/* Enable */
+	int	$0x15		/* Ignore errors */
+
+	movw	$0x5307,%ax	/* Set power state */
+	movw	$0x1,%bx	/* All devices managed by the system BIOS */
+	movw	$0x3,%cx	/* Off */
+	int	$0x15
+1:
+	ret			/* Return on error */
 
 /*
  * Load sectors from the disk
