@@ -6,8 +6,10 @@
 all:
 	$(MAKE) -C boot mbr
 	$(MAKE) -C boot bootmon
-	./create_image.sh advos.img boot/mbr boot/bootmon
+	$(MAKE) -C kernel kernel
+	./create_image.sh advos.img boot/mbr boot/bootmon kernel/kernel
 
 clean:
 	$(MAKE) -C boot clean
+	$(MAKE) -C kernel clean
 	rm -f advos.img

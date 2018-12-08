@@ -156,12 +156,16 @@ bootmon:
 	cli
 	movb	bootmode,%al
 	cmpb	$'1',%al
-	je	entry16
+	je	boot
 	cmpb	$'2',%al
 	je	poweroff
 	cmpw	$0,boottimer
-	je	entry16
+	je	boot
 	jmp	1b
+
+boot:
+	call	load_kernel
+	jmp	entry16
 
 halt:
 	hlt
@@ -347,6 +351,12 @@ poweroff:
 	int	$0x15
 1:
 	ret			/* Return on error */
+
+/*
+ * Load the kernel
+ */
+load_kernel:
+	ret
 
 /*
  * Load sectors from the disk
