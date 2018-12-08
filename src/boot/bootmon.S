@@ -21,6 +21,8 @@
  * SOFTWARE.
  */
 
+#include "bootinfo.h"
+
 #define VGA_TEXT_COLOR_80x25    0x03
 #define NUM_RETRIES             3       /* # of retries for disk read */
 #define BOOT_TIMEOUT            10      /* Boot timeout in second */
@@ -52,7 +54,9 @@
 #define PIT_MODE5               (0x5 << 1)
 #define PIT_BINARY              (0)
 #define PIT_BCD                 (1)
-
+/* Memory map */
+#define MME_SIZE                 24     /* Memory map entry size */
+#define MME_SIGN                 0x534d4150     /* MME signature ("SMAP")  */
 
 	.globl	bootmon
 
@@ -98,6 +102,29 @@ bootmon:
 
 	/* Enable A20 */
 	call	enable_a20
+
+	/* Reset the boot information region */
+	xorw	%ax,%ax
+	movl	$BI_START_ADDR,%edi
+	movl	$(BI_SIZE/2),%ecx
+	rep	stosw
+	/* Save the information on BIOS */
+	movb	drive,%al
+	movb	%al,(BI_DRIVE_ADDR)
+
+	/* Load memory map */
+	movw	$BI_MM_TABLE_ADDR,%di
+	movw	$(BI_MM_SIZE/MME_SIZE),%dx
+	call	load_mm
+	jc	1f
+	movw	%ax,(BI_MM_NENT_ADDR)
+	jmp	2f
+1:
+	movw	$msg_error_mm,%ax
+	movw	%ax,%si
+	call	putstr
+	jmp	halt
+2:
 
 	/* Display boot option message */
 	movw	$msg_bootopt,%ax
@@ -531,6 +558,65 @@ hex8.allsb:
 	stosb			/* Save chars to %es:(%di) and inc %di */
 	ret
 
+/*
+ * Load memory map entries from BIOS
+ * Parameters:
+ *   %es:%di: destination
+ *   %dx: the maximum number of entries
+ * Return values:
+ *   %ax: the number of entries
+ *   CF: set if an error occurs
+ */
+load_mm:
+	/* Save registers */
+	pushl	%ebx
+	pushl	%ecx
+	pushw	%di
+	pushw	%bp
+
+	xorl	%ebx,%ebx	/* Continuation value for int 0x15 */
+	xorw	%bp,%bp		/* Counter */
+load_mm.1:
+	movl	$0x1,%ecx	/* Write 1 once */
+	movl	%ecx,%es:20(%di)	/*  to check support ACPI >=3.x? */
+	/* Read the system address map */
+	movl	$0xe820,%eax
+	movl	$MME_SIGN,%edx	/* Set the signature */
+	movl	$MME_SIZE,%ecx	/* Set the buffer size */
+	int	$0x15		/* Query system address map */
+	jc	load_mm.error	/* Error */
+	cmpl	$MME_SIGN,%eax	/* Check the signature SMAP */
+	jne	load_mm.error
+
+	cmpl	$24,%ecx	/* Check the read buffer size */
+	je	load_mm.2	/*  %ecx==24 */
+	cmpl	$20,%ecx
+	je	load_mm.3	/*  %ecx==20 */
+	jmp	load_mm.error	/* Error otherwise */
+load_mm.2:
+	/* 24-byte entry */
+	testl	$0x1,%es:20(%di)	/* 1 must be present in the attribute */
+	jz	load_mm.error	/*  error if it's overwritten */
+load_mm.3:
+	/* 20-byte entry or 24-byte entry coming from above */
+	incw	%bp		/* Increment the number of entries */
+	testl	%ebx,%ebx	/* %ebx=0: No remaining info */
+	jz	load_mm.done	/* jz/je */
+	cmpw	%bp,%dx
+	je	load_mm.error	/* Exceeded the maximum number to read */
+load_mm.4:
+	addw	$MME_SIZE,%di	/* Next entry */
+	jmp	load_mm.1	/* Load remaining entries */
+load_mm.error:
+	stc			/* Set CF */
+load_mm.done:
+	movw	%bp,%ax		/* Return value */
+	popw	%bp
+	popw	%di
+	popl	%ecx
+	popl	%ebx
+	ret
+
 	/* Data segment */
 	.data
 
@@ -563,10 +649,8 @@ msg_error:
 error_code:
 	.asciz	"00\r"
 
-msg_boot:
-	.asciz	"WILL IMPLEMENT BOOT CODE HERE."
-msg_poweroff:
-	.asciz	"WILL IMPLEMENT POWER OFF CODE HERE."
+msg_error_mm:
+	.asciz	"Error on loading the system memory map."
 
 /* Keymap (US) */
 keymap_base:

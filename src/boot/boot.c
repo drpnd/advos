@@ -21,9 +21,67 @@
  * SOFTWARE.
  */
 
-typedef unsigned short u16;
+#include "bootinfo.h"
+#include <stdint.h>
 
 void hlt(void);
+
+/*
+ * System memory map entry
+ */
+typedef struct {
+    uint64_t base;
+    uint64_t len;
+    uint32_t type;
+    uint32_t attr;
+} __attribute__ ((packed)) sysaddrmap_entry_t;
+
+/*
+ * Convert a hexdecimal 4-bit value to an ascii code
+ */
+static int
+hex(int c)
+{
+    if ( c > 9 ) {
+        return 'a' + c - 10;
+    } else {
+        return '0' + c;
+    }
+}
+
+/*
+ * Print out the hexdecimal w-byte value
+ */
+int
+print_hex(uint16_t *vbase, uint64_t val, int w)
+{
+    int i;
+    uint16_t v;
+
+    for ( i = 0; i < w * 2; i++ ) {
+        v = (val >> (w * 8 - 4 - i * 4)) & 0xf;
+        *(vbase + i) = 0x0700 | hex(v);
+    }
+
+    return i;
+}
+
+/*
+ * Print out the specified string
+ */
+int
+print_str(uint16_t *vbase, char *s)
+{
+    int offset;
+
+    offset = 0;
+    while ( s[offset] ) {
+        *(vbase + offset) = 0x0700 | s[offset];
+        offset++;
+    }
+
+    return offset;
+}
 
 /*
  * Entry point for C code
@@ -32,15 +90,32 @@ void
 centry(void)
 {
     /* Print message */
-    u16 *base;
-    char *msg = "Congraturations!  Welcome to the 64-bit world!";
+    uint16_t *base;
     int offset;
+    int nr;
+    int i;
+    sysaddrmap_entry_t *ent;
 
-    base = (u16 *)0xb8000;
-    offset = 0;
-    while ( msg[offset] ) {
-        *(base + offset) = 0x0700 | msg[offset];
-        offset++;
+    base = (uint16_t *)0xb8000;
+    print_str(base, "Welcome to advos (64-bit)!");
+    base += 80;
+
+    nr = *(uint16_t *)BI_MM_NENT_ADDR;
+    offset = print_str(base, "System memory map; # of entries = 0x");
+    print_hex(base + offset, nr, 2);
+    base += 80;
+
+    print_str(base, "Base             Length           Type     Attribute");
+    base += 80;
+
+    ent = (sysaddrmap_entry_t *)BI_MM_TABLE_ADDR;
+    for ( i = 0; i < nr; i++ ) {
+        print_hex(base, ent->base, 8);
+        print_hex(base + 17, ent->len, 8);
+        print_hex(base + 34, ent->type, 4);
+        print_hex(base + 43, ent->attr, 4);
+        base += 80;
+        ent++;
     }
 
     /* Sleep forever */
@@ -48,3 +123,12 @@ centry(void)
         hlt();
     }
 }
+
+/*
+ * Local variables:
+ * tab-width: 4
+ * c-basic-offset: 4
+ * End:
+ * vim600: sw=4 ts=4 fdm=marker
+ * vim<600: sw=4 ts=4
+ */

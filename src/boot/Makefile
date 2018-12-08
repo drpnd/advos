@@ -3,7 +3,7 @@
 #      Hirochika Asai  <asai@jar.jp>
 #
 
-CFLAGS=-fleading-underscore
+CFLAGS=-fleading-underscore -I../include
 
 mbr: mbr.o
 	$(LD) -N -T mbr.ld -o $@ $^
