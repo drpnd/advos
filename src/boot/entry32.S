@@ -86,6 +86,12 @@ pg_setup.2:
 	addl	$0x00200000,%eax
 	loop	pg_setup.2
 
+	/* Modify kernel page table */
+	movl	%ebx,%edi
+	addl	$(0x1000*5),%edi
+	movl	$0x083,%eax
+	movl	%eax,(%edi)
+
 	/* Set page table register */
 	movl	%ebx,%cr3
 

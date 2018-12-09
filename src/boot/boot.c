@@ -32,7 +32,7 @@ void ljmp(uint64_t, uint64_t);
 void
 centry(void)
 {
-    ljmp(0x08, 0x00010000);
+    ljmp(0x08, 0xc0010000);
 }
 
 /*
