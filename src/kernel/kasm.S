@@ -21,8 +21,7 @@
  * SOFTWARE.
  */
 
-	.globl	entry64
-	.globl	_ljmp
+	.globl	kentry
 	.globl	_hlt
 
 	/* Code segment */
@@ -30,36 +29,12 @@
 	.code64
 
 /* Entry point */
-entry64:
+kentry:
 	cli
-
-	/* Clear screen */
-	movl	$0xb8000,%edi
-	movw	$0x0f20,%ax
-	movl	$80*25,%ecx
-	rep	stosw
-
-	/* Reset cursor */
-	movw	$0x000f,%ax	/* %al=0xf: cursor location low, %ah: xx00 */
-	movw	$0x3d4,%dx
-	outw	%ax,%dx
-	movw	$0x000e,%ax	/* %al=0xe: cursor location high, %ah: 00xx */
-	movw	$0x3d4,%dx
-	outw	%ax,%dx
-
-	/* Get into the C code */
-	call	_centry
-
-	/* Halt if C function returns */
+	call	_kstart
 1:
 	hlt
 	jmp	1b
-
-/* void ljmp(uint64_t cs, void *ip); */
-_ljmp:
-	pushq	%rdi
-	pushq	%rsi
-	lretq
 
 /* void hlt(void); */
 _hlt:

@@ -57,6 +57,11 @@
 /* Memory map */
 #define MME_SIZE                 24     /* Memory map entry size */
 #define MME_SIGN                 0x534d4150     /* MME signature ("SMAP")  */
+/* Kernel */
+#define KERNEL_LBA               33
+#define KERNEL_SIZE              0x20
+#define KERNEL_SEG               0x1000
+#define KERNEL_OFF               0x0000
 
 	.globl	bootmon
 
@@ -163,6 +168,9 @@ bootmon:
 	je	boot
 	jmp	1b
 
+/*
+ * Boot sequence
+ */
 boot:
 	call	load_kernel
 	jmp	entry16
@@ -356,6 +364,26 @@ poweroff:
  * Load the kernel
  */
 load_kernel:
+	pushw	%ax
+	pushw	%bx
+	pushw	%cx
+	pushw	%dx
+	pushw	%es
+
+	/* Load the kernel (at 33rd sector) to 0x1000:0x0000 */
+	movb	drive,%dl
+	movw	$KERNEL_SIZE,%cx
+	movw	$KERNEL_LBA,%ax
+	movw	$KERNEL_SEG,%bx
+	movw	%bx,%es
+	movw	$KERNEL_OFF,%bx
+	call	read
+
+	popw	%es
+	popw	%dx
+	popw	%cx
+	popw	%bx
+	popw	%ax
 	ret
 
 /*

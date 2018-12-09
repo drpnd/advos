@@ -4,7 +4,7 @@ ENTRY(kentry)
 
 SECTIONS
 {
-  . = 0xc0000000;
+  . = 0x00010000;
   .text : { *(.text) }
   .data : { *(.data) }
 }
