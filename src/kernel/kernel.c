@@ -22,9 +22,8 @@
  */
 
 #include "../boot/bootinfo.h"
+#include "kasm.h"
 #include <stdint.h>
-
-void hlt(void);
 
 /*
  * System memory map entry
