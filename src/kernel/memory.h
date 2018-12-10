@@ -24,8 +24,22 @@
 #ifndef _ADVOS_KERNEL_MEMORY_H
 #define _ADVOS_KERNEL_MEMORY_H
 
-#define MEMORY_BUDDY_ORDER      18
+#include <stdint.h>
 
+#define MEMORY_PHYS_BUDDY_ORDER         18
+
+#define MEMORY_ZONE_UNKNOWN             -1
+#define MEMORY_ZONE_DMA                 0
+#define MEMORY_ZONE_KERNEL              1
+#define MEMORY_ZONE_NUMA_AWARE          2
+
+#define MEMORY_ZONE_KERNEL_LB           0x01000000
+#define MEMORY_ZONE_NUMA_AWARE_LB       0x04000000
+
+
+/*
+ * Page
+ */
 typedef struct {
     /* Virtual address */
     void *virtual;
@@ -37,8 +51,15 @@ typedef struct {
  * Buddy system
  */
 typedef struct {
-    memory_buddy_page_t *a;
-} memory_buddy_t;
+    /* Page table */
+    uintptr_t cr3;
+
+    /* Offset to virtual address */
+    uintptr_t offset;
+
+    /* Head pointers to page blocks at each order of buddy system */
+    memory_buddy_page_t *heads[MEMORY_PHYS_BUDDY_ORDER + 1];
+} memory_zone_t;
 
 #endif
 
