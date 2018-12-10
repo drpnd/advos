@@ -117,6 +117,12 @@ kstart(void)
         ent++;
     }
 
+    /* Setup the kernel base page table */
+    
+
+
+
+
     /* Sleep forever */
     for ( ;; ) {
         hlt();

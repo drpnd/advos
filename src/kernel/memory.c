@@ -70,15 +70,64 @@ memory_buddy_alloc(int order)
 }
 
 
+static int
+_init_e820_entry(uintptr_t base, uint64_t length)
+{
+    uintptr_t next;
+    uintptr_t kbase;
+    int nr;
+
+    next = base + length;
+
+    /* Page align */
+    base = (base + 0x1fffff) & ~0x1fffffULL;
+    next = next & ~0x1fffffULL;
+
+    if ( base >= MEMORY_ZONE_NUMA_AWARE_LB ) {
+        /* No pages in the DMA nor kerne zones */
+        return 0;
+    }
+
+    /* Ignore the NUMA-aware zone */
+    if ( next > MEMORY_ZONE_NUMA_AWARE_LB ) {
+        next = MEMORY_ZONE_NUMA_AWARE_LB;
+    }
+    if ( next > MEMORY_ZONE_KERNEL_LB ) {
+        /* At least one page for the kernel zone */
+        kbase = MEMORY_ZONE_KERNEL_LB;
+
+        /* Calculate the number of pages in the kernel zone */
+        nr = (next - kbase) / 0x200000ULL;
+
+        //print_hex(0xb8000 + 80 * 2 * 10, kbase, 8);
+        //print_hex(0xb8000 + 80 * 2 * 10 + 34, next, 8);
+    } else {
+        kbase = next;
+    }
+    if ( base < MEMORY_ZONE_KERNEL_LB ) {
+        /* At least one page for the DMA zone */
+
+        /* Calculate the number of pages in the DMA zone */
+        nr = (kbase - base) / 0x200000ULL;
+
+        //print_hex(0xb8000 + 80 * 2 * 11, base, 8);
+        //print_hex(0xb8000 + 80 * 2 * 11 + 34, kbase, 8);
+    }
+
+    return 0;
+}
+
+
 /*
  * Initialize the non NUMA aware region (DMA and kernel) with BIOS-e820
  */
 int
-memory_init_e820(void *e820)
+memory_init_e820(void)
 {
     memory_e820_entry_t *table;
     int nr;
     int i;
+    int ret;
 
     nr = *(uint16_t *)BI_MM_NENT_ADDR;
     table = (memory_e820_entry_t *)BI_MM_TABLE_ADDR;
@@ -88,10 +137,7 @@ memory_init_e820(void *e820)
             /* Not usable region */
             continue;
         }
-        if ( table[i].base < MEMORY_ZONE_KERNEL_LB ) {
-            /* DMA zone */
-            
-        }
+        ret = _init_e820_entry(table[i].base, table[i].len);
     }
 
     return 0;

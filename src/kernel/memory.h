@@ -36,7 +36,6 @@
 #define MEMORY_ZONE_KERNEL_LB           0x01000000
 #define MEMORY_ZONE_NUMA_AWARE_LB       0x04000000
 
-
 /*
  * Page
  */
@@ -60,6 +59,8 @@ typedef struct {
     /* Head pointers to page blocks at each order of buddy system */
     memory_buddy_page_t *heads[MEMORY_PHYS_BUDDY_ORDER + 1];
 } memory_zone_t;
+
+int memory_init_e820(void);
 
 #endif
 
