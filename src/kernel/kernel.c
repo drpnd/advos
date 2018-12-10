@@ -126,7 +126,7 @@ setup_kernel_pgt(void)
     /* 4-5 GiB (first 64 MiB) */
     e = (uint64_t *)(base + 0x4000);
     for ( i = 0; i < 32; i++ ) {
-        *(e + i) = (0x100000000ULL + 0x00200000 * i) | 0x83;
+        *(e + i) = (0x0ULL + 0x00200000 * i) | 0x83;
     }
 
     set_cr3(base);
