@@ -25,6 +25,8 @@
 #include "kasm.h"
 #include <stdint.h>
 
+#define set_cr3(cr3)    __asm__ __volatile__ ("movq %%rax,%%cr3" :: "a"((cr3)))
+
 /*
  * System memory map entry
  */
@@ -83,6 +85,54 @@ print_str(uint16_t *vbase, char *s)
 }
 
 /*
+ * Setup the kernel page table
+ */
+static void
+setup_kernel_pgt(void)
+{
+    int i;
+    uint64_t base;
+    uint64_t *pml4;
+    uint64_t *e;
+
+    /* Setup the kernel base page table */
+    base = 0x00069000ULL;
+    pml4 = (uint64_t *)base;
+
+    /* Zero (memset() may work) */
+    for ( i = 0; i < 512 * 5; i++ ) {
+        *(pml4 + i) = 0;
+    }
+    /* First 512 GiB */
+    *pml4 = (base + 0x1000) | 0x007;
+
+    /* PDPT */
+    e = (uint64_t *)(base + 0x1000);
+    /* 0-1 GiB */
+    *(e + 0) = (base + 0x2000) | 0x007;
+    /* 3-4 GiB */
+    *(e + 3) = (base + 0x3000) | 0x007;
+    /* 4-5 GiB */
+    *(e + 4) = (base + 0x4000) | 0x007;
+
+    /* 0-1 GiB */
+    e = (uint64_t *)(base + 0x2000);
+    for ( i = 0; i < 512; i++ ) {
+        *(e + i) = (0x00200000 * i) | 0x83;
+    }
+    /* 3-4 GiB (first 2 MiB) */
+    e = (uint64_t *)(base + 0x3000);
+    *(e + 0) = (0x00000000ULL) | 0x83;
+    /* 4-5 GiB (first 64 MiB) */
+    e = (uint64_t *)(base + 0x4000);
+    for ( i = 0; i < 32; i++ ) {
+        *(e + i) = (0x100000000ULL + 0x00200000 * i) | 0x83;
+    }
+
+    set_cr3(base);
+}
+
+/*
  * Entry point for C code
  */
 void
@@ -94,6 +144,9 @@ kstart(void)
     int nr;
     int i;
     sysaddrmap_entry_t *ent;
+
+    /* Setup and enable the kernel page table */
+    setup_kernel_pgt();
 
     base = (uint16_t *)0xb8000;
     print_str(base, "Welcome to advos (64-bit)!");
@@ -116,12 +169,6 @@ kstart(void)
         base += 80;
         ent++;
     }
-
-    /* Setup the kernel base page table */
-    
-
-
-
 
     /* Sleep forever */
     for ( ;; ) {
