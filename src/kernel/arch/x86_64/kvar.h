@@ -21,22 +21,21 @@
  * SOFTWARE.
  */
 
-	.globl	kentry
-	.globl	_hlt
+#ifndef _ADVOS_KVAR_H
+#define _ADVOS_KVAR_H
 
-	/* Code segment */
-	.text
-	.code64
+#include <stdint.h>
 
-/* Entry point */
-kentry:
-	cli
-	call	_kstart
-1:
-	hlt
-	jmp	1b
+/* For physical memory management */
+#define KVAR_PHYSMEM ((void *)0x00068000ULL)
 
-/* void hlt(void); */
-_hlt:
-	hlt
-	ret
+#endif
+
+/*
+ * Local variables:
+ * tab-width: 4
+ * c-basic-offset: 4
+ * End:
+ * vim600: sw=4 ts=4 fdm=marker
+ * vim<600: sw=4 ts=4
+ */

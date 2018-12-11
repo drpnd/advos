@@ -5,7 +5,7 @@
 
 CFLAGS=-fleading-underscore -I../include
 
-kernel: kasm.o kernel.o
+kernel: arch/x86_64/asm.o kernel.o memory.o
 	$(LD) -N -T kernel.ld -o $@ $^
 
 clean:

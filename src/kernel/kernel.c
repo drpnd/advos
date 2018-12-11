@@ -23,7 +23,11 @@
 
 #include "../boot/bootinfo.h"
 #include "kasm.h"
+#include "memory.h"
 #include <stdint.h>
+
+/* To be architecture independent */
+#include "arch/x86_64/kvar.h"
 
 #define set_cr3(cr3)    __asm__ __volatile__ ("movq %%rax,%%cr3" :: "a"((cr3)))
 
@@ -148,6 +152,18 @@ kstart(void)
     /* Setup and enable the kernel page table */
     setup_kernel_pgt();
 
+    /* Check the size of the data structure first */
+    if ( sizeof(phys_memory_t) > MEMORY_PAGESIZE ) {
+        /* Must raise an error */
+        return;
+    }
+
+    /* Initialize the buddy system */
+    nr = *(uint16_t *)BI_MM_NENT_ADDR;
+    phys_memory_init(KVAR_PHYSMEM, nr,
+                     (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR, 0x100000000ULL);
+
+    /* Messaging region */
     base = (uint16_t *)0xb8000;
     print_str(base, "Welcome to advos (64-bit)!");
     base += 80;
