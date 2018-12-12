@@ -28,6 +28,16 @@ void * kmemset(void *b, int c, uint64_t len);
 #define NULL    (void *)0
 
 /*
+ * Prototype declarations
+ */
+static void _add_block(phys_memory_buddy_page_t **, int, uintptr_t);
+static void
+_add_region_order(phys_memory_buddy_page_t **, int, uintptr_t, uintptr_t);
+static void _split_buddy(phys_memory_buddy_page_t **, int);
+static void _merge_buddy(phys_memory_buddy_page_t **, int);
+static void _insert_buddy(phys_memory_buddy_page_t **, uintptr_t, int);
+
+/*
  * Add a block to the specified order
  */
 static void
@@ -42,7 +52,7 @@ _add_block(phys_memory_buddy_page_t **buddy, int order, uintptr_t addr)
     /* Keep the linked list sorted */
     cur = &buddy[order];
     while ( *cur ) {
-        if ( addr < (uint64_t)(*cur) ) {
+        if ( addr < (uintptr_t)(*cur) ) {
             /* Insert here */
             page->next = *cur;
             *cur = page;
@@ -119,7 +129,7 @@ _split_buddy(phys_memory_buddy_page_t **buddy, int order)
     phys_memory_buddy_page_t *split;
     uintptr_t offset;
 
-    if ( order > MEMORY_PHYS_BUDDY_ORDER - 1 ) {
+    if ( order >= MEMORY_PHYS_BUDDY_ORDER ) {
         return;
     }
 
@@ -147,19 +157,18 @@ _split_buddy(phys_memory_buddy_page_t **buddy, int order)
     split = (phys_memory_buddy_page_t *)((uintptr_t)block + offset);
     split->next = NULL;
     block->next = split;
-    buddy[order]->next = block;
+    buddy[order] = block;
 }
-
 
 /*
  * Allocate pages
  */
 void *
-phys_mem_buddy_allocate(phys_memory_buddy_page_t **buddy, int order)
+phys_mem_buddy_alloc(phys_memory_buddy_page_t **buddy, int order)
 {
     phys_memory_buddy_page_t *block;
 
-        /* Exceed the supported order */
+    /* Exceed the supported order */
     if ( order > MEMORY_PHYS_BUDDY_ORDER ) {
         return NULL;
     }
@@ -168,7 +177,7 @@ phys_mem_buddy_allocate(phys_memory_buddy_page_t **buddy, int order)
     _split_buddy(buddy, order);
     if ( NULL == buddy[order] ) {
         /* No block found */
-        return NULL;
+        return 0;
     }
     block = buddy[order];
     buddy[order] = buddy[order]->next;
@@ -178,16 +187,90 @@ phys_mem_buddy_allocate(phys_memory_buddy_page_t **buddy, int order)
 }
 
 /*
+ * Merge buddy blocks to the upper order
+ */
+static void
+_merge_buddy(phys_memory_buddy_page_t **buddy, int order)
+{
+    phys_memory_buddy_page_t **cur;
+    uintptr_t block;
+    uintptr_t blocksize;
+
+    if ( order >= MEMORY_PHYS_BUDDY_ORDER ) {
+        return;
+    }
+
+    blocksize = MEMORY_PAGESIZE << order;
+
+    cur = &buddy[order];
+    while ( *cur ) {
+        block = (uintptr_t)*cur;
+        if ( block & (blocksize - 1) ) {
+            /* Page aligned */
+            if ( (uintptr_t)(*cur)->next == block + blocksize ) {
+                /* is buddy */
+                *cur = (*cur)->next->next;
+                _insert_buddy(buddy, block, order + 1);
+            }
+        }
+        cur = &(*cur)->next;
+    }
+}
+
+/*
+ * Insert the block to the buddy system
+ */
+static void
+_insert_buddy(phys_memory_buddy_page_t **buddy, uintptr_t addr, int order)
+{
+    phys_memory_buddy_page_t *block;
+    phys_memory_buddy_page_t **cur;
+
+    if ( order > MEMORY_PHYS_BUDDY_ORDER ) {
+        return;
+    }
+
+    /* Search the position to insert */
+    cur = &buddy[order];
+    while ( *cur ) {
+        if ( addr < (uintptr_t)(*cur) ) {
+            /* Insert here */
+            block = (phys_memory_buddy_page_t *)addr;
+            block->next = *cur;
+            *cur = block;
+            _merge_buddy(buddy, order);
+            return;
+        }
+        cur = &(*cur)->next;
+    }
+
+    /* Insert at the tail */
+    block = (phys_memory_buddy_page_t *)addr;
+    block->next = NULL;
+    *cur = block;
+    _merge_buddy(buddy, order);
+}
+
+/*
+ * Release pages
+ */
+void
+phys_mem_buddy_free(phys_memory_buddy_page_t **buddy, void *ptr, int order)
+{
+    _insert_buddy(buddy, (uintptr_t)ptr, order);
+}
+
+/*
  * Initialize the physical memory management region
  */
 int
 phys_memory_init(phys_memory_t *mem, int nr, memory_sysmap_entry_t *map,
-                 uint64_t p2v)
+                 uintptr_t p2v)
 {
     int i;
-    uint64_t base;
-    uint64_t next;
-    uint64_t kbase;
+    uintptr_t base;
+    uintptr_t next;
+    uintptr_t kbase;
 
     /* Initialize the region */
     kmemset(mem, 0, sizeof(phys_memory_t));

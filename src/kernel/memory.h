@@ -81,6 +81,8 @@ typedef struct {
     uint32_t attr;
 } __attribute__ ((packed)) memory_sysmap_entry_t;
 
+void * phys_mem_buddy_alloc(phys_memory_buddy_page_t **, int);
+void phys_mem_buddy_free(phys_memory_buddy_page_t **, void *, int);
 int phys_memory_init(phys_memory_t *, int, memory_sysmap_entry_t *, uint64_t);
 
 #endif

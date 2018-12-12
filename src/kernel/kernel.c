@@ -148,6 +148,8 @@ kstart(void)
     int nr;
     int i;
     sysaddrmap_entry_t *ent;
+    phys_memory_t *mem;
+    void *pg;
 
     /* Setup and enable the kernel page table */
     setup_kernel_pgt();
@@ -162,6 +164,14 @@ kstart(void)
     nr = *(uint16_t *)BI_MM_NENT_ADDR;
     phys_memory_init(KVAR_PHYSMEM, nr,
                      (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR, 0x100000000ULL);
+
+    /* Test the physical memory allocator */
+    mem = KVAR_PHYSMEM;
+    pg = phys_mem_buddy_alloc(mem->czones[MEMORY_ZONE_KERNEL].heads, 8);
+    print_hex((uint16_t *)0xb8000 + 80 * 20, (uintptr_t)pg, 8);
+    phys_mem_buddy_free(mem->czones[MEMORY_ZONE_KERNEL].heads, pg, 8);
+    pg = phys_mem_buddy_alloc(mem->czones[MEMORY_ZONE_KERNEL].heads, 0);
+    print_hex((uint16_t *)0xb8000 + 80 * 21, (uintptr_t)pg, 8);
 
     /* Messaging region */
     base = (uint16_t *)0xb8000;
