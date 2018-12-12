@@ -205,12 +205,17 @@ _merge_buddy(phys_memory_buddy_page_t **buddy, int order)
     cur = &buddy[order];
     while ( *cur ) {
         block = (uintptr_t)*cur;
-        if ( block & (blocksize - 1) ) {
-            /* Page aligned */
+        if ( 0 == (block & ((blocksize << 1) - 1)) ) {
+            /* is aligned for the upper order */
             if ( (uintptr_t)(*cur)->next == block + blocksize ) {
                 /* is buddy */
                 *cur = (*cur)->next->next;
                 _insert_buddy(buddy, block, order + 1);
+                /* May return here if we can ensure only one block could be
+                   merged. */
+                if ( NULL == *cur ) {
+                    break;
+                }
             }
         }
         cur = &(*cur)->next;
