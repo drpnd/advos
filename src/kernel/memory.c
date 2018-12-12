@@ -235,18 +235,14 @@ _insert_buddy(phys_memory_buddy_page_t **buddy, uintptr_t addr, int order)
     while ( *cur ) {
         if ( addr < (uintptr_t)(*cur) ) {
             /* Insert here */
-            block = (phys_memory_buddy_page_t *)addr;
-            block->next = *cur;
-            *cur = block;
-            _merge_buddy(buddy, order);
-            return;
+            break;
         }
         cur = &(*cur)->next;
     }
 
     /* Insert at the tail */
     block = (phys_memory_buddy_page_t *)addr;
-    block->next = NULL;
+    block->next = *cur;
     *cur = block;
     _merge_buddy(buddy, order);
 }
@@ -262,6 +258,7 @@ phys_mem_buddy_free(phys_memory_buddy_page_t **buddy, void *ptr, int order)
 
 /*
  * Initialize the physical memory management region
+ * FIXME: This function needs to check the duplicate memory region.
  */
 int
 phys_memory_init(phys_memory_t *mem, int nr, memory_sysmap_entry_t *map,
