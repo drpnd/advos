@@ -37,7 +37,8 @@
 
 #define MEMORY_PHYS_BUDDY_ORDER         18
 
-#define MEMORY_PAGESIZE                 0x1000ULL
+#define MEMORY_PAGESIZE_SHIFT           12
+#define MEMORY_PAGESIZE                 (1ULL << MEMORY_PAGESIZE_SHIFT)
 
 /*
  * Page

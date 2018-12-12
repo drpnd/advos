@@ -110,6 +110,74 @@ phys_mem_buddy_add_region(phys_memory_buddy_page_t **buddy, uintptr_t base,
 }
 
 /*
+ * Split a block at the specified order into two
+ */
+static void
+_split_buddy(phys_memory_buddy_page_t **buddy, int order)
+{
+    phys_memory_buddy_page_t *block;
+    phys_memory_buddy_page_t *split;
+    uintptr_t offset;
+
+    if ( order > MEMORY_PHYS_BUDDY_ORDER - 1 ) {
+        return;
+    }
+
+    if ( NULL != buddy[order] ) {
+        /* Valid block in this order */
+        return;
+    }
+
+    /* Split the upper order if no block at the upper order */
+    _split_buddy(buddy, order + 1);
+
+    /* Check the upper order */
+    if ( NULL == buddy[order + 1] ) {
+        /* No valid block */
+        return;
+    }
+
+    /* Take one block from the upper order */
+    block = buddy[order + 1];
+    buddy[order + 1] = buddy[order + 1]->next;
+    block->next = NULL;
+
+    /* Split the block into two */
+    offset = MEMORY_PAGESIZE << order;
+    split = (phys_memory_buddy_page_t *)((uintptr_t)block + offset);
+    split->next = NULL;
+    block->next = split;
+    buddy[order]->next = block;
+}
+
+
+/*
+ * Allocate pages
+ */
+void *
+phys_mem_buddy_allocate(phys_memory_buddy_page_t **buddy, int order)
+{
+    phys_memory_buddy_page_t *block;
+
+        /* Exceed the supported order */
+    if ( order > MEMORY_PHYS_BUDDY_ORDER ) {
+        return NULL;
+    }
+
+    /* Try to split the upper order if needed */
+    _split_buddy(buddy, order);
+    if ( NULL == buddy[order] ) {
+        /* No block found */
+        return NULL;
+    }
+    block = buddy[order];
+    buddy[order] = buddy[order]->next;
+    block->next = NULL;
+
+    return block;
+}
+
+/*
  * Initialize the physical memory management region
  */
 int
