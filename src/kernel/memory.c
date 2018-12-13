@@ -24,8 +24,6 @@
 #include "memory.h"
 #include "kernel.h"
 
-#define NULL    (void *)0
-
 /*
  * Prototype declarations
  */

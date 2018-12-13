@@ -26,10 +26,27 @@
 
 #include <stdint.h>
 
+/* Variable length argument support */
+typedef __builtin_va_list va_list;
+#define va_start(ap, last)      __builtin_va_start((ap), (last))
+#define va_arg                  __builtin_va_arg
+#define va_end(ap)              __builtin_va_end(ap)
+#define va_copy(dest, src)      __builtin_va_copy((dest), (src))
+#define alloca(size)            __builtin_alloca((size))
+
+/* Define NULL */
+#if !defined(NULL)
+#define NULL    ((void *)0)
+#endif
+
 /* Defined in arch/x86_64/asm.S */
 void * kmemset(void *, int, size_t);
 int kmemcmp(void *, void *, size_t);
 int kmemcpy(void *__restrict, void *__restrict, size_t);
+
+/* Defined in strfmt.c */
+int kvsnprintf(char *, size_t, const char *, va_list);
+int ksnprintf(char *, size_t, const char *, ...);
 
 #endif
 
