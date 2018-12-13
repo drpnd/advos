@@ -21,34 +21,15 @@
  * SOFTWARE.
  */
 
-#ifndef _ADVOS_TYPES_H
-#define _ADVOS_TYPES_H
+#ifndef _ADVOS_KERNEL_H
+#define _ADVOS_KERNEL_H
 
-#if __LP64__
+#include <stdint.h>
 
-/* Sizes */
-typedef signed long ssize_t;
-typedef unsigned long size_t;
-typedef signed long long off_t;
-
-/* Unsigned integer */
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned long long int uint64_t;
-
-/* Signed integer */
-typedef signed char int8_t;
-typedef signed short int16_t;
-typedef signed int int32_t;
-typedef signed long long int int64_t;
-
-/* Pointer */
-typedef uint64_t uintptr_t;
-
-#else
-#error "Unsupported compiler"
-#endif
+/* Defined in arch/x86_64/asm.S */
+void * kmemset(void *, int, size_t);
+int kmemcmp(void *, void *, size_t);
+int kmemcpy(void *__restrict, void *__restrict, size_t);
 
 #endif
 

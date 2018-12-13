@@ -22,9 +22,8 @@
  */
 
 #include "memory.h"
+#include "kernel.h"
 
-/* Defined in arch/x86_64/asm.S */
-void * kmemset(void *b, int c, uint64_t len);
 #define NULL    (void *)0
 
 /*
