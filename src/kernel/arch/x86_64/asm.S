@@ -76,3 +76,32 @@ _kmemcpy:
 	cld			/* Ensure the DF cleared */
 	rep	movsb		/* Copy byte at (%rsi) to (%rdi) */
 	ret
+
+/* uint64_t rdmsr(uint64_t reg) */
+_rdmsr:
+	movq	%rdi,%rcx
+	rdmsr
+	shlq	$32,%rdx
+	addq	%rdx,%rax
+	ret
+
+/* void wrmsr(uint64_t reg, uint64_t data) */
+_wrmsr:
+	movq	%rdi,%rcx
+	movq	%rsi,%rax
+	movq	%rax,%rdx
+	shrq	$32,%rdx
+	wrmsr
+	ret
+
+/* uint32_t mfrd32(uintptr_t addr) */
+_mfrd32:
+	mfence
+	movl	(%rdi),%eax
+	ret
+
+/* void mfwr32(uintptr_t addr, uint32_t data) */
+_mfwr32:
+	mfence
+	movl	%esi,(%rdi)
+	ret

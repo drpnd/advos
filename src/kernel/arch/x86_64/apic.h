@@ -21,25 +21,14 @@
  * SOFTWARE.
  */
 
-#ifndef _ADVOS_KVAR_H
-#define _ADVOS_KVAR_H
+#ifndef _ADVOS_KERNEL_APIC_H
+#define _ADVOS_KERNEL_APIC_H
 
-/* For physical memory management */
-#define KVAR_PHYSMEM ((void *)0x00068000ULL)
+#include <stdint.h>
 
-/* Trampoline: 0x70 (0x70000) */
-#define TRAMPOLINE_VEC          0x70
-#define TRAMPOLINE_MAX_SIZE     0x1000
-
-/* Temporary GDT for application processors */
-#define AP_GDT_CODE64_SEL       0x08    /* Code64 selector */
-#define AP_GDT_DATA64_SEL       0x10    /* Data64 selector */
-#define AP_GDT_CODE32_SEL       0x18    /* Code32 selector */
-#define AP_GDT_DATA32_SEL       0x20    /* Data32 selector */
-#define AP_GDT_CODE16_SEL       0x28    /* Code16 selector */
-#define AP_GDT_DATA16_SEL       0x30    /* Data16 selector */
-
-#define KERNEL_RELOCBASE        0xc0000000ULL
+#define APIC_MSR                0x1b
+#define APIC_LAPIC_ID           0x020
+#define APIC_SIVR               0x0f0
 
 #endif
 
