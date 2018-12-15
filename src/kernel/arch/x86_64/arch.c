@@ -25,11 +25,18 @@
 #include "arch.h"
 #include "kvar.h"
 #include "acpi.h"
+#include "apic.h"
+#include "const.h"
 #include "../../kernel.h"
 #include "../../memory.h"
 #include <stdint.h>
 
 #define set_cr3(cr3)    __asm__ __volatile__ ("movq %%rax,%%cr3" :: "a"((cr3)))
+
+/* For trampoline code */
+void trampoline(void);
+void trampoline_end(void);
+
 
 /*
  * System memory map entry
@@ -180,6 +187,9 @@ setup_kernel_pgt(void)
     /* 3-4 GiB (first 2 MiB) */
     e = (uint64_t *)(base + 0x3000);
     *(e + 0) = (0x00000000ULL) | 0x83;
+    for ( i = 503; i < 512; i++ ) {
+        *(e + i) = (0xc0000000ULL + 0x200000ULL * i) | 0x83;
+    }
     /* 4-5 GiB (first 64 MiB) */
     e = (uint64_t *)(base + 0x4000);
     for ( i = 0; i < 32; i++ ) {
@@ -259,6 +269,7 @@ bsp_start(void)
     phys_memory_t *mem;
     acpi_t *acpi;
     int ret;
+    size_t sz;
 
     /* Setup and enable the kernel page table */
     setup_kernel_pgt();
@@ -278,14 +289,44 @@ bsp_start(void)
         panic("The size of acpi_t exceeds the expected size.");
     }
     acpi = phys_mem_buddy_alloc(mem->czones[MEMORY_ZONE_KERNEL].heads, 2);
+
+    /* Load ACPI information */
     ret = acpi_load(acpi);
     if ( ret < 0 ) {
         panic("Failed to load ACPI configuration.");
     }
 
+    /* Load trampoline code */
+    sz = (uint64_t)trampoline_end - (uint64_t)trampoline;
+    if ( sz > TRAMPOLINE_MAX_SIZE ) {
+        panic("Trampoline code is too large to load.");
+    }
+    kmemcpy((void *)(TRAMPOLINE_VEC << 12), trampoline, sz);
+
+    /* Send INIT IPI */
+    lapic_send_init_ipi();
+
+    /* Wait 10 ms */
+    acpi_busy_usleep(acpi, 10000);
+
+    /* Send a Start Up IPI */
+    lapic_send_startup_ipi(TRAMPOLINE_VEC & 0xff);
+
+    /* Wait 200 us */
+    acpi_busy_usleep(acpi, 200);
+
+    /* Send another Start Up IPI */
+    lapic_send_startup_ipi(TRAMPOLINE_VEC & 0xff);
+
+    /* Wait 200 us */
+    acpi_busy_usleep(acpi, 200);
+
     /* Messaging region */
     base = (uint16_t *)0xb8000;
     print_str(base, "Welcome to advos (64-bit)!");
+    base += 80;
+
+    print_hex(base, acpi->apic_address, 8);
     base += 80;
 
     /* Print CPU domain */

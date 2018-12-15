@@ -63,7 +63,7 @@ lapic_id(void)
 }
 
 /*
- * lapic_send_init_ipi -- Send INIT IPI
+ * lapic_send_init_ipi -- send INIT IPI
  */
 void
 lapic_send_init_ipi(void)
@@ -79,6 +79,78 @@ lapic_send_init_ipi(void)
 
     icrl = (icrl & ~0x000cdfff) | APIC_ICR_INIT | APIC_ICR_DEST_ALL_EX_SELF;
     icrh = (icrh & 0x000fffff);
+
+    mfwr32(apic_base + APIC_ICR_HIGH, icrh);
+    mfwr32(apic_base + APIC_ICR_LOW, icrl);
+}
+
+/*
+ * lapic_send_startup_ipi -- send start up IPI
+ */
+void
+lapic_send_startup_ipi(uint8_t vector)
+{
+    uint32_t icrl;
+    uint32_t icrh;
+    uint64_t apic_base;
+
+    apic_base = lapic_base_addr();
+
+    do {
+        icrl = mfrd32(apic_base + APIC_ICR_LOW);
+        icrh = mfrd32(apic_base + APIC_ICR_HIGH);
+        /* Wait until it's idle */
+    } while ( icrl & (APIC_ICR_SEND_PENDING) );
+
+    icrl = (icrl & ~0x000cdfff) | APIC_ICR_STARTUP | APIC_ICR_DEST_ALL_EX_SELF
+        | vector;
+    icrh = (icrh & 0x000fffff);
+
+    mfwr32(apic_base + APIC_ICR_HIGH, icrh);
+    mfwr32(apic_base + APIC_ICR_LOW, icrl);
+}
+
+/*
+ * lapic_bcast_fixed_ipi -- broadcast fixed IPI
+ */
+void
+lapic_bcast_fixed_ipi(uint8_t vector)
+{
+    uint32_t icrl;
+    uint32_t icrh;
+    uint64_t apic_base;
+
+    apic_base = lapic_base_addr();
+
+    icrl = mfrd32(apic_base + APIC_ICR_LOW);
+    icrh = mfrd32(apic_base + APIC_ICR_HIGH);
+
+    icrl = (icrl & ~0x000cdfff) | APIC_ICR_FIXED | APIC_ICR_DEST_ALL_EX_SELF
+        | vector;
+    icrh = (icrh & 0x000fffff);
+
+    mfwr32(apic_base + APIC_ICR_HIGH, icrh);
+    mfwr32(apic_base + APIC_ICR_LOW, icrl);
+}
+
+/*
+ * lapic_send_fixed_ipi -- send a fixed IPI to the specified destination
+ */
+void
+lapic_send_fixed_ipi(int dst, uint8_t vector)
+{
+    uint32_t icrl;
+    uint32_t icrh;
+    uint64_t apic_base;
+
+    apic_base = lapic_base_addr();
+
+    icrl = mfrd32(apic_base + APIC_ICR_LOW);
+    icrh = mfrd32(apic_base + APIC_ICR_HIGH);
+
+    icrl = (icrl & ~0x000cdfff) | APIC_ICR_FIXED | APIC_ICR_DEST_NOSHORTHAND
+        | vector;
+    icrh = (icrh & 0x000fffff) | ((uint32_t)dst << 24);
 
     mfwr32(apic_base + APIC_ICR_HIGH, icrh);
     mfwr32(apic_base + APIC_ICR_LOW, icrl);

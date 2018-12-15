@@ -21,43 +21,47 @@
  * SOFTWARE.
  */
 
-#ifndef _ADVOS_KERNEL_APIC_H
-#define _ADVOS_KERNEL_APIC_H
-
-#include <stdint.h>
 #include "const.h"
 
-#define APIC_LAPIC_ID                   0x020
-#define APIC_SIVR                       0x0f0
-#define APIC_ICR_LOW                    0x300
-#define APIC_ICR_HIGH                   0x310
+#define MSR_APIC_BASE           0x1b
+#define APIC_LAPIC_ID           0x020
 
-/* ICR delivery mode */
-#define APIC_ICR_FIXED                  0x00000000
-#define APIC_ICR_INIT                   0x00000500
-#define APIC_ICR_STARTUP                0x00000600
-/* ICR status */
-#define APIC_ICR_SEND_PENDING           0x00001000
-/* ICR level */
-#define APIC_ICR_LEVEL_ASSERT           0x00004000
-/* ICR destination */
-#define APIC_ICR_DEST_NOSHORTHAND       0x00000000
-#define APIC_ICR_DEST_SELF              0x00040000
-#define APIC_ICR_DEST_ALL_INC_SELF      0x00080000
-#define APIC_ICR_DEST_ALL_EX_SELF       0x000c0000
+	.globl	ap_entry32
 
-void lapic_send_init_ipi(void);
-void lapic_send_startup_ipi(uint8_t);
-void lapic_bcast_fixed_ipi(uint8_t);
-void lapic_send_fixed_ipi(int, uint8_t);
-
-#endif
+	.text
+	.code32
 
 /*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
+ * Entry point to the 32-bit protected mode for application processors
  */
+ap_entry32:
+	cli
+
+	/* %cs is automatically set after the long jump operation */
+	/* Setup other segment registers */
+	movl	$AP_GDT_DATA64_SEL,%eax
+	movl	%eax,%ss
+	movl	%eax,%ds
+	movl	%eax,%es
+	movl	%eax,%fs
+	movl	%eax,%gs
+
+	/* Get the local APIC ID */
+	movl    $MSR_APIC_BASE,%ecx
+	rdmsr
+	andl	$0xfffffffffffff000,%eax        /* APIC Base */
+	movl	APIC_LAPIC_ID(%eax),%eax
+	shrl	$24,%eax
+
+	movl	$0xb8000,%ebx
+	movl	$160,%ecx
+	mull	%ecx
+	subl	$2,%eax
+	movl	$0x0721,%edx
+	addl	%eax,%ebx
+	movl	%edx,(%ebx)
+
+1:
+	hlt
+	jmp	1b
+

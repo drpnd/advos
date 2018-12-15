@@ -54,7 +54,8 @@ _trampoline:
 	/* Turn on protected mode */
 	movl	%cr0,%eax
 	orl	$0x1,%eax
-	ljmp	$AP_GDT_CODE32_SEL,$(ap_entry32 - KERNEL_RELOCBASE)
+	movl	%eax,%cr0
+	ljmpl	$AP_GDT_CODE32_SEL,$(ap_entry32 - KERNEL_RELOCBASE)
 
 	/* Data section but trampoline code cannot be in separated sections */
 	.align	16
