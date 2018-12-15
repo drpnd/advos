@@ -245,7 +245,6 @@ struct acpi_sdt_srat_hdr {
 /* Prototype declarations */
 static int _validate_checksum(const uint8_t *, int);
 static int _parse_apic(acpi_t *, struct acpi_sdt_hdr *);
-static int _parse_dsdt(acpi_t *, struct acpi_sdt_hdr *);
 static int _parse_fadt(acpi_t *, struct acpi_sdt_hdr *);
 static int _parse_rsdt(acpi_t *, struct acpi_rsdp *);
 static int _rsdp_search_range(acpi_t *, uintptr_t, uintptr_t);
@@ -444,8 +443,9 @@ _parse_srat(acpi_t *acpi, struct acpi_sdt_hdr *sdt)
             break;
         case 1:
             /* Memory */
-            if ( acpi->num_memory_region < MAX_MEMORY_REGIONS ) {
-                srat_memory = (struct acpi_sdt_srat_memory *)srat;
+            srat_memory = (struct acpi_sdt_srat_memory *)srat;
+            if ( (srat_memory->flags & 1)
+                 && acpi->num_memory_region < MAX_MEMORY_REGIONS ) {
                 mbase = (uint64_t)srat_memory->base_addr_low
                     |((uint64_t)srat_memory->base_addr_high << 32);
                 mlen = (uint64_t)srat_memory->length_low
