@@ -21,7 +21,7 @@
  * SOFTWARE.
  */
 
-#include "kvar.h"
+#include "const.h"
 
 /* Note that .data section cannot be used in the trampoline file because we
    need to determine the contiguous space of the trampoline code within a

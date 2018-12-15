@@ -21,30 +21,42 @@
  * SOFTWARE.
  */
 
-#ifndef _ADVOS_KERNEL_APIC_H
-#define _ADVOS_KERNEL_APIC_H
+#ifndef _ADVOS_KERNEL_ACPI_H
+#define _ADVOS_KERNEL_ACPI_H
 
 #include <stdint.h>
 #include "const.h"
 
-#define APIC_LAPIC_ID                   0x020
-#define APIC_SIVR                       0x0f0
-#define APIC_ICR_LOW                    0x300
-#define APIC_ICR_HIGH                   0x310
+/*
+ * ACPI configuration
+ */
+typedef struct {
+    /* Local APIC address */
+    uint64_t apic_address;
+    /* I/O APIC base */
+    uint64_t ioapic_base;
+    /* ACPI PM timer */
+    uint64_t pm_tmr_port;
+    uint8_t pm_tmr_ext;
+    /* Power control */
+    uint32_t pm1a_ctrl_block;
+    uint32_t pm1b_ctrl_block;
+    /* ACPI SMI command port */
+    uint32_t smi_cmd_port;
+    /* ACPI enable */
+    uint8_t acpi_enable;
+    /* CMOS century */
+    uint8_t cmos_century;
 
-/* ICR delivery mode */
-#define APIC_ICR_FIXED                  0x00000000
-#define APIC_ICR_INIT                   0x00000500
-#define APIC_ICR_STARTUP                0x00000600
-/* ICR status */
-#define APIC_ICR_SEND_PENDING           0x00001000
-/* ICR level */
-#define APIC_ICR_LEVEL_ASSERT           0x00004000
-/* ICR destination */
-#define APIC_ICR_DEST_NOSHORTHAND       0x00000000
-#define APIC_ICR_DEST_SELF              0x00040000
-#define APIC_ICR_DEST_ALL_INC_SELF      0x00080000
-#define APIC_ICR_DEST_ALL_EX_SELF       0x000c0000
+    /* CPU domain */
+    uint32_t lapic_domain[MAX_PROCESSORS];
+    int num_memory_region;
+    struct {
+        uint64_t base;
+        uint64_t length;
+        uint32_t domain;
+    } memory_domain[MAX_MEMORY_REGIONS];
+} acpi_t;
 
 #endif
 

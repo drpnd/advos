@@ -26,6 +26,12 @@
 	.globl	_kmemset
 	.globl	_kmemcmp
 	.globl	_kmemcpy
+	.globl	_cpuid
+	.globl	_rdtsc
+	.globl	_rdmsr
+	.globl	_wrmsr
+	.globl	_mfrd32
+	.globl	_mfwr32
 
 	/* Code segment */
 	.text
@@ -77,6 +83,29 @@ _kmemcpy:
 	rep	movsb		/* Copy byte at (%rsi) to (%rdi) */
 	ret
 
+/* uint64_t cpuid(uint64_t rax, uint64_t *rbx, uint64_t *rcx, uint64_t *rdx) */
+_cpuid:
+	pushq	%rbx
+	movq	%rdi,%rax
+	movq	%rdx,%rdi
+	movq	%rcx,%r8
+	cpuid
+	movq	%rbx,(%rsi)
+	movq	%rcx,(%rdi)
+	movq	%rdx,(%r8)
+	popq	%rbx
+	ret
+
+/* uint64_t rdtsc(void) */
+_rdtsc:
+	xorq	%rax,%rax
+	movq	%rax,%rdx
+	rdtscp
+	shlq	$32,%rdx
+	addq	%rdx,%rax
+	ret
+
+
 /* uint64_t rdmsr(uint64_t reg) */
 _rdmsr:
 	movq	%rdi,%rcx
@@ -105,3 +134,4 @@ _mfwr32:
 	mfence
 	movl	%esi,(%rdi)
 	ret
+

@@ -36,7 +36,7 @@ lapic_base_addr(void)
     uint64_t apic_base;
 
     /* Read IA32_APIC_BASE register */
-    msr = rdmsr(APIC_MSR);
+    msr = rdmsr(MSR_APIC_BASE);
     apic_base = msr & 0xfffffffffffff000ULL;
 
     /* Enable APIC at spurious interrupt vector register: default vector 0xff */
@@ -60,6 +60,28 @@ lapic_id(void)
     reg = *(uint32_t *)(apic_base + APIC_LAPIC_ID);
 
     return reg >> 24;
+}
+
+/*
+ * lapic_send_init_ipi -- Send INIT IPI
+ */
+void
+lapic_send_init_ipi(void)
+{
+    uint32_t icrl;
+    uint32_t icrh;
+    uint64_t apic_base;
+
+    apic_base = lapic_base_addr();
+
+    icrl = mfrd32(apic_base + APIC_ICR_LOW);
+    icrh = mfrd32(apic_base + APIC_ICR_HIGH);
+
+    icrl = (icrl & ~0x000cdfff) | APIC_ICR_INIT | APIC_ICR_DEST_ALL_EX_SELF;
+    icrh = (icrh & 0x000fffff);
+
+    mfwr32(apic_base + APIC_ICR_HIGH, icrh);
+    mfwr32(apic_base + APIC_ICR_LOW, icrl);
 }
 
 /*

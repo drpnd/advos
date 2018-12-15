@@ -21,30 +21,39 @@
  * SOFTWARE.
  */
 
-#ifndef _ADVOS_KERNEL_APIC_H
-#define _ADVOS_KERNEL_APIC_H
+#ifndef _ADVOS_CONST_H
+#define _ADVOS_CONST_H
 
-#include <stdint.h>
-#include "const.h"
+/* For physical memory management */
+#define PHYSMEM_ADDR            0x00068000
 
-#define APIC_LAPIC_ID                   0x020
-#define APIC_SIVR                       0x0f0
-#define APIC_ICR_LOW                    0x300
-#define APIC_ICR_HIGH                   0x310
+/* Page table for kernel */
+#define KPGT_ADDR               0x00069000
 
-/* ICR delivery mode */
-#define APIC_ICR_FIXED                  0x00000000
-#define APIC_ICR_INIT                   0x00000500
-#define APIC_ICR_STARTUP                0x00000600
-/* ICR status */
-#define APIC_ICR_SEND_PENDING           0x00001000
-/* ICR level */
-#define APIC_ICR_LEVEL_ASSERT           0x00004000
-/* ICR destination */
-#define APIC_ICR_DEST_NOSHORTHAND       0x00000000
-#define APIC_ICR_DEST_SELF              0x00040000
-#define APIC_ICR_DEST_ALL_INC_SELF      0x00080000
-#define APIC_ICR_DEST_ALL_EX_SELF       0x000c0000
+/* Pointer to per-core data (flags, tss, stack); 256 */
+#define KDATA_PER_CORE_ADDR     0x00060000
+
+/* Maximum number of supported processors */
+#define MAX_PROCESSORS          256
+#define MAX_MEMORY_REGIONS      256
+
+/* Trampoline: 0x70 (0x70000) */
+#define TRAMPOLINE_VEC          0x70
+#define TRAMPOLINE_MAX_SIZE     0x1000
+
+/* Temporary GDT for application processors */
+#define AP_GDT_CODE64_SEL       0x08    /* Code64 selector */
+#define AP_GDT_DATA64_SEL       0x10    /* Data64 selector */
+#define AP_GDT_CODE32_SEL       0x18    /* Code32 selector */
+#define AP_GDT_DATA32_SEL       0x20    /* Data32 selector */
+#define AP_GDT_CODE16_SEL       0x28    /* Code16 selector */
+#define AP_GDT_DATA16_SEL       0x30    /* Data16 selector */
+
+#define KERNEL_RELOCBASE        0xc0000000
+
+/* Machine-specific registers (MSRs) */
+#define MSR_APIC_BASE           0x1b
+#define MSR_PLATFORM_INFO       0xce
 
 #endif
 
