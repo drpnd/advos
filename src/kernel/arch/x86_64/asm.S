@@ -23,6 +23,7 @@
 
 	.globl	kentry
 	.globl	_hlt
+	.globl	_pause
 	.globl	_kmemset
 	.globl	_kmemcmp
 	.globl	_kmemcpy
@@ -32,6 +33,8 @@
 	.globl	_wrmsr
 	.globl	_mfrd32
 	.globl	_mfwr32
+	.globl	_inl
+	.globl	_outw
 
 	/* Code segment */
 	.text
@@ -40,14 +43,19 @@
 /* Entry point */
 kentry:
 	cli
-	call	_kstart
+	call	_bsp_start
 1:
 	hlt
 	jmp	1b
 
-/* void hlt(void); */
+/* void hlt(void) */
 _hlt:
 	hlt
+	ret
+
+/* void pause(void) */
+_pause:
+	pause
 	ret
 
 /* void * kmemset(void *b, int c, size_t len) */
@@ -133,5 +141,19 @@ _mfrd32:
 _mfwr32:
 	mfence
 	movl	%esi,(%rdi)
+	ret
+
+/* uint32_t inl(uint16_t port) */
+_inl:
+	movw	%di,%dx
+	xorq	%rax,%rax
+	inl	%dx,%eax
+	ret
+
+/* void outw(uint16_t port, uint16_t value) */
+_outw:
+	movw	%di,%dx
+	movw	%si,%ax
+	outw	%ax,%dx
 	ret
 

@@ -299,7 +299,7 @@ _parse_apic(acpi_t *acpi, struct acpi_sdt_hdr *sdt)
         hdr = (struct acpi_sdt_apic_hdr *)(addr + len);
         if ( len + hdr->length > sdt->length ) {
             /* Invalid */
-            return 0;
+            return -1;
         }
         switch  ( hdr->type ) {
         case 0:
@@ -324,7 +324,7 @@ _parse_apic(acpi_t *acpi, struct acpi_sdt_hdr *sdt)
         len += hdr->length;
     }
 
-    return 1;
+    return 0;
 }
 
 /*
@@ -404,7 +404,7 @@ _parse_fadt(acpi_t *acpi, struct acpi_sdt_hdr *sdt)
     /* Century */
     acpi->cmos_century = fadt->century;
 
-    return 1;
+    return 0;
 }
 
 /*
@@ -435,7 +435,8 @@ _parse_srat(acpi_t *acpi, struct acpi_sdt_hdr *sdt)
         case 0:
             /* Local APIC */
             srat_lapic = (struct acpi_sdt_srat_lapic *)srat;
-            acpi->lapic_domain[srat_lapic->apic_id]
+            acpi->lapic_domain[srat_lapic->apic_id].valid = 1;
+            acpi->lapic_domain[srat_lapic->apic_id].domain
                 = srat_lapic->proximity_domain
                 | ((uint32_t)srat_lapic->proximity_domain2[0] << 8)
                 | ((uint32_t)srat_lapic->proximity_domain2[1] << 16)
@@ -465,7 +466,7 @@ _parse_srat(acpi_t *acpi, struct acpi_sdt_hdr *sdt)
         len += srat->length;
     }
 
-    return 1;
+    return 0;
 }
 
 /*
@@ -487,14 +488,14 @@ _parse_rsdt(acpi_t *acpi, struct acpi_rsdp *rsdp)
         sz = 8;
         rsdt = (struct acpi_sdt_hdr *)rsdp->xsdt_addr;
         if ( 0 != kmemcmp((uint8_t *)rsdt->signature, "XSDT", 4) ) {
-            return 0;
+            return -1;
         }
     } else {
         /* Parse RSDT (ACPI 1.x) */
         sz = 4;
         rsdt = (struct acpi_sdt_hdr *)(uintptr_t)rsdp->rsdt_addr;
         if ( 0 != kmemcmp((uint8_t *)rsdt->signature, "RSDT", 4) ) {
-            return 0;
+            return -1;
         }
     }
 
@@ -513,23 +514,23 @@ _parse_rsdt(acpi_t *acpi, struct acpi_rsdp *rsdp)
         tmp = (struct acpi_sdt_hdr *)addr;
         if ( 0 == kmemcmp((uint8_t *)tmp->signature, "APIC", 4) ) {
             /* APIC */
-            if ( !_parse_apic(acpi, tmp) ) {
-                return 0;
+            if ( _parse_apic(acpi, tmp) < 0 ) {
+                return -1;
             }
         } else if ( 0 == kmemcmp((uint8_t *)tmp->signature, "FACP", 4) ) {
             /* FADT */
-            if ( !_parse_fadt(acpi, tmp) ) {
-                return 0;
+            if ( _parse_fadt(acpi, tmp) < 0 ) {
+                return -1;
             }
         } else if ( 0 == kmemcmp((uint8_t *)tmp->signature, "SRAT ", 4) ) {
             /* SRAT */
-            if ( !_parse_srat(acpi, tmp) ) {
-                return 0;
+            if ( _parse_srat(acpi, tmp) < 0 ) {
+                return -1;
             }
         }
     }
 
-    return 1;
+    return 0;
 }
 
 /*
@@ -553,14 +554,14 @@ _rsdp_search_range(acpi_t *acpi, uintptr_t start, uintptr_t end)
         }
     }
 
-    return 0;
+    return -1;
 }
 
 /*
- * acpi_parse -- parse ACPI from EBDA or main BIOS area
+ * acpi_load -- load and parse ACPI from EBDA or main BIOS area
  */
 int
-acpi_parse(acpi_t *acpi)
+acpi_load(acpi_t *acpi)
 {
     uint16_t ebda;
     uintptr_t ebda_addr;
@@ -572,13 +573,83 @@ acpi_parse(acpi_t *acpi)
     ebda = *(uint16_t *)BDA_EDBA;
     if ( ebda ) {
         ebda_addr = (uintptr_t)ebda << 4;
-        if ( _rsdp_search_range(acpi, ebda_addr, ebda_addr + 0x0400) ) {
-            return 1;
+        if ( _rsdp_search_range(acpi, ebda_addr, ebda_addr + 0x0400) >= 0 ) {
+            return 0;
         }
     }
 
     /* If not found in the EDBA, check main BIOS area */
     return _rsdp_search_range(acpi, 0xe0000, 0x100000);
+}
+
+/*
+ * acpi_timer_available -- check the availability of the ACPI PM timer
+ */
+int
+acpi_timer_available(acpi_t *acpi)
+{
+    if ( 0 == acpi->pm_tmr_port ) {
+        return -1;              /* Not available */
+    } else {
+        return 0;               /* Available */
+    }
+}
+
+/*
+ * Get the current ACPI timer.  Note that the caller must check the
+ * availability of the ACPI timer through the acpi_timer_available() function
+ * before calling this function.
+ */
+uint32_t
+acpi_get_timer(acpi_t *acpi)
+{
+    return inl(acpi->pm_tmr_port);
+}
+
+/*
+ * Get the timer period (wrapping)
+ */
+uint64_t
+acpi_get_timer_period(acpi_t *acpi)
+{
+    if ( acpi->pm_tmr_ext ) {
+        /* 32-bit counter */
+        return ((uint64_t)1ULL << 32);
+    } else {
+        /* 24-bit counter */
+        return (1 << 24);
+    }
+}
+
+/*
+ * Wait usec microseconds using ACPI timer.  Note that the caller must check
+ * the availability of the ACPI timer through the acpi_timer_available()
+ * function before calling this function.
+ */
+void
+acpi_busy_usleep(acpi_t *acpi, uint64_t usec)
+{
+    uint64_t clk;
+    volatile uint64_t acc;
+    volatile uint64_t cur;
+    volatile uint64_t prev;
+
+    /* usec to count */
+    clk = (ACPI_TMR_HZ * usec) / 1000000;
+
+    prev = acpi_get_timer(acpi);
+    acc = 0;
+    while ( acc < clk ) {
+        cur = acpi_get_timer(acpi);
+        if ( cur < prev ) {
+            /* Overflow */
+            acc += acpi_get_timer_period(acpi) + cur - prev;
+        } else {
+            acc += cur - prev;
+        }
+        prev = cur;
+        pause();
+    }
 }
 
 /*

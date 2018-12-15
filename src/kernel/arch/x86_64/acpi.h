@@ -49,7 +49,10 @@ typedef struct {
     uint8_t cmos_century;
 
     /* CPU domain */
-    uint32_t lapic_domain[MAX_PROCESSORS];
+    struct {
+        int valid;
+        uint32_t domain;
+    } lapic_domain[MAX_PROCESSORS];
     int num_memory_region;
     struct {
         uint64_t base;
@@ -57,6 +60,12 @@ typedef struct {
         uint32_t domain;
     } memory_domain[MAX_MEMORY_REGIONS];
 } acpi_t;
+
+int acpi_load(acpi_t *);
+int acpi_timer_available(acpi_t *);
+uint32_t acpi_get_timer(acpi_t *);
+uint64_t acpi_get_timer_period(acpi_t *);
+void acpi_busy_usleep(acpi_t *, uint64_t);
 
 #endif
 
