@@ -39,6 +39,8 @@ typedef __builtin_va_list va_list;
 #define NULL    ((void *)0)
 #endif
 
+#define HZ      100
+
 /* Defined in arch/x86_64/asm.S */
 void * kmemset(void *, int, size_t);
 int kmemcmp(void *, void *, size_t);

@@ -41,6 +41,23 @@
 #define TRAMPOLINE_VEC          0x70
 #define TRAMPOLINE_MAX_SIZE     0x1000
 
+/* GDT and IDT */
+#define GDT_ADDR                0xc0080000ULL
+#define GDT_MAX_SIZE            0x2000
+#define IDT_ADDR                0xc0082000ULL
+#define IDT_MAX_SIZE            0x2000
+
+/* GDT selectors */
+#define GDT_NR                  7
+#define GDT_NULL_SEL            (0 << 3)
+#define GDT_RING0_CODE_SEL      (1 << 3)
+#define GDT_RING0_DATA_SEL      (2 << 3)
+#define GDT_RING3_CODE32_SEL    (3 << 3)
+#define GDT_RING3_DATA32_SEL    (4 << 3)
+#define GDT_RING3_CODE64_SEL    (5 << 3)
+#define GDT_RING3_DATA64_SEL    (6 << 3)
+#define GDT_TSS_SEL_BASE        (7 << 3)
+
 /* Temporary GDT for application processors */
 #define AP_GDT_CODE64_SEL       0x08    /* Code64 selector */
 #define AP_GDT_DATA64_SEL       0x10    /* Data64 selector */
@@ -49,11 +66,17 @@
 #define AP_GDT_CODE16_SEL       0x28    /* Code16 selector */
 #define AP_GDT_DATA16_SEL       0x30    /* Data16 selector */
 
+/* # of interrupts */
+#define IDT_NR  256
+
 #define KERNEL_RELOCBASE        0xc0000000
 
 /* Machine-specific registers (MSRs) */
 #define MSR_APIC_BASE           0x1b
 #define MSR_PLATFORM_INFO       0xce
+
+/* Interrupt vectors */
+#define IV_LOC_TMR              0x40
 
 #endif
 

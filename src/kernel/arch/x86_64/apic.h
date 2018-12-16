@@ -51,6 +51,9 @@ void lapic_send_startup_ipi(uint8_t);
 void lapic_bcast_fixed_ipi(uint8_t);
 void lapic_send_fixed_ipi(int, uint8_t);
 
+void ioapic_init(void);
+void ioapic_map_intr(uint64_t, uint64_t, uint64_t);
+
 #endif
 
 /*

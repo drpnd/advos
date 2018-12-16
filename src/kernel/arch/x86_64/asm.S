@@ -25,6 +25,8 @@
 
 	.globl	kentry
 	.globl	_hlt
+	.globl	_sti
+	.globl	_cli
 	.globl	_pause
 	.globl	_kmemset
 	.globl	_kmemcmp
@@ -35,12 +37,20 @@
 	.globl	_wrmsr
 	.globl	_mfrd32
 	.globl	_mfwr32
+	.globl	_inb
+	.globl	_inw
 	.globl	_inl
+	.globl	_outb
 	.globl	_outw
+	.globl	_outl
+	.globl	_lgdt
+	.globl	_sgdt
+	.globl	_lidt
+	.globl	_sidt
 	.globl	_intr_null
+	.globl	_intr_irq1
 	.globl	_intr_crash
-
-	.set	APIC_EOI,0x0b0
+	.globl	_asm_ioapic_map_intr
 
 	/* Code segment */
 	.text
@@ -57,6 +67,16 @@ kentry:
 /* void hlt(void) */
 _hlt:
 	hlt
+	ret
+
+/* void hlt(void) */
+_sti:
+	sti
+	ret
+
+/* void cli(void) */
+_cli:
+	cli
 	ret
 
 /* void pause(void) */
@@ -149,11 +169,32 @@ _mfwr32:
 	movl	%esi,(%rdi)
 	ret
 
+/* uint8_t inb(uint16_t port) */
+_inb:
+	movw	%di,%dx
+	xorq	%rax,%rax
+	inb	%dx,%al
+	ret
+
+/* uint16_t inw(uint16_t port) */
+_inw:
+	movw	%di,%dx
+	xorq	%rax,%rax
+	inw	%dx,%ax
+	ret
+
 /* uint32_t inl(uint16_t port) */
 _inl:
 	movw	%di,%dx
 	xorq	%rax,%rax
 	inl	%dx,%eax
+	ret
+
+/* void outb(uint16_t port, uint8_t value) */
+_outb:
+	movw	%di,%dx
+	movb	%sil,%al
+	outb	%al,%dx
 	ret
 
 /* void outw(uint16_t port, uint16_t value) */
@@ -163,12 +204,70 @@ _outw:
 	outw	%ax,%dx
 	ret
 
+/* void outl(uint16_t port, uint32_t value) */
+_outl:
+	movw	%di,%dx
+	movl	%esi,%eax
+	outl	%eax,%dx
+	ret
+
+/* void lgdt(void *gdtr, uint64_t selector) */
+_lgdt:
+	lgdt	(%rdi)
+	/* Reload GDT */
+	pushq	%rsi
+	movabs	$1f,%rax
+	pushq	%rax	/* Just to do ret */
+	lretq
+1:
+	/* Set data selector */
+	movq	%rsi,%rax
+	addq	$8,%rax
+	movq	%rax,%ds
+	movq	%rax,%es
+	movq	%rax,%ss
+	ret
+
+/* void sgdt(void *gdtr) */
+_sgdt:
+	sgdt	(%rdi)
+	ret
+
+/* void lidt(void *idtr) */
+_lidt:
+	lidt	(%rdi)
+	ret
+
+/* void sidt(void *idtr) */
+_sidt:
+	sidt	(%rdi)
+	ret
+
+/* void lldt(uint16_t) */
+_lldt:
+	lldt	%di
+	ret
+
 /* Null interrupt handler (do nothing) */
 _intr_null:
 	iretq
+
+/* Interrupt handler for IRQ1 */
+_intr_irq1:
 	pushq	%rax
 	pushq	%rcx
 	pushq	%rdx
+	/* Print the key to the bottom right */
+	xorl	%eax,%eax
+	inb	$0x60,%al
+	testb	$0x80,%al
+	jnz	1f		/* Key released */
+	movl	$keymap_base,%edx	/* Use base keymap */
+	addl	%eax,%edx
+	movb	(%edx),%al
+	movb	$0x07,%ah
+	movw	%ax,(0xb8000+80*25*2-2)
+1:
 	/* APIC EOI */
 	movq	$MSR_APIC_BASE,%rcx
 	rdmsr			/* Read APIC info to [%edx:%eax]; N.B., higer */
@@ -177,8 +276,8 @@ _intr_null:
 				/*  [10]: EXTD, and [8]:BSP */
 	shlq	$32,%rdx
 	addq	%rax,%rdx
-	andq	$0xfffffffffffff000,%rdx	/* APIC Base */
-	movl	$0,APIC_EOI(%rdx)	/* EOI */
+	andq	$0xfffffffffffff000,%rdx        /* APIC Base */
+	movl	$0,0x0b0(%rdx)       /* EOI */
 	popq	%rdx
 	popq	%rcx
 	popq	%rax
@@ -189,3 +288,12 @@ _intr_crash:
 1:
 	hlt
 	jmp	1b
+
+	/* Data section */
+	.data
+
+keymap_base:
+	.ascii	"  1234567890-=  qwertyuiop[]  as"
+	.ascii	"dfghjkl;'` \\zxcvbnm,./          "
+	.ascii	"                                "
+	.ascii	"                                "

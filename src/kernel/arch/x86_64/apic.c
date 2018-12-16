@@ -157,6 +157,50 @@ lapic_send_fixed_ipi(int dst, uint8_t vector)
 }
 
 /*
+ * ioapic_init -- initialize I/O APIC
+ */
+void
+ioapic_init(void)
+{
+    /* Ensure to disable i8259 PIC */
+    outb(0xa1, 0xff);
+    outb(0x21, 0xff);
+}
+
+/*
+ * ioapic_map_intr -- set a map entry of interrupt vector
+ */
+void
+ioapic_map_intr(uint64_t intvec, uint64_t tbldst, uint64_t ioapic_base)
+{
+    uint64_t val;
+
+    /*
+     * 63:56    destination field
+     * 16       interrupt mask (1: masked for edge sensitive)
+     * 15       trigger mode (1=level sensitive, 0=edge sensitive)
+     * 14       remote IRR (R/O) (1 if local APICs accept the level interrupts)
+     * 13       interrupt input pin polarity (0=high active, 1=low active)
+     * 12       delivery status (R/O)
+     * 11       destination mode (0=physical, 1=logical)
+     * 10:8     delivery mode
+     *          000 fixed, 001 lowest priority, 010 SMI, 011 reserved
+     *          100 NMI, 101 INIT, 110 reserved, 111 ExtINT
+     * 7:0      interrupt vector
+     */
+    val = intvec;
+
+    sfence();
+    *(uint32_t *)(ioapic_base + 0x00) = tbldst * 2 + 0x10;
+    sfence();
+    *(uint32_t *)(ioapic_base + 0x10) = (uint32_t)val;
+    sfence();
+    *(uint32_t *)(ioapic_base + 0x00) = tbldst * 2 + 0x10 + 1;
+    sfence();
+    *(uint32_t *)(ioapic_base + 0x10) = (uint32_t)(val >> 32);
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4

@@ -26,6 +26,8 @@
 #include "kvar.h"
 #include "acpi.h"
 #include "apic.h"
+#include "desc.h"
+#include "i8254.h"
 #include "const.h"
 #include "../../kernel.h"
 #include "../../memory.h"
@@ -187,7 +189,7 @@ setup_kernel_pgt(void)
     /* 3-4 GiB (first 2 MiB) */
     e = (uint64_t *)(base + 0x3000);
     *(e + 0) = (0x00000000ULL) | 0x83;
-    for ( i = 503; i < 512; i++ ) {
+    for ( i = 502; i < 512; i++ ) {
         *(e + i) = (0xc0000000ULL + 0x200000ULL * i) | 0x83;
     }
     /* 4-5 GiB (first 64 MiB) */
@@ -270,9 +272,22 @@ bsp_start(void)
     acpi_t *acpi;
     int ret;
     size_t sz;
+    struct gdtr *gdtr;
+    struct idtr *idtr;
 
     /* Setup and enable the kernel page table */
     setup_kernel_pgt();
+
+    /* Initialize global descriptor table (GDT) */
+    gdtr = gdt_init();
+    lgdt(gdtr, GDT_RING0_CODE_SEL);
+
+    /* Initialize interrupt descriptor table (IDT)  */
+    idtr = idt_init();
+    lidt(idtr);
+
+    /* Ensure the i8254 timer is stopped */
+    i8254_stop_timer();
 
     /* Check the size of the data structure first */
     if ( sizeof(phys_memory_t) > MEMORY_PAGESIZE ) {
@@ -321,12 +336,19 @@ bsp_start(void)
     /* Wait 200 us */
     acpi_busy_usleep(acpi, 200);
 
+    /* Initialiez I/O APIC */
+    ioapic_init();
+    ioapic_map_intr(0x21, 1, acpi->ioapic_base);
+
+    /* Test interrupt */
+    idt_setup_intr_gate(0x21, intr_irq1);
+
     /* Messaging region */
     base = (uint16_t *)0xb8000;
     print_str(base, "Welcome to advos (64-bit)!");
     base += 80;
 
-    print_hex(base, acpi->apic_address, 8);
+    print_hex(base, acpi->ioapic_base, 8);
     base += 80;
 
     /* Print CPU domain */
@@ -350,9 +372,6 @@ bsp_start(void)
         base += 80;
     }
 
-    /* Wait 5 seconds */
-    acpi_busy_usleep(acpi, 5000000);
-
     print_str(base, "----------");
     base += 80;
 
@@ -374,6 +393,9 @@ bsp_start(void)
         base += 80;
         ent++;
     }
+
+    /* Enable interrupt */
+    sti();
 
     /* Sleep forever */
     for ( ;; ) {
