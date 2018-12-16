@@ -34,9 +34,9 @@ then
     exit 1
 fi
 
-if [ $kernel_size -ge 16384 ];
+if [ $kernel_size -ge 32768 ];
 then
-    echo "Error: $kernel is too large (must be <= 16384 bytes)" >& 2
+    echo "Error: $kernel is too large (must be <= 32768 bytes)" >& 2
     exit 1
 fi
 
