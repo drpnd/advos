@@ -42,9 +42,9 @@
 #define TRAMPOLINE_MAX_SIZE     0x1000
 
 /* GDT and IDT */
-#define GDT_ADDR                0xc0080000ULL
+#define GDT_ADDR                0xc0074000ULL
 #define GDT_MAX_SIZE            0x2000
-#define IDT_ADDR                0xc0082000ULL
+#define IDT_ADDR                0xc0076000ULL
 #define IDT_MAX_SIZE            0x2000
 
 /* GDT selectors */
