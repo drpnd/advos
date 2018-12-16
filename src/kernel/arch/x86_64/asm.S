@@ -21,6 +21,8 @@
  * SOFTWARE.
  */
 
+#include "const.h"
+
 	.globl	kentry
 	.globl	_hlt
 	.globl	_pause
@@ -35,6 +37,10 @@
 	.globl	_mfwr32
 	.globl	_inl
 	.globl	_outw
+	.globl	_intr_null
+	.globl	_intr_crash
+
+	.set	APIC_EOI,0x0b0
 
 	/* Code segment */
 	.text
@@ -157,3 +163,29 @@ _outw:
 	outw	%ax,%dx
 	ret
 
+/* Null interrupt handler (do nothing) */
+_intr_null:
+	iretq
+	pushq	%rax
+	pushq	%rcx
+	pushq	%rdx
+	/* APIC EOI */
+	movq	$MSR_APIC_BASE,%rcx
+	rdmsr			/* Read APIC info to [%edx:%eax]; N.B., higer */
+				/*  32 bits of %rax and %rdx are cleared */
+				/*  bit [35:12]: APIC Base, [11]: EN */
+				/*  [10]: EXTD, and [8]:BSP */
+	shlq	$32,%rdx
+	addq	%rax,%rdx
+	andq	$0xfffffffffffff000,%rdx	/* APIC Base */
+	movl	$0,APIC_EOI(%rdx)	/* EOI */
+	popq	%rdx
+	popq	%rcx
+	popq	%rax
+	iretq
+
+/* Crash interrupt (hang here) */
+_intr_crash:
+1:
+	hlt
+	jmp	1b
