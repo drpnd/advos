@@ -60,6 +60,29 @@ gdt_setup_desc(struct gdt_desc *e, uint32_t base, uint32_t limit, uint8_t type,
 }
 
 /*
+ * Setup global descriptor table for TSS
+ */
+static void
+gdt_setup_desc_tss(struct gdt_desc_tss *e, uint64_t base, uint32_t limit,
+                   uint8_t type, uint8_t dpl, uint8_t g)
+{
+    limit &= 0xfffff;
+    type &= 0xf;
+
+    /* g => *4KiB */
+    e->w0 = limit & 0xffff;
+    e->w1 = base & 0xffff;
+    e->w2 = ((base >> 16) & 0xff) | ((uint64_t)type << 8)
+        | ((uint64_t)dpl << 13) | ((uint64_t)1 << 15);
+    e->w3 = ((limit >> 16) & 0xf) | ((uint64_t)g << 7)
+        | (((base >> 24) & 0xff) << 8);
+    e->w4 = base >> 32;
+    e->w5 = base >> 40;
+    e->w6 = 0;
+    e->w7 = 0;
+}
+
+/*
  * Initialize global descriptor table
  */
 struct gdtr *
@@ -67,6 +90,7 @@ gdt_init(void)
 {
     uint64_t sz;
     struct gdt_desc *gdt;
+    struct gdt_desc_tss *tss;
     struct gdtr *gdtr;
     uint8_t code;
     uint8_t data;
@@ -90,6 +114,11 @@ gdt_init(void)
     gdt_setup_desc(&gdt[4], 0, 0xfffff, data, 3, 0, 1, 1); /* Ring 3 data */
     gdt_setup_desc(&gdt[5], 0, 0xfffff, code, 3, 1, 0, 1); /* Ring 3 code */
     gdt_setup_desc(&gdt[6], 0, 0xfffff, data, 3, 1, 0, 1); /* Ring 3 data */
+
+    /* TSS */
+    tss = (struct gdt_desc_tss *)(GDT_ADDR + GDT_TSS_SEL_BASE);
+    gdt_setup_desc_tss(&tss[0], 0x00078000, sizeof(struct tss) - 1,
+                       TSS_INACTIVE, 0, 0);
 
     /* Set the GDT base address and the table size */
     gdtr->base = (uint64_t)gdt;
@@ -161,6 +190,56 @@ idt_init(void)
     idtr->size = IDT_NR * sizeof(struct idt_gate_desc) - 1;
 
     return idtr;
+}
+
+/*
+ * Initialize all TSS
+ */
+void
+tss_init(void)
+{
+    struct tss *tss;
+
+    tss = (struct tss *)0x00078000;
+    tss->reserved1 = 0;
+    tss->rsp0l = 0;
+    tss->rsp0h = 0;
+    tss->rsp1l = 0;
+    tss->rsp1h = 0;
+    tss->rsp2l = 0;
+    tss->rsp2h = 0;
+    tss->reserved2 = 0;
+    tss->reserved3 = 0;
+    tss->ist1l = 0;
+    tss->ist1h = 0;
+    tss->ist2l = 0;
+    tss->ist2h = 0;
+    tss->ist3l = 0;
+    tss->ist3h = 0;
+    tss->ist4l = 0;
+    tss->ist4h = 0;
+    tss->ist5l = 0;
+    tss->ist5h = 0;
+    tss->ist6l = 0;
+    tss->ist6h = 0;
+    tss->ist7l = 0;
+    tss->ist7h = 0;
+    tss->reserved4 = 0;
+    tss->reserved5 = 0;
+    tss->reserved6 = 0;
+    tss->iomap = 0;
+}
+
+/*
+ * Load task register for nr-th processor
+ */
+void
+tr_load(int nr)
+{
+    int tr;
+
+    tr = GDT_TSS_SEL_BASE + nr * sizeof(struct gdt_desc_tss);
+    ltr(tr);
 }
 
 /*

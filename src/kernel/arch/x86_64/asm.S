@@ -47,7 +47,11 @@
 	.globl	_sgdt
 	.globl	_lidt
 	.globl	_sidt
+	.globl	_lldt
+	.globl	_ltr
+	.globl	_chcs
 	.globl	_intr_null
+	.globl	_intr_gpf
 	.globl	_intr_irq1
 	.globl	_intr_crash
 	.globl	_asm_ioapic_map_intr
@@ -248,8 +252,73 @@ _lldt:
 	lldt	%di
 	ret
 
+/* void ltr(uint16_t) */
+_ltr:
+	ltr	%di
+	ret
+
+/* void chcs(uint64_t selector) */
+_chcs:
+	/* Setup SP0 in TSS */
+	movq	$0x00010000,%rax
+	movq	$0x00078000,%rdx
+	movq	%rax,TSS_SP0(%rdx)
+	/* Prepare stack for iretq */
+	movq	%rsp,%rdx
+	movq	%rdi,%rax
+	addq	$8,%rax
+	pushq	%rax
+	pushq	%rdx
+	movq	$0x202,%rax
+	pushq	%rax
+	pushq	%rdi
+	movabs	$1f,%rax
+	pushq	%rax
+	iretq
+1:
+	ret
+
 /* Null interrupt handler (do nothing) */
 _intr_null:
+	iretq
+
+/* General protection fault */
+_intr_gpf:
+	/* Save registers*/
+	pushq	%rbp
+	movq	%rsp,%rbp
+	pushq	%rax
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%rdx
+	pushq	%rcx
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	pushq	%rbx
+	/* Call isr_exception_werror() */
+	movq	$13,%rdi
+	movq	8(%rbp),%rsi	/* error code */
+	movq	16(%rbp),%rdx	/* rip */
+	movq	24(%rbp),%rcx	/* cs */
+	movq	32(%rbp),%r8	/* rflags */
+	movq	40(%rbp),%r9	/* rsp */
+	/* 48(%rbp): ss */
+	call	_isr_exception_werror
+	/* Restore registers */
+	popq	%rbx
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rcx
+	popq	%rdx
+	popq	%rsi
+	popq	%rdi
+	popq	%rax
+	popq	%rbp
+	addq	$0x8,%rsp
 	iretq
 
 /* Interrupt handler for IRQ1 */
@@ -291,6 +360,8 @@ _intr_crash:
 
 	/* Data section */
 	.data
+
+/* Restart */
 
 keymap_base:
 	.ascii	"  1234567890-=  qwertyuiop[]  as"

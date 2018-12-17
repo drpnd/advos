@@ -27,6 +27,39 @@
 #include <stdint.h>
 #include "const.h"
 
+/*
+ * TSS
+ */
+struct tss {
+    uint32_t reserved1;
+    uint32_t rsp0l;
+    uint32_t rsp0h;
+    uint32_t rsp1l;
+    uint32_t rsp1h;
+    uint32_t rsp2l;
+    uint32_t rsp2h;
+    uint32_t reserved2;
+    uint32_t reserved3;
+    uint32_t ist1l;
+    uint32_t ist1h;
+    uint32_t ist2l;
+    uint32_t ist2h;
+    uint32_t ist3l;
+    uint32_t ist3h;
+    uint32_t ist4l;
+    uint32_t ist4h;
+    uint32_t ist5l;
+    uint32_t ist5h;
+    uint32_t ist6l;
+    uint32_t ist6h;
+    uint32_t ist7l;
+    uint32_t ist7h;
+    uint32_t reserved4;
+    uint32_t reserved5;
+    uint16_t reserved6;
+    uint16_t iomap;
+} __attribute__ ((packed));
+
 #define sfence()        __asm__ __volatile__ ("sfence")
 
 void sti(void);
@@ -48,11 +81,14 @@ void sgdt(void *);
 void lidt(void *);
 void sidt(void *);
 void lldt(uint16_t);
+void ltr(uint16_t);
+void chcs(uint64_t);
 void hlt(void);
 void pause(void);
 
 /* Interrupt handlers */
 void intr_null(void);
+void intr_gpf(void);
 void intr_irq1(void);
 void intr_crash(void);
 

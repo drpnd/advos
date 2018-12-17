@@ -109,6 +109,7 @@ struct idtr * idt_init(void);
 void idt_setup_intr_gate(int, void *);
 void idt_setup_trap_gate(int, void *);
 void tss_init(void);
+void tr_load(int);
 
 #endif
 

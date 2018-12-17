@@ -184,11 +184,11 @@ setup_kernel_pgt(void)
     /* 0-1 GiB */
     e = (uint64_t *)(base + 0x2000);
     for ( i = 0; i < 512; i++ ) {
-        *(e + i) = (0x00200000 * i) | 0x83;
+        *(e + i) = (0x00200000 * i) | 0x83 | 4; /* Allow user */
     }
     /* 3-4 GiB (first 2 MiB) */
     e = (uint64_t *)(base + 0x3000);
-    *(e + 0) = (0x00000000ULL) | 0x83;
+    *(e + 0) = (0x00000000ULL) | 0x83 | 4; /* Allow user */
     for ( i = 502; i < 512; i++ ) {
         *(e + i) = (0xc0000000ULL + 0x200000ULL * i) | 0x83;
     }
@@ -257,6 +257,21 @@ panic(const char *s)
 }
 
 /*
+ * Error handler with error code
+ */
+void
+isr_exception_werror(uint32_t vec, uint64_t error, uint64_t rip, uint64_t cs,
+                     uint64_t rflags, uint64_t rsp)
+{
+    char buf[4096];
+
+    ksnprintf(buf, sizeof(buf), "Exception: vec=%llx, error=%llx, rip=%llx, "
+              "cs=%llx, rflags=%llx, rsp=%llx", vec, error, rip, cs, rflags,
+              rsp);
+    panic(buf);
+}
+
+/*
  * Entry point for C code
  */
 void
@@ -285,6 +300,13 @@ bsp_start(void)
     /* Initialize interrupt descriptor table (IDT)  */
     idtr = idt_init();
     lidt(idtr);
+
+    /* Load LDT */
+    lldt(0);
+
+    /* Initialize TSS and load BSP's task register */
+    tss_init();
+    tr_load(0);
 
     /* Ensure the i8254 timer is stopped */
     i8254_stop_timer();
@@ -341,6 +363,7 @@ bsp_start(void)
     ioapic_map_intr(0x21, 1, acpi->ioapic_base);
 
     /* Test interrupt */
+    idt_setup_trap_gate(13, intr_gpf);
     idt_setup_intr_gate(0x21, intr_irq1);
 
     /* Messaging region */
@@ -396,6 +419,13 @@ bsp_start(void)
 
     /* Enable interrupt */
     sti();
+
+    /* Test ring 3 after 3 seconds */
+    acpi_busy_usleep(acpi, 3000000);
+    chcs(GDT_RING3_CODE64_SEL + 3);
+    print_str(base, "Testing ring 3, and cause #GP");
+    __asm__ __volatile__ ("movq %cr0,%rax");
+    __asm__ __volatile__ ("1: jmp 1b");
 
     /* Sleep forever */
     for ( ;; ) {
