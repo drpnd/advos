@@ -33,7 +33,10 @@
 #include "../../memory.h"
 #include <stdint.h>
 
+#define P2V_OFFSET      0x100000000ULL
+
 #define set_cr3(cr3)    __asm__ __volatile__ ("movq %%rax,%%cr3" :: "a"((cr3)))
+#define invlpg(addr)    __asm__ __volatile__ ("invlpg (%%rax)" :: "a"((addr)))
 
 /* For trampoline code */
 void trampoline(void);
@@ -202,6 +205,86 @@ setup_kernel_pgt(void)
 }
 
 /*
+ * Initialize the linear page table
+ */
+static int
+_init_linear_pgt(phys_memory_t *mem, int nr, memory_sysmap_entry_t *map)
+{
+    int i;
+    uintptr_t addr;
+    uintptr_t maxaddr;
+    int npg;
+    int npdpt;
+    int npml;
+    int n;;
+    int order;
+    uint64_t base;
+    uint64_t *arr;
+    uint64_t *e;
+
+    /* Get the maximum address of the system memory */
+    maxaddr = 0;
+    for ( i = 0; i < nr; i++ ) {
+        addr = map[i].base + map[i].len;
+        if ( addr > maxaddr ) {
+            maxaddr = addr;
+        }
+    }
+
+    /* # of 2 MiB pages, PDPT entries */
+    maxaddr += mem->p2v;
+    npg = ((maxaddr + 0x1fffff) >> 21);
+    npdpt = ((npg + 511) / 512);
+    npml = ((npdpt + 511) / 512);
+    n = (npdpt - 5) + (npml - 1) - 1;
+    order = 0;
+    while ( n ) {
+        n >>= 1;
+        order++;
+    }
+
+    /* Allocate memory for the page table from the kernel zone */
+    arr = phys_mem_buddy_alloc(mem->czones[MEMORY_ZONE_KERNEL].heads, order);
+    if ( NULL == arr ) {
+        return -1;
+    }
+
+    /* Modify the kernel base page table */
+    base = 0x00069000ULL;
+    e = (uint64_t *)base;
+    /* PML4 */
+    for ( i = 1; i < npml; i++ ) {
+        addr = (uintptr_t)arr[i - 1] - mem->p2v;
+        *(e + i) = addr | 0x007;
+    }
+    /* PDPT */
+    e = (uint64_t *)(base + 0x1000);
+    for ( i = 5; i < 512 && i < npdpt; i++ ) {
+        addr = (uintptr_t)arr[npml - 1 + i - 5] - mem->p2v;
+        *(e + i) = addr | 0x007;
+    }
+    for ( i = 512; i < npdpt; i++ ) {
+        e = (uint64_t *)arr[i / 512 - 1];
+        addr = (uintptr_t)arr[npml - 1 + i - 5] - mem->p2v;
+        *(e + i % 512) = addr | 0x007;
+    }
+    /* PD */
+    e = (uint64_t *)(base + 0x4000);
+    for ( i = 32; i < 512 && i < npg; i++ ) {
+        addr = (uintptr_t)arr[npml - 1 + i - 5] - mem->p2v;
+        *(e + i) = (0x00200000ULL * i) | 0x083;
+        invlpg((0x00200000ULL * i + mem->p2v));
+    }
+    for ( i = 512; i < npg; i++ ) {
+        e = (uint64_t *)arr[npml - 1 + i / 512];
+        *(e + i % 512) = (0x00200000ULL * i) | 0x083;
+        invlpg((0x00200000ULL * i + mem->p2v));
+    }
+
+    return 0;
+}
+
+/*
  * panic -- print an error message and stop everything
  * damn blue screen, lovely green screen
  */
@@ -272,6 +355,104 @@ isr_exception_werror(uint32_t vec, uint64_t error, uint64_t rip, uint64_t cs,
 }
 
 /*
+ * Add a region to buddy system
+ */
+static void
+_add_region_to_numa_zones(phys_memory_t *mem, acpi_t *acpi, uintptr_t base,
+                          uintptr_t next)
+{
+    int i;
+    uintptr_t s;
+    uintptr_t t;
+    int dom;
+
+    for ( i = 0; i < acpi->num_memory_region; i++ ) {
+        s = acpi->memory_domain[i].base;
+        t = s + acpi->memory_domain[i].length;
+        dom = acpi->memory_domain[i].domain;
+        if ( base >= s && next <= t ) {
+            /* Within the domain, then add this region to the buddy system */
+            phys_mem_buddy_add_region(mem->numazones[dom].heads,
+                                      base + mem->p2v, next + mem->p2v);
+        } else if ( base >= s ) {
+            /* s <= base <= t < next */
+            phys_mem_buddy_add_region(mem->numazones[dom].heads,
+                                      base + mem->p2v, t + mem->p2v);
+        } else if ( next <= t ) {
+            /* base < s < next <= t */
+            phys_mem_buddy_add_region(mem->numazones[dom].heads,
+                                      s + mem->p2v, next + mem->p2v);
+        }
+
+    }
+}
+
+/*
+ * Initialize NUMA-aware zones
+ */
+static int
+_init_numa_zones(phys_memory_t *mem, acpi_t *acpi, int nr,
+                 memory_sysmap_entry_t *map)
+{
+    int i;
+    uint32_t max_domain;
+    size_t sz;
+    phys_memory_zone_t *zones;
+    int order;
+    uintptr_t base;
+    uintptr_t next;
+
+    /* Get the maximum domain number */
+    max_domain = 0;
+    for ( i = 0; i < acpi->num_memory_region; i++ ) {
+        if ( acpi->memory_domain[i].domain > max_domain ) {
+            max_domain = acpi->memory_domain[i].domain;
+        }
+    }
+
+    /* Allocate for the NUMA-aware zones */
+    sz = sizeof(phys_memory_zone_t) * (max_domain + 1);
+    sz = (sz - 1) >> MEMORY_PAGESIZE_SHIFT;
+    order = 0;
+    while ( sz ) {
+        sz >>= 1;
+        order++;
+    }
+    zones = phys_mem_buddy_alloc(mem->czones[MEMORY_ZONE_KERNEL].heads, order);
+    if ( NULL == zones ) {
+        return -1;
+    }
+    kmemset(zones, 0, sizeof(1 << (order + MEMORY_PAGESIZE_SHIFT)));
+    mem->numazones = zones;
+    mem->max_domain = max_domain;
+
+    for ( i = 0; i < nr; i++ ) {
+        /* Base address and the address of the next block (base + length) */
+        base = map[i].base;
+        next = base + map[i].len;
+
+        /* Ignore Kernel zone */
+        if ( base < MEMORY_ZONE_NUMA_AWARE_LB ) {
+            base = MEMORY_ZONE_NUMA_AWARE_LB;
+        }
+        if ( next < MEMORY_ZONE_NUMA_AWARE_LB ) {
+            next = MEMORY_ZONE_NUMA_AWARE_LB;
+        }
+
+        /* Round up for 4 KiB page alignment */
+        base = (base + (MEMORY_PAGESIZE - 1)) & ~(MEMORY_PAGESIZE - 1);
+        next = next & ~(MEMORY_PAGESIZE - 1);
+
+        if ( base != next ) {
+            /* Add this region to the buddy system */
+            _add_region_to_numa_zones(mem, acpi, base, next);
+        }
+    }
+
+    return 0;
+}
+
+/*
  * Entry point for C code
  */
 void
@@ -321,16 +502,35 @@ bsp_start(void)
     nr = *(uint16_t *)BI_MM_NENT_ADDR;
     mem = KVAR_PHYSMEM;
     phys_memory_init(mem, nr, (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR,
-                     0x100000000ULL);
+                     P2V_OFFSET);
     if ( sizeof(acpi_t) > MEMORY_PAGESIZE * 4 ) {
         panic("The size of acpi_t exceeds the expected size.");
     }
+
+    /* Allocate memory for ACPI parser */
     acpi = phys_mem_buddy_alloc(mem->czones[MEMORY_ZONE_KERNEL].heads, 2);
+    if ( NULL == acpi ) {
+        panic("Memory allocation failed for acpi_t.");
+    }
 
     /* Load ACPI information */
     ret = acpi_load(acpi);
     if ( ret < 0 ) {
         panic("Failed to load ACPI configuration.");
+    }
+
+    /* Linear mapping */
+    ret = _init_linear_pgt(mem, nr, (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR);
+    if ( ret < 0 ) {
+        panic("Failed to setup linear mapping page table.");
+    }
+
+
+    /* Initialize the NUMA-aware zones */
+    ret = _init_numa_zones(mem, acpi, nr,
+                           (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR);
+    if ( ret < 0 ) {
+        panic("Failed to initialize the NUMA-aware zones.");
     }
 
     /* Load trampoline code */
@@ -419,13 +619,6 @@ bsp_start(void)
 
     /* Enable interrupt */
     sti();
-
-    /* Test ring 3 after 3 seconds */
-    acpi_busy_usleep(acpi, 3000000);
-    chcs(GDT_RING3_CODE64_SEL + 3);
-    print_str(base, "Testing ring 3, and cause #GP");
-    __asm__ __volatile__ ("movq %cr0,%rax");
-    __asm__ __volatile__ ("1: jmp 1b");
 
     /* Sleep forever */
     for ( ;; ) {

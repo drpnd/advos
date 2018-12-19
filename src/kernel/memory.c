@@ -322,8 +322,7 @@ phys_memory_init(phys_memory_t *mem, int nr, memory_sysmap_entry_t *map,
     }
 
     /* Set the p2v offset */
-    mem->czones[MEMORY_ZONE_DMA].p2v = p2v;
-    mem->czones[MEMORY_ZONE_KERNEL].p2v = p2v;
+    mem->p2v = p2v;
 
     /* Mark that DMA and kernel zones are initialized */
     mem->czones[MEMORY_ZONE_DMA].valid = 1;
@@ -331,8 +330,6 @@ phys_memory_init(phys_memory_t *mem, int nr, memory_sysmap_entry_t *map,
 
     return 0;
 }
-
-
 
 /*
  * Local variables:

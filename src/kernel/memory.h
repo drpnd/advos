@@ -56,9 +56,6 @@ typedef struct {
     /* Flag to note the zone is initialized or not */
     int valid;
 
-    /* Offset to calculate virtual address from physical address */
-    uintptr_t p2v;
-
     /* Head pointers to page blocks at each order of buddy system */
     phys_memory_buddy_page_t *heads[MEMORY_PHYS_BUDDY_ORDER + 1];
 } phys_memory_zone_t;
@@ -67,8 +64,15 @@ typedef struct {
  * Physical memory management
  */
 typedef struct {
+    /* Offset to calculate virtual address from physical address */
+    uintptr_t p2v;
+
     /* Core zones */
     phys_memory_zone_t czones[MEMORY_ZONE_CORE_NUM];
+
+    /* NUMA zones */
+    int max_domain;
+    phys_memory_zone_t *numazones;
 } phys_memory_t;
 
 /*
@@ -81,6 +85,8 @@ typedef struct {
     uint32_t attr;
 } __attribute__ ((packed)) memory_sysmap_entry_t;
 
+void
+phys_mem_buddy_add_region(phys_memory_buddy_page_t **, uintptr_t, uintptr_t);
 void * phys_mem_buddy_alloc(phys_memory_buddy_page_t **, int);
 void phys_mem_buddy_free(phys_memory_buddy_page_t **, void *, int);
 int phys_memory_init(phys_memory_t *, int, memory_sysmap_entry_t *, uint64_t);
