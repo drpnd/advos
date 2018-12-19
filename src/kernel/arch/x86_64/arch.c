@@ -571,7 +571,14 @@ bsp_start(void)
     print_str(base, "Welcome to advos (64-bit)!");
     base += 80;
 
-    print_hex(base, acpi->ioapic_base, 8);
+    /* Testing memory allocator */
+    void *ptr;
+    ptr = phys_mem_buddy_alloc(mem->numazones[1].heads, 1);
+    print_hex(base, (uintptr_t)ptr, 8);
+    base += 80;
+    phys_mem_buddy_free(mem->numazones[1].heads, ptr, 1);
+    ptr = phys_mem_buddy_alloc(mem->numazones[1].heads, 1);
+    print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
 
     /* Print CPU domain */
