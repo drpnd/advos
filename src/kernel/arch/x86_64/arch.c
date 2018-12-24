@@ -467,7 +467,6 @@ bsp_start(void)
     size_t sz;
     struct gdtr *gdtr;
     struct idtr *idtr;
-    void *pages;
 
     /* Kernel variables */
     kvar = KVAR;
