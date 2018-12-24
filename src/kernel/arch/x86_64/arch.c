@@ -324,6 +324,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     uintptr_t maxaddr;
     size_t npg;
     void *pages;
+    int ret;
 
     /* Get the maximum address of the system memory */
     maxaddr = 0;
@@ -351,31 +352,39 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
 
     /* 0-1 GiB */
     for ( i = 0; i < 512; i++ ) {
-        pgt_map(&kvar->pgt, i * MEMORY_SUPERPAGESIZE, i * MEMORY_SUPERPAGESIZE,
-                1, 0, 1, 0);
+        ret = pgt_map(&kvar->pgt, i * MEMORY_SUPERPAGESIZE,
+                      i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+        if ( ret < 0 ) {
+            return -1;
+        }
     }
     /* 3-4 GiB (first 2 and the tail MiB) */
     for ( i = 0; i < 1; i++ ) {
-        pgt_map(&kvar->pgt,
-                (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
-                i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+        ret = pgt_map(&kvar->pgt,
+                      (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
+                      i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+        if ( ret < 0 ) {
+            return -1;
+        }
     }
     for ( i = 502; i < 512; i++ ) {
-        pgt_map(&kvar->pgt,
-                (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
-                (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
-                1, 0, 1, 0);
-    }
-    /* 4-5 GiB (first 64 MiB) */
-    for ( i = 0; i < 32; i++ ) {
-        pgt_map(&kvar->pgt, (uintptr_t)KERNEL_LMAP + i * MEMORY_SUPERPAGESIZE,
-                i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+        ret = pgt_map(&kvar->pgt,
+                      (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
+                      (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
+                      1, 0, 1, 0);
+        if ( ret < 0 ) {
+            return -1;
+        }
     }
 
     /* Linear mapping */
     for ( i = 0; i < npg; i++ ) {
-        pgt_map(&kvar->pgt, (uintptr_t)KERNEL_LMAP + i * MEMORY_SUPERPAGESIZE,
-                i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+        ret = pgt_map(&kvar->pgt,
+                      (uintptr_t)KERNEL_LMAP + i * MEMORY_SUPERPAGESIZE,
+                      i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+        if ( ret < 0 ) {
+            return -1;
+        }
     }
 
     /* Activate the page table */
