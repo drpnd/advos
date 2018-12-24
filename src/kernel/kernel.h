@@ -41,6 +41,18 @@ typedef __builtin_va_list va_list;
 
 #define HZ      100
 
+/* Defined in arch/<architecture>/arch.c */
+void panic(const char *);
+
+#define kassert(cond)        do {                                       \
+        char buf[4096];                                                 \
+        if ( !(cond) ) {                                                \
+            ksnprintf(buf, 4096, "Assertion failed. %s:%d",             \
+                      __FILE__, __LINE__);                              \
+            panic(buf);                                                 \
+        }                                                               \
+    } while( 0 )
+
 /* Defined in arch/x86_64/asm.S */
 void * kmemset(void *, int, size_t);
 int kmemcmp(void *, void *, size_t);

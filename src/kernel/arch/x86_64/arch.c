@@ -28,6 +28,7 @@
 #include "apic.h"
 #include "desc.h"
 #include "i8254.h"
+#include "pgt.h"
 #include "const.h"
 #include "../../kernel.h"
 #include "../../memory.h"
@@ -154,137 +155,6 @@ print_str(uint16_t *vbase, char *s)
 }
 
 /*
- * Setup the kernel page table
- */
-static void
-setup_kernel_pgt(void)
-{
-    int i;
-    uint64_t base;
-    uint64_t *pml4;
-    uint64_t *e;
-
-    /* Setup the kernel base page table */
-    base = 0x00069000ULL;
-    pml4 = (uint64_t *)base;
-
-    /* Zero (memset() may work) */
-    for ( i = 0; i < 512 * 5; i++ ) {
-        *(pml4 + i) = 0;
-    }
-    /* First 512 GiB */
-    *pml4 = (base + 0x1000) | 0x007;
-
-    /* PDPT */
-    e = (uint64_t *)(base + 0x1000);
-    /* 0-1 GiB */
-    *(e + 0) = (base + 0x2000) | 0x007;
-    /* 3-4 GiB */
-    *(e + 3) = (base + 0x3000) | 0x007;
-    /* 4-5 GiB */
-    *(e + 4) = (base + 0x4000) | 0x007;
-
-    /* 0-1 GiB */
-    e = (uint64_t *)(base + 0x2000);
-    for ( i = 0; i < 512; i++ ) {
-        *(e + i) = (0x00200000 * i) | 0x83 | 4; /* Allow user */
-    }
-    /* 3-4 GiB (first 2 MiB) */
-    e = (uint64_t *)(base + 0x3000);
-    *(e + 0) = (0x00000000ULL) | 0x83 | 4; /* Allow user */
-    for ( i = 502; i < 512; i++ ) {
-        *(e + i) = (0xc0000000ULL + 0x200000ULL * i) | 0x83;
-    }
-    /* 4-5 GiB (first 64 MiB) */
-    e = (uint64_t *)(base + 0x4000);
-    for ( i = 0; i < 32; i++ ) {
-        *(e + i) = (0x0ULL + 0x00200000 * i) | 0x83;
-    }
-
-    set_cr3(base);
-}
-
-/*
- * Initialize the linear page table
- */
-static int
-_init_linear_pgt(phys_memory_t *mem, int nr, memory_sysmap_entry_t *map)
-{
-    int i;
-    uintptr_t addr;
-    uintptr_t maxaddr;
-    int npg;
-    int npdpt;
-    int npml;
-    int n;;
-    int order;
-    uint64_t base;
-    uint64_t *arr;
-    uint64_t *e;
-
-    /* Get the maximum address of the system memory */
-    maxaddr = 0;
-    for ( i = 0; i < nr; i++ ) {
-        addr = map[i].base + map[i].len;
-        if ( addr > maxaddr ) {
-            maxaddr = addr;
-        }
-    }
-
-    /* # of 2 MiB pages, PDPT entries */
-    maxaddr += mem->p2v;
-    npg = ((maxaddr + 0x1fffff) >> 21);
-    npdpt = ((npg + 511) / 512);
-    npml = ((npdpt + 511) / 512);
-    n = (npdpt - 5) + (npml - 1) - 1;
-    order = 0;
-    while ( n ) {
-        n >>= 1;
-        order++;
-    }
-
-    /* Allocate memory for the page table from the kernel zone */
-    arr = phys_mem_buddy_alloc(mem->czones[MEMORY_ZONE_KERNEL].heads, order);
-    if ( NULL == arr ) {
-        return -1;
-    }
-
-    /* Modify the kernel base page table */
-    base = 0x00069000ULL;
-    e = (uint64_t *)base;
-    /* PML4 */
-    for ( i = 1; i < npml; i++ ) {
-        addr = (uintptr_t)arr[i - 1] - mem->p2v;
-        *(e + i) = addr | 0x007;
-    }
-    /* PDPT */
-    e = (uint64_t *)(base + 0x1000);
-    for ( i = 5; i < 512 && i < npdpt; i++ ) {
-        addr = (uintptr_t)arr[npml - 1 + i - 5] - mem->p2v;
-        *(e + i) = addr | 0x007;
-    }
-    for ( i = 512; i < npdpt; i++ ) {
-        e = (uint64_t *)arr[i / 512 - 1];
-        addr = (uintptr_t)arr[npml - 1 + i - 5] - mem->p2v;
-        *(e + i % 512) = addr | 0x007;
-    }
-    /* PD */
-    e = (uint64_t *)(base + 0x4000);
-    for ( i = 32; i < 512 && i < npg; i++ ) {
-        addr = (uintptr_t)arr[npml - 1 + i - 5] - mem->p2v;
-        *(e + i) = (0x00200000ULL * i) | 0x083;
-        invlpg((0x00200000ULL * i + mem->p2v));
-    }
-    for ( i = 512; i < npg; i++ ) {
-        e = (uint64_t *)arr[npml - 1 + i / 512];
-        *(e + i % 512) = (0x00200000ULL * i) | 0x083;
-        invlpg((0x00200000ULL * i + mem->p2v));
-    }
-
-    return 0;
-}
-
-/*
  * panic -- print an error message and stop everything
  * damn blue screen, lovely green screen
  */
@@ -388,6 +258,133 @@ _add_region_to_numa_zones(phys_memory_t *mem, acpi_t *acpi, uintptr_t base,
 }
 
 /*
+ * Setup temporary kernel page table
+ */
+static int
+_init_temporary_pgt(void)
+{
+    pgt_t tmppgt;
+    int i;
+    int ret;
+
+    /* Setup and enable the kernel page table */
+    pgt_init(&tmppgt, (void *)0x69000, 0);
+    for ( i = 1; i < 6; i++ ) {
+        pgt_push(&tmppgt, (void *)0x69000 + 4096 * i);
+    }
+    /* 0-1 GiB */
+    for ( i = 0; i < 512; i++ ) {
+        ret = pgt_map(&tmppgt, i * MEMORY_SUPERPAGESIZE,
+                      i * MEMORY_SUPERPAGESIZE,
+                      1, 0, 1, 0);
+        if ( ret < 0 ) {
+            return -1;
+        }
+    }
+    /* 3-4 GiB (first 2 and the tail MiB) */
+    for ( i = 0; i < 1; i++ ) {
+        ret = pgt_map(&tmppgt,
+                      (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
+                      i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+        if ( ret < 0 ) {
+            return -1;
+        }
+    }
+    for ( i = 502; i < 512; i++ ) {
+        ret = pgt_map(&tmppgt,
+                      (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
+                      (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
+                      1, 0, 1, 0);
+        if ( ret < 0 ) {
+            return -1;
+        }
+    }
+    /* 4-5 GiB (first 64 MiB) */
+    for ( i = 0; i < 32; i++ ) {
+        ret = pgt_map(&tmppgt,
+                      (uintptr_t)KERNEL_LMAP + i * MEMORY_SUPERPAGESIZE,
+                      i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+        if ( ret < 0 ) {
+            return -1;
+        }
+    }
+    pgt_set_cr3(&tmppgt);
+
+    return 0;
+}
+
+/*
+ * Initialize the kernel page table
+ */
+static int
+_init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
+{
+    size_t i;
+    uintptr_t addr;
+    uintptr_t maxaddr;
+    size_t npg;
+    void *pages;
+
+    /* Get the maximum address of the system memory */
+    maxaddr = 0;
+    for ( i = 0; i < nr; i++ ) {
+        addr = map[i].base + map[i].len;
+        if ( addr > maxaddr ) {
+            maxaddr = addr;
+        }
+    }
+    /* # of pages */
+    npg = ((maxaddr + 0x1fffff) >> 21);
+
+    /* Allocate 512 pages for page tables */
+    pages = phys_mem_buddy_alloc(kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
+                                 9);
+    if ( NULL == pages ) {
+        return -1;
+    }
+
+    /* Initialize the kernel page table */
+    pgt_init(&kvar->pgt, pages, KERNEL_LMAP);
+    for ( i = 1; i < (1 << 9); i++ ) {
+        pgt_push(&kvar->pgt, pages + i * 4096);
+    }
+
+    /* 0-1 GiB */
+    for ( i = 0; i < 512; i++ ) {
+        pgt_map(&kvar->pgt, i * MEMORY_SUPERPAGESIZE, i * MEMORY_SUPERPAGESIZE,
+                1, 0, 1, 0);
+    }
+    /* 3-4 GiB (first 2 and the tail MiB) */
+    for ( i = 0; i < 1; i++ ) {
+        pgt_map(&kvar->pgt,
+                (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
+                i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+    }
+    for ( i = 502; i < 512; i++ ) {
+        pgt_map(&kvar->pgt,
+                (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
+                (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
+                1, 0, 1, 0);
+    }
+    /* 4-5 GiB (first 64 MiB) */
+    for ( i = 0; i < 32; i++ ) {
+        pgt_map(&kvar->pgt, (uintptr_t)KERNEL_LMAP + i * MEMORY_SUPERPAGESIZE,
+                i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+    }
+
+    /* Linear mapping */
+    for ( i = 0; i < npg; i++ ) {
+        pgt_map(&kvar->pgt, (uintptr_t)KERNEL_LMAP + i * MEMORY_SUPERPAGESIZE,
+                i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
+    }
+
+    /* Activate the page table */
+    pgt_set_cr3(&kvar->pgt);
+
+    return 0;
+}
+
+/*
  * Initialize NUMA-aware zones
  */
 static int
@@ -464,15 +461,19 @@ bsp_start(void)
     int nr;
     int i;
     sysaddrmap_entry_t *ent;
-    phys_memory_t *mem;
+    kvar_t *kvar;
     acpi_t *acpi;
     int ret;
     size_t sz;
     struct gdtr *gdtr;
     struct idtr *idtr;
+    void *pages;
+
+    /* Kernel variables */
+    kvar = KVAR;
 
     /* Setup and enable the kernel page table */
-    setup_kernel_pgt();
+    _init_temporary_pgt();
 
     /* Initialize global descriptor table (GDT) */
     gdtr = gdt_init();
@@ -495,20 +496,25 @@ bsp_start(void)
     /* Check the size of the data structure first */
     if ( sizeof(phys_memory_t) > MEMORY_PAGESIZE ) {
         /* Must raise an error */
-        return;
+        panic("phys_memory_t exceeds the expected size.");
     }
 
-    /* Initialize the buddy system */
+    /* Initialize the buddy system for the core memory */
     nr = *(uint16_t *)BI_MM_NENT_ADDR;
-    mem = KVAR_PHYSMEM;
-    phys_memory_init(mem, nr, (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR,
+    phys_memory_init(&kvar->phys, nr, (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR,
                      P2V_OFFSET);
-    if ( sizeof(acpi_t) > MEMORY_PAGESIZE * 4 ) {
-        panic("The size of acpi_t exceeds the expected size.");
+
+    /* Initialize the kernel table */
+    ret = _init_kernel_pgt(kvar, nr, (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR);
+    if ( ret < 0 ) {
+        panic("Failed to setup linear mapping page table.");
     }
 
     /* Allocate memory for ACPI parser */
-    acpi = phys_mem_buddy_alloc(mem->czones[MEMORY_ZONE_KERNEL].heads, 2);
+    if ( sizeof(acpi_t) > MEMORY_PAGESIZE * 4 ) {
+        panic("The size of acpi_t exceeds the expected size.");
+    }
+    acpi = phys_mem_buddy_alloc(kvar->phys.czones[MEMORY_ZONE_KERNEL].heads, 2);
     if ( NULL == acpi ) {
         panic("Memory allocation failed for acpi_t.");
     }
@@ -519,15 +525,8 @@ bsp_start(void)
         panic("Failed to load ACPI configuration.");
     }
 
-    /* Linear mapping */
-    ret = _init_linear_pgt(mem, nr, (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR);
-    if ( ret < 0 ) {
-        panic("Failed to setup linear mapping page table.");
-    }
-
-
     /* Initialize the NUMA-aware zones */
-    ret = _init_numa_zones(mem, acpi, nr,
+    ret = _init_numa_zones(&kvar->phys, acpi, nr,
                            (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR);
     if ( ret < 0 ) {
         panic("Failed to initialize the NUMA-aware zones.");
@@ -573,11 +572,11 @@ bsp_start(void)
 
     /* Testing memory allocator */
     void *ptr;
-    ptr = phys_mem_buddy_alloc(mem->numazones[1].heads, 1);
+    ptr = phys_mem_buddy_alloc(kvar->phys.numazones[1].heads, 1);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
-    phys_mem_buddy_free(mem->numazones[1].heads, ptr, 1);
-    ptr = phys_mem_buddy_alloc(mem->numazones[1].heads, 1);
+    phys_mem_buddy_free(kvar->phys.numazones[1].heads, ptr, 1);
+    ptr = phys_mem_buddy_alloc(kvar->phys.numazones[1].heads, 1);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
 

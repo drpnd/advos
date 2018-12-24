@@ -21,30 +21,39 @@
  * SOFTWARE.
  */
 
-#ifndef _ADVOS_KVAR_H
-#define _ADVOS_KVAR_H
+#ifndef _ADVOS_KERNEL_PGT_H
+#define _ADVOS_KERNEL_PGT_H
 
-#include "kvar_def.h"
-#include "const.h"
-#include "../../memory.h"
-#include "pgt.h"
+#include <stdint.h>
 
 /*
- * Kernel variable
+ * Entry
+ */
+typedef struct pgt_entry pgt_entry_t;
+struct pgt_entry {
+    pgt_entry_t *next;
+};
+
+/*
+ * Page table
  */
 typedef struct {
-    phys_memory_t phys;
-    pgt_t pgt;
-} kvar_t;
+    /* Pointer (physical) to PML4 */
+    uintptr_t cr3;
+    /* Offset to calculate the virtual address from the physical address */
+    uintptr_t p2v;
+    /* Free pages to be used as page tables */
+    pgt_entry_t *free;
+} pgt_t;
 
-/* For kernel variables */
-#define KVAR                    ((kvar_t *)KVAR_ADDR)
-
-/* Page table for kernel (pgt_t) */
-#define KVAR_KPGT               ((void *)KPGT_ADDR)
-
-/* Pointer to per-core data (flags, tss, stack); 256 */
-#define KVAR_KDATA_PER_CORE     ((void *)KDATA_PER_CORE)
+/* Prototype declarations */
+void pgt_init(pgt_t *, void *, uintptr_t);
+void * pgt_pop(pgt_t *);
+void pgt_push(pgt_t *, pgt_entry_t *);
+void * pgt_v2p(pgt_t *, uintptr_t);
+int pgt_map(pgt_t *, uintptr_t, uintptr_t, int, int, int, int);
+int pgt_unmap(pgt_t *, uintptr_t, int);
+void pgt_set_cr3(pgt_t *);
 
 #endif
 
