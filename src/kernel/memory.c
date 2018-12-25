@@ -332,6 +332,216 @@ phys_memory_init(phys_memory_t *mem, int nr, memory_sysmap_entry_t *map,
 }
 
 /*
+ * Initialize virtual memory
+ */
+memory_t *
+memory_init(void)
+{
+    return NULL;
+}
+
+/*
+ * Add a node
+ */
+static int
+_atree_add(virt_memory_free_t **t, virt_memory_free_t *n)
+{
+    if ( NULL == *t ) {
+        /* Insert here */
+        *t = n;
+        n->stree.left = NULL;
+        n->stree.right = NULL;
+        return 0;
+    }
+    if ( n->start == (*t)->start ) {
+        return -1;
+    }
+    if ( n->start > (*t)->start ) {
+        return _atree_add(&(*t)->atree.right, n);
+    } else {
+        return _atree_add(&(*t)->atree.left, n);
+    }
+}
+static int
+_stree_add(virt_memory_free_t **t, virt_memory_free_t *n)
+{
+    if ( NULL == *t ) {
+        /* Insert here */
+        *t = n;
+        n->stree.left = NULL;
+        n->stree.right = NULL;
+        return 0;
+    } else if ( (*t)->size == n->size ) {
+        /* Insert here */
+        n->stree.left = *t;
+        n->stree.right = NULL;
+        *t = n;
+        return 0;
+    }
+    if ( n->size > (*t)->size ) {
+        return _stree_add(&(*t)->stree.right, n);
+    } else {
+        return _stree_add(&(*t)->stree.left, n);
+    }
+}
+static int
+_add(virt_memory_free_t *t, virt_memory_free_t *n)
+{
+    int ret;
+
+    ret = _atree_add(&t, n);
+    if ( ret < 0 ) {
+        return -1;
+    }
+    ret = _stree_add(&t, n);
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
+ * Delete the node
+ */
+static virt_memory_free_t *
+_atree_delete(virt_memory_free_t *t, virt_memory_free_t *n)
+{
+    if ( NULL == t ) {
+        return NULL;
+    }
+    if ( n == t ) {
+        t->atree.left = n->atree.left;
+        t->atree.right = n->atree.left;
+        return t;
+    }
+    if ( n->start > t->start ) {
+        return _atree_delete(t->atree.right, n);
+    } else {
+        return _atree_delete(t->atree.left, n);
+    }
+}
+static virt_memory_free_t *
+_stree_delete(virt_memory_free_t *t, virt_memory_free_t *n)
+{
+    if ( NULL == t ) {
+        return NULL;
+    }
+    if ( n == t ) {
+        t->stree.left = n->stree.left;
+        t->stree.right = n->stree.left;
+        return t;
+    }
+    if ( n->size > t->size ) {
+        return _stree_delete(t->stree.right, n);
+    } else {
+        return _stree_delete(t->stree.left, n);
+    }
+}
+static virt_memory_free_t *
+_delete(virt_memory_free_t *t, virt_memory_free_t *n)
+{
+    virt_memory_free_t *da;
+    virt_memory_free_t *ds;
+
+    da = _atree_delete(t, n);
+    ds = _stree_delete(t, n);
+    kassert(da == ds);
+
+    return n;
+}
+
+/*
+ * Search the tree by size
+ */
+static virt_memory_free_t *
+_search_fit_size(virt_memory_block_t *block, virt_memory_free_t *t, size_t sz)
+{
+    virt_memory_free_t *s;
+
+    if ( NULL == t ) {
+        return NULL;
+    }
+    if ( sz > t->size ) {
+        /* Search the right subtree */
+        return _search_fit_size(block, t->stree.right, sz);
+    } else {
+        /* Search the left subtree */
+        s = _search_fit_size(block, t->stree.left, sz);
+        if ( NULL == s ) {
+            /* Not found any block that fits this size, then return this node */
+            return t;
+        }
+        return s;
+    }
+}
+
+/*
+ * Allocate pages from the block
+ */
+static page_t *
+_alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
+{
+    virt_memory_free_t *n;
+    page_t *page;
+
+    /* Search from the binary tree */
+    n = _search_fit_size(block, block->frees, nr * MEMORY_PAGESIZE);
+    if ( NULL == n ) {
+        /* No available space */
+        return NULL;
+    }
+
+
+    return NULL;
+}
+
+/*
+ * Allocate pages
+ */
+page_t *
+memory_alloc_pages(memory_t *mem, size_t nr)
+{
+    virt_memory_block_t *block;
+    page_t *page;
+
+    block = mem->blocks;
+    page = NULL;
+    while ( NULL != block && NULL == page ) {
+        page = _alloc_pages_block(mem, block, nr);
+    }
+
+    return page;
+}
+
+
+/*
+ * Add a new memory block
+ */
+int
+memory_block_add(memory_t *mem, virt_memory_block_t *n)
+{
+    virt_memory_block_t **b;
+
+    b = &mem->blocks;
+    while ( NULL != *b ) {
+        if ( (*b)->start > n->start ) {
+            /* Try to insert here */
+            if ( n->start + n->length > (*b)->start ) {
+                /* Overlapping space */
+                return -1;
+            }
+            break;
+        }
+        b = &(*b)->next;
+    }
+    n->next = *b;
+    *b = n;
+
+    return 0;
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4

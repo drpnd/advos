@@ -478,6 +478,9 @@ bsp_start(void)
     struct idtr *idtr;
 
     /* Kernel variables */
+    if ( sizeof(kvar_t) > KVAR_SIZE ) {
+        panic("kvar_t exceeds the expected size.");
+    }
     kvar = KVAR;
 
     /* Setup and enable the kernel page table */

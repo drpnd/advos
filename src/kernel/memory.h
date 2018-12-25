@@ -87,11 +87,124 @@ typedef struct {
     uint32_t attr;
 } __attribute__ ((packed)) memory_sysmap_entry_t;
 
+/*
+ * Page
+ */
+typedef struct page page_t;
+struct page {
+    /* Physical address */
+    uintptr_t physical;
+    /* Zone of the buddy system */
+    uint8_t zone;
+    /* Order of the buddy system */
+    uint8_t order;
+    /* Numa-domain if available */
+    uint32_t numadomain;
+    /* Pointer to the next page in the same object */
+    page_t *next;
+};
+
+/*
+ * Object
+ */
+typedef struct virt_memory_object virt_memory_object_t;
+struct virt_memory_object {
+    /* Pointer to the list of pages */
+    page_t *pages;
+    /* Size */
+    size_t size;
+};
+
+/*
+ * Virtual memory entry (allocated)
+ */
+typedef struct virt_memory_entry virt_memory_entry_t;
+struct virt_memory_entry {
+    /* Start virtual address of this entry */
+    uintptr_t start;
+    /* Size */
+    size_t size;
+    /* Pointer to the object */
+    virt_memory_object_t *object;
+
+    /* Binary tree for start address ordering */
+    struct {
+        virt_memory_entry_t *left;
+        virt_memory_entry_t *right;
+    } atree;
+};
+
+/*
+ * Free spacw management
+ */
+typedef struct virt_memory_free virt_memory_free_t;
+struct virt_memory_free {
+    /* Start address of this space */
+    uintptr_t start;
+    /* Size of this space */
+    size_t size;
+
+    /* Binary tree for start address ordering */
+    struct {
+        virt_memory_free_t *left;
+        virt_memory_free_t *right;
+    } atree;
+    /* Binary tree for size ordering */
+    struct {
+        virt_memory_free_t *left;
+        virt_memory_free_t *right;
+    } stree;
+};
+
+/*
+ * Memory block
+ */
+typedef struct virt_memory_block virt_memory_block_t;
+struct virt_memory_block {
+    /* Start virtual address of this block */
+    uintptr_t start;
+    /* Length of this block */
+    size_t length;
+    /* Pointer to the next block */
+    virt_memory_block_t *next;
+
+    /* Allocated entries */
+    virt_memory_entry_t *entries;
+
+    /* Free space list */
+    virt_memory_free_t *frees;
+
+    /* Architecture-specific defintions */
+    void *arch;
+    void (*map)(void *, page_t *, uintptr_t);
+};
+
+/*
+ * Data structure used for virtual memory management
+ */
+union virt_memory_data {
+    page_t page;
+    virt_memory_object_t object;
+    virt_memory_entry_t entry;
+    virt_memory_free_t free;
+};
+
+/*
+ * Memory
+ */
+typedef struct {
+    /* List of blocks */
+    virt_memory_block_t *blocks;
+} memory_t;
+
 void
 phys_mem_buddy_add_region(phys_memory_buddy_page_t **, uintptr_t, uintptr_t);
 void * phys_mem_buddy_alloc(phys_memory_buddy_page_t **, int);
 void phys_mem_buddy_free(phys_memory_buddy_page_t **, void *, int);
 int phys_memory_init(phys_memory_t *, int, memory_sysmap_entry_t *, uint64_t);
+
+page_t * memory_alloc_pages(memory_t *, size_t);
+void memory_free_pages(memory_t *, page_t *);
 
 #endif
 
