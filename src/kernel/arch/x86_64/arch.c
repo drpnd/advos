@@ -614,6 +614,10 @@ bsp_start(void)
     if ( ret < 0 ) {
         panic("Failed to initialize the memory manager.");
     }
+    ret = memory_block_add(&kvar->mm, 0xc0000000ULL, 0x40000000ULL);
+    if ( ret < 0 ) {
+        panic("Failed to add kernel memory block.");
+    }
 
     /* Allocate memory for ACPI parser */
     if ( sizeof(acpi_t) > MEMORY_PAGESIZE * 4 ) {

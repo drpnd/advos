@@ -219,6 +219,7 @@ int phys_memory_init(phys_memory_t *, int, memory_sysmap_entry_t *, uint64_t);
 int memory_init(memory_t *, phys_memory_t *, void *,
                 int (*map)(void *, uintptr_t, page_t *),
                 int (*unmap)(void *, uintptr_t, page_t *));
+int memory_block_add(memory_t *, uintptr_t, size_t);
 void * memory_alloc_pages(memory_t *, size_t);
 void memory_free_pages(memory_t *, void *);
 

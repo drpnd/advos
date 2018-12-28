@@ -738,7 +738,6 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
     return (void *)e->start;
 }
 
-#if 0
 /*
  * Add a new memory block
  */
@@ -795,7 +794,6 @@ memory_block_add(memory_t *mem, uintptr_t start, size_t length)
 
     return 0;
 }
-#endif
 
 /*
  * Allocate pages
