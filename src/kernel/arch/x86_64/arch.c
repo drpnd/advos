@@ -459,6 +459,93 @@ _init_numa_zones(phys_memory_t *mem, acpi_t *acpi, int nr,
 }
 
 /*
+ * Map virtual address to physical address
+ */
+int
+arch_memory_map(void *arch, uintptr_t virtual, page_t *page)
+{
+    pgt_t *pgt;
+    int ret;
+    int superpage;
+    int global;
+    int rw;
+    int user;
+    int i;
+    int nr;
+    uintptr_t pagesize;
+
+    /* Check the size of the page */
+    if ( page->order >= (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT) ) {
+        /* Superpage */
+        superpage = 1;
+        pagesize = MEMORY_SUPERPAGESIZE;
+        nr = page->order - (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT);
+    } else {
+        /* Page */
+        superpage = 0;
+        pagesize = MEMORY_PAGESIZE;
+        nr = page->order;
+    }
+    /* Global (temporary) */
+    global = 1;
+    /* Read-write for all pages (temporary) */
+    rw = 1;
+    /* Superuser only (temporary) */
+    user = 0;
+
+    pgt = (pgt_t *)arch;
+    for ( i = 0; i < (1LL << nr); i++ ) {
+        ret = pgt_map(pgt, virtual + pagesize * i,
+                      page->physical + pagesize * i, superpage, global, rw,
+                      user);
+        if ( ret < 0 ) {
+            break;
+        }
+    }
+    if ( ret < 0 ) {
+        for ( i = i - 1; i >= 0; i-- ) {
+            pgt_unmap(pgt, virtual + pagesize * i, superpage);
+        }
+    }
+
+    return 0;
+}
+
+/*
+ * Map virtual address to physical address
+ */
+int
+arch_memory_unmap(void *arch, uintptr_t virtual, page_t *page)
+{
+    pgt_t *pgt;
+    int superpage;
+    int i;
+    int nr;
+    uintptr_t pagesize;
+
+    pgt = (pgt_t *)arch;
+
+    /* Check the size of the page */
+    if ( page->order >= (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT) ) {
+        /* Superpage */
+        pagesize = MEMORY_SUPERPAGESIZE;
+        superpage = 1;
+        nr = page->order - (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT);
+    } else {
+        /* Page */
+        pagesize = MEMORY_PAGESIZE;
+        superpage = 0;
+        nr = page->order;
+    }
+
+    for ( i = 0; i < (1LL << nr); i++ ) {
+        pgt_unmap(pgt, virtual + pagesize * i, superpage);
+    }
+
+    return 0;
+}
+
+/*
  * Entry point for C code
  */
 void
@@ -519,6 +606,13 @@ bsp_start(void)
     ret = _init_kernel_pgt(kvar, nr, (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR);
     if ( ret < 0 ) {
         panic("Failed to setup linear mapping page table.");
+    }
+
+    /* Initialize the virtual memory management */
+    ret = memory_init(&kvar->mm, &kvar->phys, &kvar->pgt, arch_memory_map,
+                      arch_memory_unmap);
+    if ( ret < 0 ) {
+        panic("Failed to initialize the memory manager.");
     }
 
     /* Allocate memory for ACPI parser */
@@ -583,6 +677,9 @@ bsp_start(void)
 
     /* Testing memory allocator */
     void *ptr;
+    ptr = memory_alloc_pages(&kvar->mm, 0);
+    print_hex(base, (uintptr_t)ptr, 8);
+    base += 80;
     ptr = phys_mem_buddy_alloc(kvar->phys.numazones[1].heads, 1);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;

@@ -172,11 +172,10 @@ struct virt_memory_block {
     virt_memory_entry_t *entries;
 
     /* Free space list */
-    virt_memory_free_t *frees;
-
-    /* Architecture-specific defintions */
-    void *arch;
-    void (*map)(void *, page_t *, uintptr_t);
+    struct {
+        virt_memory_free_t *atree;
+        virt_memory_free_t *stree;
+    } frees;
 };
 
 /*
@@ -187,6 +186,8 @@ union virt_memory_data {
     virt_memory_object_t object;
     virt_memory_entry_t entry;
     virt_memory_free_t free;
+    virt_memory_block_t block;
+    union virt_memory_data *next;
 };
 
 /*
@@ -195,16 +196,31 @@ union virt_memory_data {
 typedef struct {
     /* List of blocks */
     virt_memory_block_t *blocks;
+
+    /* Physical memory manager */
+    phys_memory_t *phys;
+
+    /* List of memory management data structures */
+    union virt_memory_data *lists;
+
+    /* Architecture-specific defintions */
+    void *arch;
+    int (*map)(void *, uintptr_t, page_t *);
+    int (*unmap)(void *, uintptr_t, page_t *);
 } memory_t;
 
+/* Prototype declarations */
 void
 phys_mem_buddy_add_region(phys_memory_buddy_page_t **, uintptr_t, uintptr_t);
 void * phys_mem_buddy_alloc(phys_memory_buddy_page_t **, int);
 void phys_mem_buddy_free(phys_memory_buddy_page_t **, void *, int);
 int phys_memory_init(phys_memory_t *, int, memory_sysmap_entry_t *, uint64_t);
 
-page_t * memory_alloc_pages(memory_t *, size_t);
-void memory_free_pages(memory_t *, page_t *);
+int memory_init(memory_t *, phys_memory_t *, void *,
+                int (*map)(void *, uintptr_t, page_t *),
+                int (*unmap)(void *, uintptr_t, page_t *));
+void * memory_alloc_pages(memory_t *, size_t);
+void memory_free_pages(memory_t *, void *);
 
 #endif
 
