@@ -209,13 +209,14 @@ typedef struct {
     int (*unmap)(void *, uintptr_t, page_t *);
 } memory_t;
 
-/* Prototype declarations */
+/* Defined in physmem.c */
 void
 phys_mem_buddy_add_region(phys_memory_buddy_page_t **, uintptr_t, uintptr_t);
 void * phys_mem_buddy_alloc(phys_memory_buddy_page_t **, int);
 void phys_mem_buddy_free(phys_memory_buddy_page_t **, void *, int);
 int phys_memory_init(phys_memory_t *, int, memory_sysmap_entry_t *, uint64_t);
 
+/* Defined in memory.c */
 int memory_init(memory_t *, phys_memory_t *, void *,
                 int (*map)(void *, uintptr_t, page_t *),
                 int (*unmap)(void *, uintptr_t, page_t *));
