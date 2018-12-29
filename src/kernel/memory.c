@@ -28,7 +28,7 @@
  * Prototype declarations
  */
 static virt_memory_free_t *
-_atree_delete(virt_memory_free_t **, virt_memory_free_t *);
+_free_atree_delete(virt_memory_free_t **, virt_memory_free_t *);
 
 /*
  * Initialize virtual memory
@@ -67,10 +67,10 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch,
 }
 
 /*
- * Add a node
+ * Add a node to the free entry tree
  */
 static int
-_atree_add(virt_memory_free_t **t, virt_memory_free_t *n)
+_free_atree_add(virt_memory_free_t **t, virt_memory_free_t *n)
 {
     if ( NULL == *t ) {
         /* Insert here */
@@ -83,13 +83,13 @@ _atree_add(virt_memory_free_t **t, virt_memory_free_t *n)
         return -1;
     }
     if ( n->start > (*t)->start ) {
-        return _atree_add(&(*t)->atree.right, n);
+        return _free_atree_add(&(*t)->atree.right, n);
     } else {
-        return _atree_add(&(*t)->atree.left, n);
+        return _free_atree_add(&(*t)->atree.left, n);
     }
 }
 static int
-_stree_add(virt_memory_free_t **t, virt_memory_free_t *n)
+_free_stree_add(virt_memory_free_t **t, virt_memory_free_t *n)
 {
     if ( NULL == *t ) {
         /* Insert here */
@@ -105,22 +105,24 @@ _stree_add(virt_memory_free_t **t, virt_memory_free_t *n)
         return 0;
     }
     if ( n->size > (*t)->size ) {
-        return _stree_add(&(*t)->stree.right, n);
+        return _free_stree_add(&(*t)->stree.right, n);
     } else {
-        return _stree_add(&(*t)->stree.left, n);
+        return _free_stree_add(&(*t)->stree.left, n);
     }
 }
 static int
-_add(virt_memory_free_t **t, virt_memory_free_t *n)
+_free_add(virt_memory_free_t **t, virt_memory_free_t *n)
 {
     int ret;
+    virt_memory_free_t *p;
 
-    ret = _atree_add(t, n);
+    ret = _free_atree_add(t, n);
     if ( ret < 0 ) {
         return -1;
     }
-    _atree_delete(t, n);
-    ret = _stree_add(t, n);
+    p = _free_atree_delete(t, n);
+    kassert( p != NULL );
+    ret = _free_stree_add(t, n);
     if ( ret < 0 ) {
         return -1;
     }
@@ -129,14 +131,15 @@ _add(virt_memory_free_t **t, virt_memory_free_t *n)
 }
 
 /*
- * Delete the node
+ * Delete the specified node from the free entry tree
  */
 static virt_memory_free_t *
-_atree_delete(virt_memory_free_t **t, virt_memory_free_t *n)
+_free_atree_delete(virt_memory_free_t **t, virt_memory_free_t *n)
 {
     virt_memory_free_t **x;
 
     if ( NULL == *t ) {
+        /* Not found */
         return NULL;
     }
     if ( n == *t ) {
@@ -157,13 +160,13 @@ _atree_delete(virt_memory_free_t **t, virt_memory_free_t *n)
         return n;
     }
     if ( n->start > (*t)->start ) {
-        return _atree_delete(&(*t)->atree.right, n);
+        return _free_atree_delete(&(*t)->atree.right, n);
     } else {
-        return _atree_delete(&(*t)->atree.left, n);
+        return _free_atree_delete(&(*t)->atree.left, n);
     }
 }
 static virt_memory_free_t *
-_stree_delete(virt_memory_free_t **t, virt_memory_free_t *n)
+_free_stree_delete(virt_memory_free_t **t, virt_memory_free_t *n)
 {
     virt_memory_free_t **x;
 
@@ -188,9 +191,9 @@ _stree_delete(virt_memory_free_t **t, virt_memory_free_t *n)
         return n;
     }
     if ( n->start > (*t)->start ) {
-        return _stree_delete(&(*t)->stree.right, n);
+        return _free_stree_delete(&(*t)->stree.right, n);
     } else {
-        return _stree_delete(&(*t)->stree.left, n);
+        return _free_stree_delete(&(*t)->stree.left, n);
     }
 }
 
@@ -223,7 +226,7 @@ _search_fit_size(virt_memory_block_t *block, virt_memory_free_t *t, size_t sz)
  * Allocate virtual memory data
  */
 static union virt_memory_data *
-_alloc_data(memory_t *mem)
+_data_alloc(memory_t *mem)
 {
     union virt_memory_data *data;
 
@@ -239,7 +242,7 @@ _alloc_data(memory_t *mem)
  * Free virtual memory data
  */
 static void
-_free_data(memory_t *mem, union virt_memory_data *data)
+_data_free(memory_t *mem, union virt_memory_data *data)
 {
     data->next = mem->lists;
     mem->lists = data;
@@ -300,40 +303,40 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
         /* No available space */
         return NULL;
     }
-    r = _stree_delete(&block->frees.stree, n);
+    r = _free_stree_delete(&block->frees.stree, n);
     if ( NULL == r ) {
         return NULL;
     }
-    r = _atree_delete(&block->frees.atree, n);
+    r = _free_atree_delete(&block->frees.atree, n);
     if ( NULL == r ) {
-        _stree_add(&block->frees.stree, n);
+        _free_stree_add(&block->frees.stree, n);
         return NULL;
     }
 
     /* Allocate an entry */
-    e = (virt_memory_entry_t *)_alloc_data(mem);
+    e = (virt_memory_entry_t *)_data_alloc(mem);
     if ( NULL == e ) {
-        _atree_add(&block->frees.atree, n);
-        _stree_add(&block->frees.stree, n);
+        _free_atree_add(&block->frees.atree, n);
+        _free_stree_add(&block->frees.stree, n);
         return NULL;
     }
     kmemset(e, 0, sizeof(virt_memory_entry_t));
 
     /* Prepare for free spaces */
-    f0 = (virt_memory_free_t *)_alloc_data(mem);
+    f0 = (virt_memory_free_t *)_data_alloc(mem);
     if ( NULL == f0 ) {
-        _free_data(mem, (union virt_memory_data *)e);
-        _atree_add(&block->frees.atree, n);
-        _stree_add(&block->frees.stree, n);
+        _data_free(mem, (union virt_memory_data *)e);
+        _free_atree_add(&block->frees.atree, n);
+        _free_stree_add(&block->frees.stree, n);
         return NULL;
     }
     kmemset(f0, 0, sizeof(virt_memory_free_t));
-    f1 = (virt_memory_free_t *)_alloc_data(mem);
+    f1 = (virt_memory_free_t *)_data_alloc(mem);
     if ( NULL == f1 ) {
-        _free_data(mem, (union virt_memory_data *)f0);
-        _free_data(mem, (union virt_memory_data *)e);
-        _atree_add(&block->frees.atree, n);
-        _stree_add(&block->frees.stree, n);
+        _data_free(mem, (union virt_memory_data *)f0);
+        _data_free(mem, (union virt_memory_data *)e);
+        _free_atree_add(&block->frees.atree, n);
+        _free_stree_add(&block->frees.stree, n);
         return NULL;
     }
     kmemset(f1, 0, sizeof(virt_memory_free_t));
@@ -348,21 +351,21 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
 
             f0->start = n->start;
             f0->size = e->start - n->start;
-            _atree_add(&block->frees.atree, f0);
-            _stree_add(&block->frees.stree, f0);
+            _free_atree_add(&block->frees.atree, f0);
+            _free_stree_add(&block->frees.stree, f0);
         } else {
             /* Aligned to superpage */
             e->start = n->start;
             e->size = nr * MEMORY_PAGESIZE;
-            _free_data(mem, (union virt_memory_data *)f0);
+            _data_free(mem, (union virt_memory_data *)f0);
         }
         if ( n->start + n->size != e->start + e->size ) {
             f1->start = e->start + e->size;
             f1->size = n->start + n->size - (e->start + e->size);
-            _atree_add(&block->frees.atree, f1);
-            _stree_add(&block->frees.stree, f1);
+            _free_atree_add(&block->frees.atree, f1);
+            _free_stree_add(&block->frees.stree, f1);
         } else {
-            _free_data(mem, (union virt_memory_data *)f1);
+            _data_free(mem, (union virt_memory_data *)f1);
         }
     } else {
         e->start = n->start;
@@ -370,15 +373,15 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
         if ( n->start + n->size != e->start + e->size ) {
             f1->start = e->start + e->size;
             f1->size = n->start + n->size - (e->start + e->size);
-            _atree_add(&block->frees.atree, f1);
-            _stree_add(&block->frees.stree, f1);
+            _free_atree_add(&block->frees.atree, f1);
+            _free_stree_add(&block->frees.stree, f1);
         } else {
-            _free_data(mem, (union virt_memory_data *)f1);
+            _data_free(mem, (union virt_memory_data *)f1);
         }
     }
 
     /* Allocate an object */
-    obj = (virt_memory_object_t *)_alloc_data(mem);
+    obj = (virt_memory_object_t *)_data_alloc(mem);
     kmemset(obj, 0, sizeof(virt_memory_object_t));
     obj->size = nr * MEMORY_PAGESIZE;
     pp = &obj->pages;
@@ -386,7 +389,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
     /* Allocate superpages */
     for ( i = 0; i < nr;
           i += (1 << (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT)) ) {
-        p = (page_t *)_alloc_data(mem);
+        p = (page_t *)_data_alloc(mem);
         kmemset(p, 0, sizeof(page_t));
         p->zone = MEMORY_ZONE_KERNEL; /* FIXME */
         p->numadomain = 0;  /* FIXME */
@@ -408,7 +411,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
 
     /* Allocate pages */
     for ( ; i < nr; i++ ) {
-        p = (page_t *)_alloc_data(mem);
+        p = (page_t *)_data_alloc(mem);
         kmemset(p, 0, sizeof(page_t));
         p->zone = MEMORY_ZONE_KERNEL; /* FIXME */
         p->numadomain = 0;  /* FIXME */
@@ -446,7 +449,7 @@ memory_block_add(memory_t *mem, uintptr_t start, size_t length)
     virt_memory_block_t **b;
 
     /* Allocate data and initialize the block */
-    data = _alloc_data(mem);
+    data = _data_alloc(mem);
     if ( NULL == data ) {
         return -1;
     }
@@ -459,9 +462,9 @@ memory_block_add(memory_t *mem, uintptr_t start, size_t length)
     n->frees.stree = NULL;
 
     /* Add a free entry */
-    fr = _alloc_data(mem);
+    fr = _data_alloc(mem);
     if ( NULL == fr ) {
-        _free_data(mem, data);
+        _data_free(mem, data);
         return -1;
     }
     kmemset(fr, 0, sizeof(union virt_memory_data));
@@ -477,8 +480,8 @@ memory_block_add(memory_t *mem, uintptr_t start, size_t length)
             /* Try to insert here */
             if ( n->start + n->length > (*b)->start ) {
                 /* Overlapping space */
-                _free_data(mem, fr);
-                _free_data(mem, data);
+                _data_free(mem, fr);
+                _data_free(mem, data);
                 return -1;
             }
             break;
@@ -555,7 +558,7 @@ _free_pages(memory_t *mem, page_t *page)
             /* Do nothing */
         }
         /* Free this page */
-        _free_data(mem, (union virt_memory_data *)page);
+        _data_free(mem, (union virt_memory_data *)page);
 
         p = p->next;
     }
@@ -608,7 +611,7 @@ _free_entry(memory_t *mem, virt_memory_block_t *b, virt_memory_entry_t *e)
         kmemcpy(f, &free, sizeof(virt_memory_free_t));
 
         /* Add this node to the free entry tree */
-        ret = _stree_add(&b->frees.stree, f);
+        ret = _free_stree_add(&b->frees.stree, f);
         if ( ret < 0 ) {
             return -1;
         }
@@ -619,14 +622,14 @@ _free_entry(memory_t *mem, virt_memory_block_t *b, virt_memory_entry_t *e)
         } else {
             f->size = f->size + e->size;
         }
-        _free_data(mem, (union virt_memory_data*)e);
+        _data_free(mem, (union virt_memory_data*)e);
 
         /* Rebalance the size-based tree */
-        r = _stree_delete(&b->frees.stree, f);
+        r = _free_stree_delete(&b->frees.stree, f);
         if ( NULL == r ) {
             return -1;
         }
-        ret = _stree_add(&b->frees.stree, f);
+        ret = _free_stree_add(&b->frees.stree, f);
         if ( ret < 0 ) {
             return -1;
         }
@@ -679,7 +682,7 @@ memory_free_pages(memory_t *mem, void *ptr)
     /* Free the corersponding pages */
     _free_pages(mem, page);
     /* Free the object */
-    _free_data(mem, (union virt_memory_data *)e->object);
+    _data_free(mem, (union virt_memory_data *)e->object);
     /* Retuurn to the free entry */
     _free_entry(mem, b, e);
 }
