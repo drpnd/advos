@@ -182,6 +182,18 @@ phys_mem_buddy_alloc(phys_memory_buddy_page_t **buddy, int order)
 
     return block;
 }
+void *
+phys_mem_alloc(phys_memory_t *mem, int order, int zone, int domain)
+{
+    if ( MEMORY_ZONE_DMA == zone || MEMORY_ZONE_KERNEL == zone ) {
+        return phys_mem_buddy_alloc(mem->czones[zone].heads, order);
+    } else if ( MEMORY_ZONE_NUMA_AWARE == zone ) {
+        return phys_mem_buddy_alloc(mem->numazones[domain].heads, order);
+    } else {
+        return NULL;
+    }
+
+}
 
 /*
  * Merge buddy blocks to the upper order
@@ -256,6 +268,15 @@ void
 phys_mem_buddy_free(phys_memory_buddy_page_t **buddy, void *ptr, int order)
 {
     _insert_buddy(buddy, (uintptr_t)ptr, order);
+}
+void
+phys_mem_free(phys_memory_t *mem, void *ptr, int order, int zone, int domain)
+{
+    if ( MEMORY_ZONE_DMA == zone || MEMORY_ZONE_KERNEL == zone ) {
+        phys_mem_buddy_free(mem->czones[zone].heads, ptr, order);
+    } else if ( MEMORY_ZONE_NUMA_AWARE == zone ) {
+        phys_mem_buddy_free(mem->numazones[domain].heads, ptr, order);
+    }
 }
 
 /*

@@ -400,6 +400,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
         p->order = order;
         ret = mem->map(mem->arch, virtual, p);
         if ( ret < 0 ) {
+            _data_free(mem, (union virt_memory_data *)p);
             goto error_page;
         }
         virtual += 1ULL << (order + MEMORY_PAGESIZE_SHIFT);
@@ -470,6 +471,8 @@ error_page:
     while ( NULL != p ) {
         ret = mem->unmap(mem->arch, virtual, p);
         kassert(ret == 0);
+        virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
+        _data_free(mem, (union virt_memory_data *)p);
         p = p->next;
     }
     _data_free(mem, (union virt_memory_data *)f1);
@@ -620,7 +623,7 @@ _free_delete(virt_memory_block_t *b, virt_memory_free_t *n)
     virt_memory_free_t *fs;
 
     fa = _free_atree_delete(&b->frees.atree, n);
-    fs = _free_atree_delete(&b->frees.stree, n);
+    fs = _free_stree_delete(&b->frees.stree, n);
     kassert( fa == fs );
 
     return fa;
@@ -655,11 +658,12 @@ _search_fit_size(virt_memory_block_t *block, virt_memory_free_t *t, size_t sz)
  * Allocate pages from the block
  */
 static void *
-_alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
+_alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
+                   int zone, int numadomain)
 {
     int superpage;
     size_t size;
-    virt_memory_free_t *n;
+    virt_memory_free_t *f;
     virt_memory_free_t *f0;
     virt_memory_free_t *f1;
     virt_memory_entry_t *e;
@@ -669,6 +673,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
     void *r;
     size_t i;
     int ret;
+    uintptr_t virtual;
 
     /* Search from the binary tree */
     size = nr * MEMORY_PAGESIZE;
@@ -678,140 +683,191 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
         size += MEMORY_SUPERPAGESIZE;
         superpage = 1;
     }
-    n = _search_fit_size(block, block->frees.stree, size);
-    if ( NULL == n ) {
+    f = _search_fit_size(block, block->frees.stree, size);
+    if ( NULL == f ) {
         /* No available space */
         return NULL;
     }
-    r = _free_stree_delete(&block->frees.stree, n);
-    if ( NULL == r ) {
-        return NULL;
-    }
-    r = _free_atree_delete(&block->frees.atree, n);
-    if ( NULL == r ) {
-        _free_stree_add(&block->frees.stree, n);
-        return NULL;
-    }
 
-    /* Allocate an entry */
+    /* Allocate an entry and an object */
     e = (virt_memory_entry_t *)_data_alloc(mem);
     if ( NULL == e ) {
-        ret = _free_add(block, n);
-        kassert(ret == 0);
-        return NULL;
+        goto error_entry;
     }
+    e->size = nr * MEMORY_PAGESIZE;
+    e->object = (virt_memory_object_t *)_data_alloc(mem);
+    if ( NULL == e->object ) {
+        goto error_obj;
+    }
+    obj->size = nr * MEMORY_PAGESIZE;
+    e->object->pages = NULL;;
 
     /* Prepare for free spaces */
     f0 = (virt_memory_free_t *)_data_alloc(mem);
     if ( NULL == f0 ) {
-        _data_free(mem, (union virt_memory_data *)e);
-        _free_atree_add(&block->frees.atree, n);
-        _free_stree_add(&block->frees.stree, n);
-        return NULL;
+        goto error_f0;
     }
     f1 = (virt_memory_free_t *)_data_alloc(mem);
     if ( NULL == f1 ) {
-        _data_free(mem, (union virt_memory_data *)f0);
-        _data_free(mem, (union virt_memory_data *)e);
-        _free_atree_add(&block->frees.atree, n);
-        _free_stree_add(&block->frees.stree, n);
-        return NULL;
+        goto error_f1;
     }
 
-    /* Map virtual page */
+    /* Align for superpages */
     if ( superpage ) {
-        if ( n->start & (MEMORY_SUPERPAGESIZE - 1) ) {
-            /* Not aligned to superpage */
-            e->start = (n->start + (MEMORY_SUPERPAGESIZE - 1))
+        if ( f->start & (MEMORY_SUPERPAGESIZE - 1) ) {
+            /* Not aligned to superpage, then align */
+            e->start = (f->start + (MEMORY_SUPERPAGESIZE - 1))
                 & ~(uintptr_t)(MEMORY_SUPERPAGESIZE - 1);
-            e->size = nr * MEMORY_PAGESIZE;
-
-            f0->start = n->start;
-            f0->size = e->start - n->start;
-            _free_atree_add(&block->frees.atree, f0);
-            _free_stree_add(&block->frees.stree, f0);
         } else {
             /* Aligned to superpage */
-            e->start = n->start;
-            e->size = nr * MEMORY_PAGESIZE;
-            _data_free(mem, (union virt_memory_data *)f0);
-        }
-        if ( n->start + n->size != e->start + e->size ) {
-            f1->start = e->start + e->size;
-            f1->size = n->start + n->size - (e->start + e->size);
-            _free_atree_add(&block->frees.atree, f1);
-            _free_stree_add(&block->frees.stree, f1);
-        } else {
-            _data_free(mem, (union virt_memory_data *)f1);
+            e->start = f->start;
         }
     } else {
-        e->start = n->start;
-        e->size = nr * MEMORY_PAGESIZE;
-        if ( n->start + n->size != e->start + e->size ) {
-            f1->start = e->start + e->size;
-            f1->size = n->start + n->size - (e->start + e->size);
-            _free_atree_add(&block->frees.atree, f1);
-            _free_stree_add(&block->frees.stree, f1);
-        } else {
-            _data_free(mem, (union virt_memory_data *)f1);
-        }
+        e->start = f->start;
     }
 
-    /* Allocate an object */
-    obj = (virt_memory_object_t *)_data_alloc(mem);
-    kmemset(obj, 0, sizeof(virt_memory_object_t));
-    obj->size = nr * MEMORY_PAGESIZE;
-    pp = &obj->pages;
-
-    /* Allocate superpages */
+    /* Allocate and map superpages */
+    pp = &e->object->pages;
     for ( i = 0; i < nr;
           i += (1 << (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT)) ) {
         p = (page_t *)_data_alloc(mem);
-        kmemset(p, 0, sizeof(page_t));
-        p->zone = MEMORY_ZONE_KERNEL; /* FIXME */
-        p->numadomain = 0;  /* FIXME */
+        if ( NULL == p ) {
+            goto error_page;
+        }
+        p->zone = zone;
+        p->numadomain = numadomain;
+        p->flags = 0;
         p->order = MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT;
 
-        r = phys_mem_buddy_alloc(mem->phys->czones[MEMORY_ZONE_KERNEL].heads,
-                                 p->order);
+        /* Allocate a physical superpage */
+        r = phys_mem_alloc(mem->phys, p->order, p->zone, p->numadomain);
         if ( NULL == r ) {
-            /* FIXME */
-            return NULL;
+            _data_free(mem, (union virt_memory_data *)p);
+            goto error_page;
         }
         p->physical = (uintptr_t)r;
+
         /* Map */
-        mem->map(mem->arch, e->start + i * MEMORY_PAGESIZE, p);
+        ret = mem->map(mem->arch, e->start + i * MEMORY_PAGESIZE, p);
+        if ( ret < 0 ) {
+            _data_free(mem, (union virt_memory_data *)p);
+            phys_mem_free(mem->phys, (void *)p->physical, p->order, p->zone,
+                          p->numadomain);
+            goto error_page;
+        }
 
         *pp = p;
         pp = &p->next;
     }
 
-    /* Allocate pages */
+    /* Allocate and map pages */
     for ( ; i < nr; i++ ) {
         p = (page_t *)_data_alloc(mem);
-        kmemset(p, 0, sizeof(page_t));
-        p->zone = MEMORY_ZONE_KERNEL; /* FIXME */
-        p->numadomain = 0;  /* FIXME */
+        if ( NULL == p ) {
+            goto error_page;
+        }
+        p->zone = zone;
+        p->numadomain = numadomain;
+        p->flags = 0;
         p->order = 0;
 
-        r = phys_mem_buddy_alloc(mem->phys->czones[MEMORY_ZONE_KERNEL].heads,
-                                 p->order);
+        /* Allocate a physical page */
+        r = phys_mem_alloc(mem->phys, p->order, p->zone, p->numadomain);
         if ( NULL == r ) {
-            /* FIXME */
-            return NULL;
+            _data_free(mem, (union virt_memory_data *)p);
+            goto error_page;
         }
         p->physical = (uintptr_t)r;
+
         /* Map */
         mem->map(mem->arch, e->start + i * MEMORY_PAGESIZE, p);
+        if ( ret < 0 ) {
+            _data_free(mem, (union virt_memory_data *)p);
+            phys_mem_free(mem->phys, (void *)p->physical, p->order, p->zone,
+                          p->numadomain);
+            goto error_page;
+        }
 
         *pp = p;
         pp = &p->next;
     }
 
-    e->object = obj;
-    _entry_add(&block->entries, e);
+    /* Add this entry */
+    ret = _entry_add(&block->entries, e);
+    if ( ret < 0 ) {
+        goto error_page;
+    }
+
+    /* Remove the free entry */
+    f = _free_delete(block, f);
+    kassert( f != NULL );
+    if ( f->start == e->start && f->size == e->size  ) {
+        /* Remove the entire entry */
+        _data_free(mem, (union virt_memory_data *)f0);
+        _data_free(mem, (union virt_memory_data *)f1);
+    } else if ( f->start == e->start ) {
+        /* The start address is same, then add the rest to the free entry */
+        f0->start = f->start + e->size;
+        f0->size = f->size - e->size;
+        ret = _free_add(block, f0);
+        if ( ret < 0 ) {
+            goto error_post;
+        }
+        _data_free(mem, (union virt_memory_data *)f1);
+    } else if ( f->start + f->size == e->start + e->size ) {
+        /* The end address is same, then add the rest to the free entry */
+        f0->start = f->start;
+        f0->size = f->size - e->size;
+        ret = _free_add(block, f0);
+        if ( ret < 0 ) {
+            goto error_post;
+        }
+        _data_free(mem, (union virt_memory_data *)f1);
+    } else {
+        f0->start = f->start;
+        f0->size = e->start + e->size - f->start;
+        f1->start = e->start + e->size;
+        f1->size = f->start + f->size - f1->start;
+        ret = _free_add(block, f0);
+        if ( ret < 0 ) {
+            goto error_post;
+        }
+        ret = _free_add(block, f1);
+        if ( ret < 0 ) {
+            goto error_free;
+        }
+    }
+    _data_free(mem, (union virt_memory_data *)f);
 
     return (void *)e->start;
+
+error_free:
+    _free_delete(block, f0);
+error_post:
+    _entry_delete(&block->entries, e);
+    /* Add it back */
+    _free_add(block, f);
+error_page:
+    p = e->object->pages;
+    virtual = e->start;
+    while ( NULL != p ) {
+        ret = mem->unmap(mem->arch, virtual, p);
+        kassert(ret == 0);
+        phys_mem_free(mem->phys, (void *)p->physical, p->order, p->zone,
+                      p->numadomain);
+        virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
+        _data_free(mem, (union virt_memory_data *)p);
+        p = p->next;
+    }
+    _data_free(mem, (union virt_memory_data *)f1);
+error_f1:
+    _data_free(mem, (union virt_memory_data *)f0);
+error_f0:
+    _data_free(mem, (union virt_memory_data *)e->object);
+error_obj:
+    _data_free(mem, (union virt_memory_data *)e);
+error_entry:
+    return NULL;
 }
 
 /*
@@ -826,7 +882,9 @@ memory_alloc_pages(memory_t *mem, size_t nr)
     block = mem->blocks;
     ptr = NULL;
     while ( NULL != block && NULL == ptr ) {
-        ptr = _alloc_pages_block(mem, block, nr);
+        ptr = _alloc_pages_block(mem, block, nr, MEMORY_ZONE_NUMA_AWARE,
+                                 0);
+        block = block->next;
     }
 
     return ptr;
