@@ -235,6 +235,10 @@ _data_alloc(memory_t *mem)
     }
     data = mem->lists;
     mem->lists = data->next;
+
+    /* Zeros */
+    kmemset(data, 0, sizeof(union virt_memory_data));
+
     return data;
 }
 
@@ -441,47 +445,45 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr)
  * Add a new memory block
  */
 int
-memory_block_add(memory_t *mem, uintptr_t start, size_t length)
+memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
 {
-    union virt_memory_data *data;
-    union virt_memory_data *fr;
+    virt_memory_free_t *fr;
     virt_memory_block_t *n;
     virt_memory_block_t **b;
 
     /* Allocate data and initialize the block */
-    data = _data_alloc(mem);
-    if ( NULL == data ) {
+    n = (virt_memory_block_t *)_data_alloc(mem);
+    if ( NULL == n ) {
         return -1;
     }
-    n = &data->block;
     n->start = start;
-    n->length = length;
+    n->end = end;
     n->next = NULL;
     n->entries = NULL;
     n->frees.atree = NULL;
     n->frees.stree = NULL;
 
-    /* Add a free entry */
-    fr = _data_alloc(mem);
+    /* Add a free entry aligned to the block and the page size */
+    fr = (virt_memory_free_t *)_data_alloc(mem);
     if ( NULL == fr ) {
-        _data_free(mem, data);
+        _data_free(mem, (union virt_memory_data *)n);
         return -1;
     }
-    kmemset(fr, 0, sizeof(union virt_memory_data));
-    fr->free.start = start;
-    fr->free.size = length;
-    n->frees.atree = &fr->free;
-    n->frees.stree = &fr->free;
+    fr->start = (start + MEMORY_PAGESIZE - 1)
+        & ~(uintptr_t)(MEMORY_PAGESIZE - 1);
+    fr->size = ((end + 1) & ~(uintptr_t)(MEMORY_PAGESIZE - 1)) - fr->start;
+    n->frees.atree = fr;
+    n->frees.stree = fr;
 
-    /* Insert the block */
+    /* Insert the block to the sorted list */
     b = &mem->blocks;
     while ( NULL != *b ) {
         if ( (*b)->start > n->start ) {
             /* Try to insert here */
-            if ( n->start + n->length > (*b)->start ) {
-                /* Overlapping space */
-                _data_free(mem, fr);
-                _data_free(mem, data);
+            if ( n->end >= (*b)->start ) {
+                /* Overlapping space, then raise an error */
+                _data_free(mem, (union virt_memory_data *)fr);
+                _data_free(mem, (union virt_memory_data *)n);
                 return -1;
             }
             break;
@@ -655,7 +657,7 @@ memory_free_pages(memory_t *mem, void *ptr)
     /* Find a block */
     b = mem->blocks;
     while ( NULL != b ) {
-        if ( addr >= b->start && addr < b->start + b->length ) {
+        if ( addr >= b->start && addr <= b->end ) {
             /* Found */
             break;
         }
