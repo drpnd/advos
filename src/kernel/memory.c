@@ -52,8 +52,8 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch,
     mem->blocks = NULL;
     mem->lists = NULL;
 
-    /* Allocate 4 MiB for page management */
-    data = phys_mem_buddy_alloc(phys->czones[MEMORY_ZONE_KERNEL].heads, 10);
+    /* Allocate 8 MiB for page management */
+    data = phys_mem_alloc(phys, 11, MEMORY_ZONE_KERNEL, 0);
     if ( NULL == data ) {
         return -1;
     }
@@ -667,7 +667,6 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
     virt_memory_free_t *f0;
     virt_memory_free_t *f1;
     virt_memory_entry_t *e;
-    virt_memory_object_t *obj;
     page_t **pp;
     page_t *p;
     void *r;
@@ -699,7 +698,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
     if ( NULL == e->object ) {
         goto error_obj;
     }
-    obj->size = nr * MEMORY_PAGESIZE;
+    e->object->size = nr * MEMORY_PAGESIZE;
     e->object->pages = NULL;;
 
     /* Prepare for free spaces */
@@ -728,7 +727,8 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
 
     /* Allocate and map superpages */
     pp = &e->object->pages;
-    for ( i = 0; i < nr;
+    for ( i = 0;
+          i + (1 << (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT)) <= nr;
           i += (1 << (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT)) ) {
         p = (page_t *)_data_alloc(mem);
         if ( NULL == p ) {
@@ -738,6 +738,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
         p->numadomain = numadomain;
         p->flags = 0;
         p->order = MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT;
+        p->next = NULL;
 
         /* Allocate a physical superpage */
         r = phys_mem_alloc(mem->phys, p->order, p->zone, p->numadomain);
@@ -770,6 +771,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
         p->numadomain = numadomain;
         p->flags = 0;
         p->order = 0;
+        p->next = NULL;
 
         /* Allocate a physical page */
         r = phys_mem_alloc(mem->phys, p->order, p->zone, p->numadomain);
@@ -813,7 +815,6 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
         if ( ret < 0 ) {
             goto error_post;
         }
-        _data_free(mem, (union virt_memory_data *)f1);
     } else if ( f->start + f->size == e->start + e->size ) {
         /* The end address is same, then add the rest to the free entry */
         f0->start = f->start;
@@ -916,27 +917,15 @@ _find_entry(virt_memory_entry_t *e, uintptr_t addr)
  * Free pages from the list of the specified page list
  */
 static void
-_free_pages(memory_t *mem, page_t *page)
+_pages_free(memory_t *mem, page_t *p)
 {
-    page_t *p;
-
-    p = page;
     while ( NULL != p ) {
         /* Free physical pages */
-        if ( MEMORY_ZONE_DMA == p->zone ) {
-            phys_mem_buddy_free(mem->phys->czones[MEMORY_ZONE_DMA].heads,
-                                (void *)p->physical, p->order);
-        } else if ( MEMORY_ZONE_KERNEL == p->zone ) {
-            phys_mem_buddy_free(mem->phys->czones[MEMORY_ZONE_KERNEL].heads,
-                                (void *)p->physical, p->order);
-        } else if ( MEMORY_ZONE_NUMA_AWARE == p->zone ) {
-            phys_mem_buddy_free(mem->phys->numazones[p->numadomain].heads,
-                                (void *)p->physical, p->order);
-        } else {
-            /* Do nothing */
-        }
+        phys_mem_free(mem->phys, (void *)p->physical, p->order, p->zone,
+                      p->numadomain);
+
         /* Free this page */
-        _data_free(mem, (union virt_memory_data *)page);
+        _data_free(mem, (union virt_memory_data *)p);
 
         p = p->next;
     }
@@ -946,7 +935,7 @@ _free_pages(memory_t *mem, page_t *page)
  * Free an entry
  */
 static int
-_free_entry(memory_t *mem, virt_memory_block_t *b, virt_memory_entry_t *e)
+_entry_free(memory_t *mem, virt_memory_block_t *b, virt_memory_entry_t *e)
 {
     virt_memory_free_t free;
     virt_memory_free_t *f;
@@ -964,28 +953,27 @@ _free_entry(memory_t *mem, virt_memory_block_t *b, virt_memory_entry_t *e)
         kmemcpy(f, &free, sizeof(virt_memory_free_t));
 
         /* Add this node to the free entry tree */
-        ret = _free_stree_add(&b->frees.stree, f);
+        ret = _free_add(b, f);
         if ( ret < 0 ) {
             return -1;
         }
     } else {
+        /* Remove the node first */
+        r = _free_delete(b, f);
+        kassert( r != NULL );
+
         /* Expand the free region */
         if ( f->start == e->start + e->size ) {
             f->start = e->start;
+            f->size = f->size + e->size;
         } else {
             f->size = f->size + e->size;
         }
         _data_free(mem, (union virt_memory_data*)e);
 
         /* Rebalance the size-based tree */
-        r = _free_stree_delete(&b->frees.stree, f);
-        if ( NULL == r ) {
-            return -1;
-        }
-        ret = _free_stree_add(&b->frees.stree, f);
-        if ( ret < 0 ) {
-            return -1;
-        }
+        ret = _free_add(b, f);
+        kassert( ret == 0 );
     }
 
     return 0;
@@ -1001,6 +989,7 @@ memory_free_pages(memory_t *mem, void *ptr)
     uintptr_t addr;
     virt_memory_entry_t *e;
     page_t *page;
+    void *r;
 
     /* Convert the pointer to the address in integer */
     addr = (uintptr_t)ptr;
@@ -1026,11 +1015,13 @@ memory_free_pages(memory_t *mem, void *ptr)
     /* Find pages from the object */
     page = e->object->pages;
     /* Free the corersponding pages */
-    _free_pages(mem, page);
+    _pages_free(mem, page);
     /* Free the object */
     _data_free(mem, (union virt_memory_data *)e->object);
     /* Retuurn to the free entry */
-    _free_entry(mem, b, e);
+    r = _entry_delete(&b->entries, e);
+    kassert( r == e );
+    _entry_free(mem, b, e);
 }
 
 /*

@@ -694,14 +694,14 @@ bsp_start(void)
 
     /* Testing memory allocator */
     void *ptr;
-    ptr = memory_alloc_pages(&kvar->mm, 0);
+    ptr = memory_alloc_pages(&kvar->mm, 1);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
-    ptr = phys_mem_buddy_alloc(kvar->phys.numazones[1].heads, 1);
+    ptr = memory_alloc_pages(&kvar->mm, 2);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
-    phys_mem_buddy_free(kvar->phys.numazones[1].heads, ptr, 1);
-    ptr = phys_mem_buddy_alloc(kvar->phys.numazones[1].heads, 1);
+    memory_free_pages(&kvar->mm, ptr);
+    ptr = memory_alloc_pages(&kvar->mm, 1);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
 

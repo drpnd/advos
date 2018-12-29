@@ -188,7 +188,11 @@ phys_mem_alloc(phys_memory_t *mem, int order, int zone, int domain)
     if ( MEMORY_ZONE_DMA == zone || MEMORY_ZONE_KERNEL == zone ) {
         return phys_mem_buddy_alloc(mem->czones[zone].heads, order);
     } else if ( MEMORY_ZONE_NUMA_AWARE == zone ) {
-        return phys_mem_buddy_alloc(mem->numazones[domain].heads, order);
+        if ( domain <= mem->max_domain ) {
+            return phys_mem_buddy_alloc(mem->numazones[domain].heads, order);
+        } else {
+            return NULL;
+        }
     } else {
         return NULL;
     }
@@ -275,7 +279,9 @@ phys_mem_free(phys_memory_t *mem, void *ptr, int order, int zone, int domain)
     if ( MEMORY_ZONE_DMA == zone || MEMORY_ZONE_KERNEL == zone ) {
         phys_mem_buddy_free(mem->czones[zone].heads, ptr, order);
     } else if ( MEMORY_ZONE_NUMA_AWARE == zone ) {
-        phys_mem_buddy_free(mem->numazones[domain].heads, ptr, order);
+        if ( domain <= mem->max_domain ) {
+            phys_mem_buddy_free(mem->numazones[domain].heads, ptr, order);
+        }
     }
 }
 
