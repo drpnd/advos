@@ -40,7 +40,6 @@
 #define AP_GDT_CODE16_SEL       0x28    /* Code16 selector */
 #define AP_GDT_DATA16_SEL       0x30    /* Data16 selector */
 
-#define KERNEL_RELOCBASE        0xc0000000
 #define KERNEL_LMAP             0x100000000
 
 #endif

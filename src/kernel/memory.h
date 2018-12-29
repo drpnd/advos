@@ -42,6 +42,9 @@
 #define MEMORY_SUPERPAGESIZE_SHIFT      21
 #define MEMORY_SUPERPAGESIZE            (1ULL << MEMORY_SUPERPAGESIZE_SHIFT)
 
+/* Page flags */
+#define MEMORY_PGF_WIRED                (1 << 0)
+
 /*
  * Page
  */
@@ -94,6 +97,8 @@ typedef struct page page_t;
 struct page {
     /* Physical address */
     uintptr_t physical;
+    /* Flags */
+    uint16_t flags;
     /* Zone of the buddy system */
     uint8_t zone;
     /* Order of the buddy system */
@@ -221,6 +226,7 @@ int memory_init(memory_t *, phys_memory_t *, void *,
                 int (*map)(void *, uintptr_t, page_t *),
                 int (*unmap)(void *, uintptr_t, page_t *));
 int memory_block_add(memory_t *, uintptr_t, uintptr_t);
+int memory_wire(memory_t *, uintptr_t, size_t, uintptr_t);
 void * memory_alloc_pages(memory_t *, size_t);
 void memory_free_pages(memory_t *, void *);
 

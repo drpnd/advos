@@ -24,15 +24,6 @@
 #ifndef _ADVOS_CONST_H
 #define _ADVOS_CONST_H
 
-/* For physical memory management */
-#define PHYSMEM_ADDR            0x00068000
-
-/* Page table for kernel */
-#define KPGT_ADDR               0x00069000
-
-/* Pointer to per-core data (flags, tss, stack); 256 */
-#define KDATA_PER_CORE_ADDR     0x00060000
-
 /* Maximum number of supported processors */
 #define MAX_PROCESSORS          256
 #define MAX_MEMORY_REGIONS      256

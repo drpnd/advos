@@ -43,6 +43,9 @@
 void trampoline(void);
 void trampoline_end(void);
 
+/* Prototype declarations */
+int arch_memory_map(void *, uintptr_t, page_t *);
+int arch_memory_unmap(void *arch, uintptr_t, page_t *);
 
 /*
  * System memory map entry
@@ -168,7 +171,7 @@ panic(const char *s)
     int ln;
 
     /* Video RAM */
-    video = (uint16_t *)0xb8000;
+    video = (uint16_t *)0xc00b8000;
 
     /* Fill out with green */
     for ( i = 0; i < 80 * 25; i++ ) {
@@ -259,6 +262,16 @@ _add_region_to_numa_zones(phys_memory_t *mem, acpi_t *acpi, uintptr_t base,
 
 /*
  * Setup temporary kernel page table
+ * Linear mapping summary:
+ *   Virtual address     | Physical address
+ *   ------------------- | -------------------
+ *   0000 0000 0000 0000 | 0000 0000 0000 0000
+ *   0000 0000 4000 0000 | N/A
+ *   0000 0000 c000 0000 | 0000 0000 0000 0000
+ *   0000 0000 c020 0000 | N/A
+ *   0000 0000 fec0 0000 | 0000 0000 fec0 0000
+ *   0000 0001 0000 0000 | 0000 0000 0000 0000
+ *   0000 0001 0400 0000 | N/A
  */
 static int
 _init_temporary_pgt(void)
@@ -334,7 +347,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
             maxaddr = addr;
         }
     }
-    /* # of pages */
+    /* # of superpages */
     npg = ((maxaddr + 0x1fffff) >> 21);
 
     /* Allocate 512 pages for page tables */
@@ -350,41 +363,51 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
         pgt_push(&kvar->pgt, pages + i * 4096);
     }
 
-    /* 0-1 GiB */
-    for ( i = 0; i < 512; i++ ) {
-        ret = pgt_map(&kvar->pgt, i * MEMORY_SUPERPAGESIZE,
-                      i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
-        if ( ret < 0 ) {
-            return -1;
-        }
+    /* Initialize the virtual memory management */
+    ret = memory_init(&kvar->mm, &kvar->phys, &kvar->pgt, arch_memory_map,
+                      arch_memory_unmap);
+    if ( ret < 0 ) {
+        panic("Failed to initialize the memory manager.");
     }
-    /* 3-4 GiB (first 2 and the tail MiB) */
-    for ( i = 0; i < 1; i++ ) {
-        ret = pgt_map(&kvar->pgt,
-                      (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
-                      i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
-        if ( ret < 0 ) {
-            return -1;
-        }
+    ret = memory_block_add(&kvar->mm, 0xc0000000ULL, 0xffffffffULL);
+    if ( ret < 0 ) {
+        panic("Failed to add kernel memory block.");
     }
-    for ( i = 502; i < 512; i++ ) {
-        ret = pgt_map(&kvar->pgt,
-                      (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
-                      (uintptr_t)KERNEL_RELOCBASE + i * MEMORY_SUPERPAGESIZE,
-                      1, 0, 1, 0);
-        if ( ret < 0 ) {
-            return -1;
-        }
+
+    /* Map the first 2 MiB */
+    ret = memory_wire(&kvar->mm, 0xc0000000ULL, 512, 0x00000000ULL);
+    if ( ret < 0 ) {
+        panic("Failed to wire kernel memory (lower).");
+    }
+    /* Map the APIC region */
+    ret = memory_wire(&kvar->mm, 0xfec00000ULL, 5120, 0xfec00000ULL);
+    if ( ret < 0 ) {
+        panic("Failed to wire kernel memory (upper).");
     }
 
     /* Linear mapping */
-    for ( i = 0; i < npg; i++ ) {
-        ret = pgt_map(&kvar->pgt,
-                      (uintptr_t)KERNEL_LMAP + i * MEMORY_SUPERPAGESIZE,
-                      i * MEMORY_SUPERPAGESIZE, 1, 0, 1, 0);
-        if ( ret < 0 ) {
-            return -1;
-        }
+    ret = memory_block_add(&kvar->mm, (uintptr_t)KERNEL_LMAP,
+                           (uintptr_t)KERNEL_LMAP
+                           + npg * MEMORY_SUPERPAGESIZE - 1);
+    if ( ret < 0 ) {
+        panic("Failed to add linear mapping memory block.");
+    }
+    ret = memory_wire(&kvar->mm, (uintptr_t)KERNEL_LMAP,
+                      npg << (MEMORY_SUPERPAGESIZE_SHIFT
+                              - MEMORY_PAGESIZE_SHIFT),
+                      0x00000000ULL);
+    if ( ret < 0 ) {
+        panic("Failed to wire linear mapping region.");
+    }
+
+    /* 0-1 GiB (To be removed) */
+    ret = memory_block_add(&kvar->mm, 0, 0x40000000);
+    if ( ret < 0 ) {
+        panic("Failed to add linear mapping memory block (low).");
+    }
+    ret = memory_wire(&kvar->mm, 0, 0x40000, 0);
+    if ( ret < 0 ) {
+        panic("Failed to wire linear mapping region (low).");
     }
 
     /* Activate the page table */
@@ -506,6 +529,7 @@ arch_memory_map(void *arch, uintptr_t virtual, page_t *page)
         for ( i = i - 1; i >= 0; i-- ) {
             pgt_unmap(pgt, virtual + pagesize * i, superpage);
         }
+        return -1;
     }
 
     return 0;
@@ -608,17 +632,6 @@ bsp_start(void)
         panic("Failed to setup linear mapping page table.");
     }
 
-    /* Initialize the virtual memory management */
-    ret = memory_init(&kvar->mm, &kvar->phys, &kvar->pgt, arch_memory_map,
-                      arch_memory_unmap);
-    if ( ret < 0 ) {
-        panic("Failed to initialize the memory manager.");
-    }
-    ret = memory_block_add(&kvar->mm, 0xc0000000ULL, 0xffffffffULL);
-    if ( ret < 0 ) {
-        panic("Failed to add kernel memory block.");
-    }
-
     /* Allocate memory for ACPI parser */
     if ( sizeof(acpi_t) > MEMORY_PAGESIZE * 4 ) {
         panic("The size of acpi_t exceeds the expected size.");
@@ -641,12 +654,20 @@ bsp_start(void)
         panic("Failed to initialize the NUMA-aware zones.");
     }
 
+    /* Initialiez I/O APIC */
+    ioapic_init();
+    ioapic_map_intr(0x21, 1, acpi->ioapic_base);
+
+    /* Test interrupt */
+    idt_setup_trap_gate(13, intr_gpf);
+    idt_setup_intr_gate(0x21, intr_irq1);
+
     /* Load trampoline code */
     sz = (uint64_t)trampoline_end - (uint64_t)trampoline;
     if ( sz > TRAMPOLINE_MAX_SIZE ) {
         panic("Trampoline code is too large to load.");
     }
-    kmemcpy((void *)(TRAMPOLINE_VEC << 12), trampoline, sz);
+    kmemcpy((void *)(TRAMPOLINE_VEC << 12) + KERNEL_RELOCBASE, trampoline, sz);
 
     /* Send INIT IPI */
     lapic_send_init_ipi();
@@ -666,24 +687,16 @@ bsp_start(void)
     /* Wait 200 us */
     acpi_busy_usleep(acpi, 200);
 
-    /* Initialiez I/O APIC */
-    ioapic_init();
-    ioapic_map_intr(0x21, 1, acpi->ioapic_base);
-
-    /* Test interrupt */
-    idt_setup_trap_gate(13, intr_gpf);
-    idt_setup_intr_gate(0x21, intr_irq1);
-
     /* Messaging region */
-    base = (uint16_t *)0xb8000;
+    base = (uint16_t *)0xc00b8000;
     print_str(base, "Welcome to advos (64-bit)!");
     base += 80;
 
     /* Testing memory allocator */
     void *ptr;
-    ptr = memory_alloc_pages(&kvar->mm, 0);
-    print_hex(base, (uintptr_t)ptr, 8);
-    base += 80;
+    //ptr = memory_alloc_pages(&kvar->mm, 0);
+    //print_hex(base, (uintptr_t)ptr, 8);
+    //base += 80;
     ptr = phys_mem_buddy_alloc(kvar->phys.numazones[1].heads, 1);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
