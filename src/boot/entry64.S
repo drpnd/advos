@@ -55,8 +55,9 @@ entry64:
 	hlt
 	jmp	1b
 
-/* void ljmp(uint64_t cs, void *ip); */
+/* void ljmp(uint64_t cs, void *ip, uint64_t sp); */
 _ljmp:
+	movq	%rdx,%rsp
 	pushq	%rdi
 	pushq	%rsi
 	lretq

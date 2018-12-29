@@ -24,7 +24,7 @@
 #include "bootinfo.h"
 #include <stdint.h>
 
-void ljmp(uint64_t, uint64_t);
+void ljmp(uint64_t, uint64_t, uint64_t);
 
 /*
  * Entry point for C code
@@ -32,7 +32,7 @@ void ljmp(uint64_t, uint64_t);
 void
 centry(void)
 {
-    ljmp(0x08, 0xc0010000);
+    ljmp(0x08, 0xc0010000, 0xc0007c00);
 }
 
 /*
