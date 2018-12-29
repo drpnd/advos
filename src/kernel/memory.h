@@ -45,6 +45,8 @@
 /* Page flags */
 #define MEMORY_PGF_WIRED                (1 << 0)
 
+#define MEMORY_SLAB_CACHE_NAME_MAX      64
+
 /*
  * Page
  */
@@ -214,6 +216,60 @@ typedef struct {
     int (*unmap)(void *, uintptr_t, page_t *);
 } memory_t;
 
+/*
+ * Define memory_slab_cache_t first
+ */
+typedef struct memory_slab_cache memory_slab_cache_t;
+
+/*
+ * Slab header
+ */
+typedef struct memory_slab_hdr memory_slab_hdr_t;
+struct memory_slab_hdr {
+    /* Pointer to the next slab header */
+    memory_slab_hdr_t *next;
+    /* Parent cache */
+    memory_slab_cache_t *cache;
+    /* Size of objects */
+    size_t size;
+    /* The number of objects in this slab */
+    int nobjs;
+    /* The number of allocated objects */
+    int nused;
+    /* Pointer to the first object in this slab */
+    void *obj_head;
+    /* Free marks follows (nobjs byte) */
+    uint8_t marks[0];
+    /* Objects follow */
+};
+
+/*
+ * free list of slab objects
+ */
+typedef struct {
+    memory_slab_hdr_t *partial;
+    memory_slab_hdr_t *full;
+    memory_slab_hdr_t *free;
+} memory_slab_free_list_t;
+
+/*
+ * Slab cache
+ */
+struct memory_slab_cache {
+    char name[MEMORY_SLAB_CACHE_NAME_MAX];
+    memory_slab_free_list_t freelist;
+    /* Search tree */
+    memory_slab_cache_t *left;
+    memory_slab_cache_t *right;
+};
+
+/*
+ * Slab allocator
+ */
+typedef struct {
+    memory_slab_cache_t *root;
+} memory_slab_allocator_t;
+
 /* Defined in physmem.c */
 void
 phys_mem_buddy_add_region(phys_memory_buddy_page_t **, uintptr_t, uintptr_t);
@@ -231,6 +287,8 @@ int memory_block_add(memory_t *, uintptr_t, uintptr_t);
 int memory_wire(memory_t *, uintptr_t, size_t, uintptr_t);
 void * memory_alloc_pages(memory_t *, size_t, int, int);
 void memory_free_pages(memory_t *, void *);
+
+/* Defined in slab.c */
 
 #endif
 
