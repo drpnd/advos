@@ -29,6 +29,13 @@
 
 #define invlpg(addr)    __asm__ __volatile__ ("invlpg (%%rax)" :: "a"((addr)))
 #define set_cr3(cr3)    __asm__ __volatile__ ("movq %%rax,%%cr3" :: "a"((cr3)))
+static uintptr_t
+get_cr3(void)
+{
+    uintptr_t cr3;
+    __asm__ __volatile__ ("movq %%cr3,%%rax" : "=a"((cr3)));
+    return cr3;
+}
 
 #define MASK_PAGE(a)        ((a) & ~0xfffULL)
 #define MASK_SUPERPAGE(a)   ((a) & ~0x1fffffULL)
@@ -354,6 +361,10 @@ pgt_map(pgt_t *pgt, uintptr_t virtual, uintptr_t physical, int superpage,
         pd[idx].page.us = user;
         pd[idx].page.g = global;
         pd[idx].v |= physical;
+        /* Invalidate */
+        if ( MASK_PAGE(get_cr3()) == MASK_PAGE(pgt->cr3) ) {
+            invlpg(virtual);
+        }
     } else {
         if ( !pd[idx].ptr.present ) {
             /* Not present, then add a page here */
@@ -382,6 +393,11 @@ pgt_map(pgt_t *pgt, uintptr_t virtual, uintptr_t physical, int superpage,
         pt[idx].page.us = user;
         pt[idx].page.g = global;
         pt[idx].v |= physical;
+
+        /* Invalidate */
+        if ( MASK_PAGE(get_cr3()) == MASK_PAGE(pgt->cr3) ) {
+            invlpg(virtual);
+        }
     }
 
     return 0;
@@ -442,6 +458,11 @@ pgt_unmap(pgt_t *pgt, uintptr_t virtual, int superpage)
             return -1;
         }
         pd[idx].v = 0;
+
+        /* Invalidate */
+        if ( MASK_PAGE(get_cr3()) == MASK_PAGE(pgt->cr3) ) {
+            invlpg(virtual);
+        }
     } else {
         /* PT */
         p = MASK_PAGE(pd[idx].v);
@@ -452,6 +473,11 @@ pgt_unmap(pgt_t *pgt, uintptr_t virtual, int superpage)
             return -1;
         }
         pt[idx].v = 0;
+
+        /* Invalidate */
+        if ( MASK_PAGE(get_cr3()) == MASK_PAGE(pgt->cr3) ) {
+            invlpg(virtual);
+        }
 
         /* Check all entries of PT */
         for ( i = 0; i < 512; i++ ) {

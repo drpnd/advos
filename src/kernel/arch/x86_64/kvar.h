@@ -41,9 +41,6 @@ typedef struct {
 /* For kernel variables */
 #define KVAR                    ((kvar_t *)KVAR_ADDR)
 
-/* Page table for kernel (pgt_t) */
-#define KVAR_KPGT               ((void *)KPGT_ADDR)
-
 /* Pointer to per-core data (flags, tss, stack); 256 */
 #define KVAR_KDATA_PER_CORE     ((void *)KDATA_PER_CORE)
 
