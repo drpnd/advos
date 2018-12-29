@@ -34,8 +34,6 @@
 #include "../../memory.h"
 #include <stdint.h>
 
-#define P2V_OFFSET      0x100000000ULL
-
 #define set_cr3(cr3)    __asm__ __volatile__ ("movq %%rax,%%cr3" :: "a"((cr3)))
 #define invlpg(addr)    __asm__ __volatile__ ("invlpg (%%rax)" :: "a"((addr)))
 
@@ -624,7 +622,7 @@ bsp_start(void)
     /* Initialize the buddy system for the core memory */
     nr = *(uint16_t *)BI_MM_NENT_ADDR;
     phys_memory_init(&kvar->phys, nr, (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR,
-                     P2V_OFFSET);
+                     KERNEL_LMAP);
 
     /* Initialize the kernel table */
     ret = _init_kernel_pgt(kvar, nr, (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR);
