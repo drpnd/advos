@@ -875,7 +875,7 @@ error_entry:
  * Allocate pages
  */
 void *
-memory_alloc_pages(memory_t *mem, size_t nr)
+memory_alloc_pages(memory_t *mem, size_t nr, int zone, int domain)
 {
     virt_memory_block_t *block;
     void *ptr;
@@ -883,8 +883,7 @@ memory_alloc_pages(memory_t *mem, size_t nr)
     block = mem->blocks;
     ptr = NULL;
     while ( NULL != block && NULL == ptr ) {
-        ptr = _alloc_pages_block(mem, block, nr, MEMORY_ZONE_NUMA_AWARE,
-                                 0);
+        ptr = _alloc_pages_block(mem, block, nr, zone, domain);
         block = block->next;
     }
 

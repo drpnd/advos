@@ -185,18 +185,23 @@ phys_mem_buddy_alloc(phys_memory_buddy_page_t **buddy, int order)
 void *
 phys_mem_alloc(phys_memory_t *mem, int order, int zone, int domain)
 {
+    void *ptr;
+
+    ptr = NULL;
     if ( MEMORY_ZONE_DMA == zone || MEMORY_ZONE_KERNEL == zone ) {
-        return phys_mem_buddy_alloc(mem->czones[zone].heads, order);
+        ptr = phys_mem_buddy_alloc(mem->czones[zone].heads, order);
     } else if ( MEMORY_ZONE_NUMA_AWARE == zone ) {
         if ( domain <= mem->max_domain ) {
-            return phys_mem_buddy_alloc(mem->numazones[domain].heads, order);
-        } else {
-            return NULL;
+            ptr = phys_mem_buddy_alloc(mem->numazones[domain].heads, order);
         }
-    } else {
-        return NULL;
     }
 
+    /* Virtual to physical */
+    if ( NULL != ptr ) {
+        ptr = ptr - mem->p2v;
+    }
+
+    return ptr;
 }
 
 /*
@@ -276,6 +281,11 @@ phys_mem_buddy_free(phys_memory_buddy_page_t **buddy, void *ptr, int order)
 void
 phys_mem_free(phys_memory_t *mem, void *ptr, int order, int zone, int domain)
 {
+    /* Physical to virtual */
+    if ( NULL != ptr ) {
+        ptr = ptr + mem->p2v;
+    }
+
     if ( MEMORY_ZONE_DMA == zone || MEMORY_ZONE_KERNEL == zone ) {
         phys_mem_buddy_free(mem->czones[zone].heads, ptr, order);
     } else if ( MEMORY_ZONE_NUMA_AWARE == zone ) {

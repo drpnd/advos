@@ -397,7 +397,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     if ( ret < 0 ) {
         panic("Failed to wire linear mapping region.");
     }
-
+#if 1
     /* 0-1 GiB (To be removed) */
     ret = memory_block_add(&kvar->mm, 0, 0x40000000);
     if ( ret < 0 ) {
@@ -407,6 +407,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     if ( ret < 0 ) {
         panic("Failed to wire linear mapping region (low).");
     }
+#endif
 
     /* Activate the page table */
     pgt_set_cr3(&kvar->pgt);
@@ -573,18 +574,17 @@ arch_memory_unmap(void *arch, uintptr_t virtual, page_t *page)
 void
 bsp_start(void)
 {
-    /* Print message */
-    uint16_t *base;
-    int offset;
     int nr;
-    int i;
-    sysaddrmap_entry_t *ent;
     kvar_t *kvar;
-    acpi_t *acpi;
     int ret;
-    size_t sz;
     struct gdtr *gdtr;
     struct idtr *idtr;
+    acpi_t *acpi;
+    size_t sz;
+    uint16_t *base;
+    int offset;
+    sysaddrmap_entry_t *ent;
+    int i;
 
     /* Kernel variables */
     if ( sizeof(kvar_t) > KVAR_SIZE ) {
@@ -634,7 +634,7 @@ bsp_start(void)
     if ( sizeof(acpi_t) > MEMORY_PAGESIZE * 4 ) {
         panic("The size of acpi_t exceeds the expected size.");
     }
-    acpi = phys_mem_buddy_alloc(kvar->phys.czones[MEMORY_ZONE_KERNEL].heads, 2);
+    acpi = memory_alloc_pages(&kvar->mm, 4, MEMORY_ZONE_KERNEL, 0);
     if ( NULL == acpi ) {
         panic("Memory allocation failed for acpi_t.");
     }
@@ -692,14 +692,14 @@ bsp_start(void)
 
     /* Testing memory allocator */
     void *ptr;
-    ptr = memory_alloc_pages(&kvar->mm, 1);
+    ptr = memory_alloc_pages(&kvar->mm, 1, MEMORY_ZONE_NUMA_AWARE, 0);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
-    ptr = memory_alloc_pages(&kvar->mm, 2);
+    ptr = memory_alloc_pages(&kvar->mm, 2, MEMORY_ZONE_NUMA_AWARE, 0);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
     memory_free_pages(&kvar->mm, ptr);
-    ptr = memory_alloc_pages(&kvar->mm, 1);
+    ptr = memory_alloc_pages(&kvar->mm, 1, MEMORY_ZONE_NUMA_AWARE, 0);
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
 

@@ -229,7 +229,7 @@ int memory_init(memory_t *, phys_memory_t *, void *,
                 int (*unmap)(void *, uintptr_t, page_t *));
 int memory_block_add(memory_t *, uintptr_t, uintptr_t);
 int memory_wire(memory_t *, uintptr_t, size_t, uintptr_t);
-void * memory_alloc_pages(memory_t *, size_t);
+void * memory_alloc_pages(memory_t *, size_t, int, int);
 void memory_free_pages(memory_t *, void *);
 
 #endif

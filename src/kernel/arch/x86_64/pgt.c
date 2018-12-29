@@ -363,6 +363,7 @@ pgt_map(pgt_t *pgt, uintptr_t virtual, uintptr_t physical, int superpage,
         pd[idx].v |= physical;
         /* Invalidate */
         if ( MASK_PAGE(get_cr3()) == MASK_PAGE(pgt->cr3) ) {
+            panic("xxx");
             invlpg(virtual);
         }
     } else {
