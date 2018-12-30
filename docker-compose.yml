@@ -1,6 +1,10 @@
 version: '3'
 
 services:
+  qemu-single:
+    build:
+      context: ./
+      dockerfile: ./qemu/Dockerfile.single
   qemu:
     build:
       context: ./
