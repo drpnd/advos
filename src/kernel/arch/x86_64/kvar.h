@@ -36,6 +36,7 @@ typedef struct {
     phys_memory_t phys;
     memory_t mm;
     pgt_t pgt;
+    memory_slab_allocator_t slab;
 } kvar_t;
 
 /* For kernel variables */

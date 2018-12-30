@@ -237,24 +237,30 @@ _add_region_to_numa_zones(phys_memory_t *mem, acpi_t *acpi, uintptr_t base,
     uintptr_t t;
     int dom;
 
-    for ( i = 0; i < acpi->num_memory_region; i++ ) {
-        s = acpi->memory_domain[i].base;
-        t = s + acpi->memory_domain[i].length;
-        dom = acpi->memory_domain[i].domain;
-        if ( base >= s && next <= t ) {
-            /* Within the domain, then add this region to the buddy system */
-            phys_mem_buddy_add_region(mem->numazones[dom].heads,
-                                      base + mem->p2v, next + mem->p2v);
-        } else if ( base >= s ) {
-            /* s <= base <= t < next */
-            phys_mem_buddy_add_region(mem->numazones[dom].heads,
-                                      base + mem->p2v, t + mem->p2v);
-        } else if ( next <= t ) {
-            /* base < s < next <= t */
-            phys_mem_buddy_add_region(mem->numazones[dom].heads,
-                                      s + mem->p2v, next + mem->p2v);
+    if ( acpi->num_memory_region > 1 ) {
+        for ( i = 0; i < acpi->num_memory_region; i++ ) {
+            s = acpi->memory_domain[i].base;
+            t = s + acpi->memory_domain[i].length;
+            dom = acpi->memory_domain[i].domain;
+            if ( base >= s && next <= t ) {
+                /* Within the domain, then add this region to the buddy
+                   system */
+                phys_mem_buddy_add_region(mem->numazones[dom].heads,
+                                          base + mem->p2v, next + mem->p2v);
+            } else if ( base >= s ) {
+                /* s <= base <= t < next */
+                phys_mem_buddy_add_region(mem->numazones[dom].heads,
+                                          base + mem->p2v, t + mem->p2v);
+            } else if ( next <= t ) {
+                /* base < s < next <= t */
+                phys_mem_buddy_add_region(mem->numazones[dom].heads,
+                                          s + mem->p2v, next + mem->p2v);
+            }
         }
-
+    } else {
+        /* Non-NUMA (UMA) */
+        phys_mem_buddy_add_region(mem->numazones[0].heads,
+                                  base + mem->p2v, next + mem->p2v);
     }
 }
 
@@ -650,6 +656,12 @@ bsp_start(void)
                            (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR);
     if ( ret < 0 ) {
         panic("Failed to initialize the NUMA-aware zones.");
+    }
+
+    /* Initialize the slab allocator */
+    ret = memory_slab_init(&kvar->slab, &kvar->mm);
+    if ( ret < 0 ) {
+        panic("Failed to initialize the slab allocator");
     }
 
     /* Initialiez I/O APIC */

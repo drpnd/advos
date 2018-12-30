@@ -45,10 +45,13 @@
 /* Page flags */
 #define MEMORY_PGF_WIRED                (1 << 0)
 
+#define MEMORY_SLAB_NUM_PAGES           8
 #define MEMORY_SLAB_CACHE_NAME_MAX      64
+#define MEMORY_SLAB_ALIGNMENT           64 /* Cacheline size (must be 2^n) */
+#define MEMORY_SLAB_CACHE_NAME          "slab_cache"
 
 /*
- * Page
+ * PAGE
  */
 struct _phys_memory_buddy_page {
     /* Linked list's next pointer (virtual address) */
@@ -230,8 +233,6 @@ struct memory_slab_hdr {
     memory_slab_hdr_t *next;
     /* Parent cache */
     memory_slab_cache_t *cache;
-    /* Size of objects */
-    size_t size;
     /* The number of objects in this slab */
     int nobjs;
     /* The number of allocated objects */
@@ -249,7 +250,7 @@ struct memory_slab_hdr {
 typedef struct {
     memory_slab_hdr_t *partial;
     memory_slab_hdr_t *full;
-    memory_slab_hdr_t *free;
+    memory_slab_hdr_t *empty;
 } memory_slab_free_list_t;
 
 /*
@@ -257,6 +258,7 @@ typedef struct {
  */
 struct memory_slab_cache {
     char name[MEMORY_SLAB_CACHE_NAME_MAX];
+    size_t size;
     memory_slab_free_list_t freelist;
     /* Search tree */
     memory_slab_cache_t *left;
@@ -267,6 +269,7 @@ struct memory_slab_cache {
  * Slab allocator
  */
 typedef struct {
+    memory_t *mem;
     memory_slab_cache_t *root;
 } memory_slab_allocator_t;
 
@@ -288,7 +291,12 @@ int memory_wire(memory_t *, uintptr_t, size_t, uintptr_t);
 void * memory_alloc_pages(memory_t *, size_t, int, int);
 void memory_free_pages(memory_t *, void *);
 
+/* To be implemented */
+void * kmalloc(size_t);
+void kfree(void *);
+
 /* Defined in slab.c */
+int memory_slab_init(memory_slab_allocator_t *, memory_t *);
 
 #endif
 
