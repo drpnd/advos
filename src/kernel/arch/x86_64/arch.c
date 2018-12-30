@@ -615,7 +615,7 @@ ksignal_clock(void)
 
     base = (uint16_t *)0xc00b8000;
     base += 80 * 24;
-    print_hex(base, cnt, 8);
+    print_hex(base, cnt / 100, 8);
     cnt++;
 }
 
