@@ -25,6 +25,107 @@
 #include "memory.h"
 #include <stdint.h>
 
+/*
+ * kstrcmp
+ */
+int
+kstrcmp(const char *s1, const char *s2)
+{
+    size_t i;
+    int diff;
+
+    i = 0;
+    while ( s1[i] != '\0' || s2[i] != '\0' ) {
+        diff = s1[i] - s2[i];
+        if ( diff ) {
+            return diff;
+        }
+        i++;
+    }
+
+    return 0;
+}
+
+/*
+ * kstrncmp
+ */
+int
+kstrncmp(const char *s1, const char *s2, size_t n)
+{
+    size_t i;
+    int diff;
+
+    i = 0;
+    while ( (s1[i] != '\0' || s2[i] != '\0') && i < n ) {
+        diff = s1[i] - s2[i];
+        if ( diff ) {
+            return diff;
+        }
+        i++;
+    }
+
+    return 0;
+}
+
+/*
+ * kstrcpy
+ */
+char *
+kstrcpy(char *dst, const char *src)
+{
+    size_t i;
+
+    i = 0;
+    while ( src[i] != '\0' ) {
+        dst[i] = src[i];
+        i++;
+    }
+    dst[i] = src[i];
+
+    return dst;
+}
+
+/*
+ * kstrncpy
+ */
+char *
+kstrncpy(char *dst, const char *src, size_t n)
+{
+    size_t i;
+
+    i = 0;
+    while ( src[i] != '\0' && i < n ) {
+        dst[i] = src[i];
+        i++;
+    }
+    for ( ; i < n; i++ ) {
+        dst[i] = '\0';
+    }
+
+    return dst;
+}
+
+/*
+ * kstrlcpy
+ */
+size_t
+kstrlcpy(char *dst, const char *src, size_t n)
+{
+    size_t i;
+
+    i = 0;
+    while ( src[i] != '\0' && i < n - 1 ) {
+        dst[i] = src[i];
+        i++;
+    }
+    dst[i] = '\0';
+
+    while ( '\0' != src[i] ) {
+        i++;
+    }
+
+    return i;
+}
 
 /*
  * Local variables:

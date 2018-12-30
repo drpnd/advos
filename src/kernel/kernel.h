@@ -58,6 +58,13 @@ void * kmemset(void *, int, size_t);
 int kmemcmp(void *, void *, size_t);
 int kmemcpy(void *__restrict, void *__restrict, size_t);
 
+/* Defined in kernel.c */
+int kstrcmp(const char *, const char *);
+int kstrncmp(const char *, const char *, size_t);
+char * kstrcpy(char *, const char *);
+char * kstrncpy(char *, const char *, size_t);
+char * kstrlcpy(char *, const char *, size_t);
+
 /* Defined in strfmt.c */
 int kvsnprintf(char *, size_t, const char *, va_list);
 int ksnprintf(char *, size_t, const char *, ...);
