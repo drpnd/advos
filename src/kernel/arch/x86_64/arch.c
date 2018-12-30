@@ -591,6 +591,9 @@ bsp_start(void)
     int offset;
     sysaddrmap_entry_t *ent;
     int i;
+    static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
+                                   2048, 4096, 8192 };
+    char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
 
     /* Kernel variables */
     if ( sizeof(kvar_t) > KVAR_SIZE ) {
@@ -664,6 +667,13 @@ bsp_start(void)
         panic("Failed to initialize the slab allocator");
     }
 
+    /* Initialize the kmalloc slab caches */
+    for ( i = 0; i < (int)(sizeof(kmalloc_sizes) / sizeof(int)); i++ ) {
+        ksnprintf(cachename, MEMORY_SLAB_CACHE_NAME_MAX, "kmalloc-%d",
+                  kmalloc_sizes[i]);
+        memory_slab_create_cache(&kvar->slab, cachename, kmalloc_sizes[i]);
+    }
+
     /* Initialiez I/O APIC */
     ioapic_init();
     ioapic_map_intr(0x21, 1, acpi->ioapic_base);
@@ -704,14 +714,14 @@ bsp_start(void)
 
     /* Testing memory allocator */
     void *ptr;
-    ptr = memory_alloc_pages(&kvar->mm, 1, MEMORY_ZONE_NUMA_AWARE, 0);
+    ptr = memory_slab_alloc(&kvar->slab, "kmalloc-64");
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
-    ptr = memory_alloc_pages(&kvar->mm, 2, MEMORY_ZONE_NUMA_AWARE, 0);
+    ptr = memory_slab_alloc(&kvar->slab, "kmalloc-64");
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
-    memory_free_pages(&kvar->mm, ptr);
-    ptr = memory_alloc_pages(&kvar->mm, 1, MEMORY_ZONE_NUMA_AWARE, 0);
+    memory_slab_free(&kvar->slab, "kmalloc-64", ptr);
+    ptr = memory_slab_alloc(&kvar->slab, "kmalloc-64");
     print_hex(base, (uintptr_t)ptr, 8);
     base += 80;
 

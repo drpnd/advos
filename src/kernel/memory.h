@@ -297,6 +297,10 @@ void kfree(void *);
 
 /* Defined in slab.c */
 int memory_slab_init(memory_slab_allocator_t *, memory_t *);
+void * memory_slab_alloc(memory_slab_allocator_t *, const char *);
+void memory_slab_free(memory_slab_allocator_t *, const char *, void *);
+int memory_slab_create_cache(memory_slab_allocator_t *, const char *, size_t);
+
 
 #endif
 

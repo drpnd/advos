@@ -76,6 +76,11 @@ _find_slab_cache(memory_slab_cache_t *n, const char *name)
 {
     int ret;
 
+    if ( NULL == n ) {
+        /* Not found */
+        return NULL;
+    }
+
     ret = kstrncmp(n->name, name, MEMORY_SLAB_CACHE_NAME_MAX);
     if ( 0 == ret ) {
         return n;
@@ -177,6 +182,109 @@ memory_slab_alloc(memory_slab_allocator_t *slab, const char *name)
 }
 
 /*
+ * Search a slab containing to the object
+ */
+static memory_slab_hdr_t *
+_find_slab_for_object(memory_slab_cache_t *c, memory_slab_hdr_t *h, void *obj)
+{
+    memory_slab_hdr_t *s;
+    uintptr_t addr;
+    uintptr_t start;
+    uintptr_t end;
+
+    /* Address of the object */
+    addr = (uintptr_t)obj;
+
+    /* Search a slab containing the object */
+    s = h;
+    while ( NULL != s ) {
+        start = (uintptr_t)s->obj_head;
+        end = start + c->size * s->nobjs;
+        if ( addr >= start && addr < end ) {
+            return s;
+        }
+        s = s->next;
+    }
+
+    return NULL;
+}
+
+/*
+ * Free an object to the slab cache
+ */
+void
+memory_slab_free(memory_slab_allocator_t *slab, const char *name, void *obj)
+{
+    memory_slab_cache_t *c;
+    memory_slab_hdr_t *s;
+    int waspartial;
+    memory_slab_hdr_t **head;
+    uintptr_t off;
+    int idx;
+
+    /* Find the slab cache corresponding to the name */
+    c = _find_slab_cache(slab->root, name);
+    if ( NULL == c ) {
+        /* Not found */
+        return;
+    }
+
+    /* Search a slab containing the object */
+    waspartial = 1;
+    s = _find_slab_for_object(c, c->freelist.partial, obj);
+    if ( NULL == s ) {
+        /* Not found, then try to search empty list */
+        waspartial = 0;
+        s = _find_slab_for_object(c, c->freelist.empty, obj);
+        if ( NULL == s ) {
+            /* Not found */
+            return;
+        }
+    }
+
+    /* Calculate the offset and the index */
+    off = obj - s->obj_head;
+    idx = off / c->size;
+    kassert( idx < s->nobjs );
+
+    /* Mark as free */
+    s->marks[idx] = 1;
+    s->nused--;
+
+    if ( !waspartial ) {
+        /* Remove from emtpy, then add to the partial */
+        head = &c->freelist.empty;
+        while ( *head ) {
+            if ( *head == s ) {
+                /* Found, then remove s */
+                *head = s->next;
+                break;
+            }
+            head = &(*head)->next;
+        }
+        /* Add it to the partial list */
+        s->next = c->freelist.partial;
+        c->freelist.partial = s;
+    }
+
+    if ( s->nused == 0 ) {
+        /* Remove from partial, then add to the full */
+        head = &c->freelist.partial;
+        while ( *head ) {
+            if ( *head == s ) {
+                /* Found, then remove s */
+                *head = s->next;
+                break;
+            }
+            head = &(*head)->next;
+        }
+        /* Add it to the full list */
+        s->next = c->freelist.full;
+        c->freelist.full = s;
+    }
+}
+
+/*
  * Create a new slab cache
  */
 int
@@ -188,7 +296,7 @@ memory_slab_create_cache(memory_slab_allocator_t *slab, const char *name,
     int ret;
 
     /* Duplicate check */
-    cache = memory_slab_alloc(slab, name);
+    cache = _find_slab_cache(slab->root, name);
     if ( NULL != cache ) {
         /* Already exists */
         return -1;
@@ -254,7 +362,6 @@ _slab_cache_init(memory_slab_allocator_t *slab)
 
     return 0;
 }
-
 
 /*
  * Initialize the slab allocator
