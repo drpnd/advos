@@ -51,6 +51,7 @@
 	.globl	_ltr
 	.globl	_chcs
 	.globl	_intr_null
+	.globl	_intr_apic_loc_tmr
 	.globl	_intr_gpf
 	.globl	_intr_irq1
 	.globl	_intr_crash
@@ -280,6 +281,58 @@ _chcs:
 
 /* Null interrupt handler (do nothing) */
 _intr_null:
+	iretq
+
+/* Timer interrupt of Local APIC */
+_intr_apic_loc_tmr:
+	/* Push all registers to the stackframe */
+	pushq	%rax
+	pushq	%rbx
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	pushq	%r12
+	pushq	%r13
+	pushq	%r14
+	pushq	%r15
+	pushq	%rsi
+	pushq	%rdi
+	pushq	%rbp
+	pushw	%fs
+	pushw	%gs
+	/* Call a function */
+	call	_ksignal_clock
+	/* APIC EOI */
+	movq	$MSR_APIC_BASE,%rcx
+	rdmsr			/* Read APIC info to [%edx:%eax]; N.B., higer */
+				/*  32 bits of %rax and %rdx are cleared */
+				/*  bit [35:12]: APIC Base, [11]: EN */
+				/*  [10]: EXTD, and [8]:BSP */
+	shlq	$32,%rdx
+	addq	%rax,%rdx
+	andq	$0xfffffffffffff000,%rdx        /* APIC Base */
+	movl	$0,0x0b0(%rdx)       /* EOI */
+	/* Pop all registers from the stackframe */
+	popw	%gs
+	popw	%fs
+	popq	%rbp
+	popq	%rdi
+	popq	%rsi
+	popq	%r15
+	popq	%r14
+	popq	%r13
+	popq	%r12
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdx
+	popq	%rcx
+	popq	%rbx
+	popq	%rax
 	iretq
 
 /* General protection fault */

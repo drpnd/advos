@@ -88,6 +88,7 @@ void pause(void);
 
 /* Interrupt handlers */
 void intr_null(void);
+void intr_apic_loc_tmr(void);
 void intr_gpf(void);
 void intr_irq1(void);
 void intr_crash(void);

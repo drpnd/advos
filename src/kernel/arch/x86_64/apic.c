@@ -201,6 +201,79 @@ ioapic_map_intr(uint64_t intvec, uint64_t tbldst, uint64_t ioapic_base)
 }
 
 /*
+ * lapic_set_timer -- set timer
+ */
+void
+lapic_set_timer(uint32_t value, int divide)
+{
+    uint64_t apic_base;
+
+    apic_base = lapic_base_addr();
+
+    /* Disable timer */
+    mfwr32(apic_base + APIC_LVT_TMR, APIC_LVT_DISABLE);
+
+    /* Set divide configuration of the timer */
+    mfwr32(apic_base + APIC_TMRDIV, divide);
+
+    /* Vector: lvt[18:17] = 00 : oneshot */
+    mfwr32(apic_base + APIC_LVT_TMR, 0x0);
+
+    /* Set initial counter and start the timer */
+    mfwr32(apic_base + APIC_INITTMR, value);
+}
+
+/*
+ * lapic_stop_and_read_timer -- stop and read the timer counter
+ */
+uint64_t
+lapic_stop_and_read_timer(void)
+{
+    uint64_t apic_base;
+    uint32_t t;
+
+    apic_base = lapic_base_addr();
+
+    /* Disable current timer */
+    mfwr32(apic_base + APIC_LVT_TMR, APIC_LVT_DISABLE);
+
+    /* Read current timer */
+    t = mfrd32(apic_base + APIC_CURTMR);
+
+    return t;
+}
+
+/*
+ * Start local APIC timer
+ */
+void
+lapic_start_timer(uint64_t busfreq, uint64_t freq, uint8_t vec)
+{
+    uint64_t apic_base;
+
+    apic_base = lapic_base_addr();
+
+    /* Set counter */
+    mfwr32(apic_base + APIC_LVT_TMR, APIC_LVT_PERIODIC | (uint32_t)vec);
+    mfwr32(apic_base + APIC_TMRDIV, APIC_TMRDIV_X16);
+    mfwr32(apic_base + APIC_INITTMR, (busfreq >> 4) / freq);
+}
+
+/*
+ * Stop APIC timer
+ */
+void
+lapic_stop_timer(void)
+{
+    uint64_t apic_base;
+
+    apic_base = lapic_base_addr();
+
+    /* Disable timer */
+    mfwr32(apic_base + APIC_LVT_TMR, APIC_LVT_DISABLE);
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4

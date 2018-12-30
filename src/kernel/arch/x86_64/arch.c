@@ -487,6 +487,36 @@ _init_numa_zones(phys_memory_t *mem, acpi_t *acpi, int nr,
 }
 
 /*
+ * Estimate bus frequency
+ */
+static uint64_t
+_estimate_bus_freq(acpi_t *acpi)
+{
+    uint32_t t0;
+    uint32_t t1;
+    uint32_t probe;
+    uint64_t ret;
+
+    /* Start timer */
+    t0 = 0xffffffff;
+    lapic_set_timer(0xffffffff, APIC_TMRDIV_X16);
+    
+    /* Set probe timer (100 ms) */
+    probe = 100000;
+
+    /* Sleep probing time */
+    acpi_busy_usleep(acpi, probe);
+
+    t1 = lapic_stop_and_read_timer();
+
+    /* Calculate the APIC bus frequency */
+    ret = (uint64_t)(t0 - t1) << 4;
+    ret = ret * 1000000 / probe;
+
+    return ret;
+}
+
+/*
  * Map virtual address to physical address
  */
 int
@@ -575,6 +605,21 @@ arch_memory_unmap(void *arch, uintptr_t virtual, page_t *page)
 }
 
 /*
+ * Local APIC timer handler
+ */
+void
+ksignal_clock(void)
+{
+    uint16_t *base;
+    static uint64_t cnt = 0;
+
+    base = (uint16_t *)0xc00b8000;
+    base += 80 * 24;
+    print_hex(base, cnt, 8);
+    cnt++;
+}
+
+/*
  * Entry point for C code
  */
 void
@@ -594,6 +639,7 @@ bsp_start(void)
     static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
                                    2048, 4096, 8192 };
     char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
+    uint64_t busfreq;
 
     /* Kernel variables */
     if ( sizeof(kvar_t) > KVAR_SIZE ) {
@@ -679,6 +725,7 @@ bsp_start(void)
     ioapic_map_intr(0x21, 1, acpi->ioapic_base);
 
     /* Test interrupt */
+    idt_setup_intr_gate(IV_LOC_TMR, intr_apic_loc_tmr);
     idt_setup_trap_gate(13, intr_gpf);
     idt_setup_intr_gate(0x21, intr_irq1);
 
@@ -711,7 +758,9 @@ bsp_start(void)
     base = (uint16_t *)0xc00b8000;
     print_str(base, "Welcome to advos (64-bit)!");
     base += 80;
-
+    busfreq = _estimate_bus_freq(acpi);
+    print_hex(base, busfreq, 8);
+    base += 80;
     /* Testing memory allocator */
     void *ptr;
     ptr = memory_slab_alloc(&kvar->slab, "kmalloc-64");
@@ -767,6 +816,8 @@ bsp_start(void)
         base += 80;
         ent++;
     }
+
+    lapic_start_timer(busfreq, HZ, IV_LOC_TMR);
 
     /* Enable interrupt */
     sti();

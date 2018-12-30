@@ -63,7 +63,7 @@ int kstrcmp(const char *, const char *);
 int kstrncmp(const char *, const char *, size_t);
 char * kstrcpy(char *, const char *);
 char * kstrncpy(char *, const char *, size_t);
-char * kstrlcpy(char *, const char *, size_t);
+size_t kstrlcpy(char *, const char *, size_t);
 
 /* Defined in strfmt.c */
 int kvsnprintf(char *, size_t, const char *, va_list);

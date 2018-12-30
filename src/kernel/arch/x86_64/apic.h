@@ -31,6 +31,11 @@
 #define APIC_SIVR                       0x0f0
 #define APIC_ICR_LOW                    0x300
 #define APIC_ICR_HIGH                   0x310
+#define APIC_LVT_TMR                    0x320
+#define APIC_INITTMR                    0x380
+#define APIC_CURTMR                     0x390
+#define APIC_TMRDIV                     0x3e0
+
 
 /* ICR delivery mode */
 #define APIC_ICR_FIXED                  0x00000000
@@ -45,12 +50,29 @@
 #define APIC_ICR_DEST_SELF              0x00040000
 #define APIC_ICR_DEST_ALL_INC_SELF      0x00080000
 #define APIC_ICR_DEST_ALL_EX_SELF       0x000c0000
+/* LVT */
+#define APIC_LVT_DISABLE                0x10000
+#define APIC_LVT_ONESHOT                0x00000000
+#define APIC_LVT_PERIODIC               0x00020000
+#define APIC_LVT_TSC_DEADLINE           0x00040000
+/* Timer */
+#define APIC_TMRDIV_X1                  0xb
+#define APIC_TMRDIV_X2                  0x0
+#define APIC_TMRDIV_X4                  0x1
+#define APIC_TMRDIV_X8                  0x2
+#define APIC_TMRDIV_X16                 0x3
+#define APIC_TMRDIV_X32                 0x8
+#define APIC_TMRDIV_X64                 0x9
+#define APIC_TMRDIV_X128                0xa
 
 void lapic_send_init_ipi(void);
 void lapic_send_startup_ipi(uint8_t);
 void lapic_bcast_fixed_ipi(uint8_t);
 void lapic_send_fixed_ipi(int, uint8_t);
-
+void lapic_set_timer(uint32_t, int);
+uint64_t lapic_stop_and_read_timer(void);
+void lapic_start_timer(uint64_t, uint64_t, uint8_t);
+void lapic_stop_timer(void);
 void ioapic_init(void);
 void ioapic_map_intr(uint64_t, uint64_t, uint64_t);
 
