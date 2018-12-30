@@ -380,11 +380,6 @@ memory_slab_init(memory_slab_allocator_t *slab, memory_t *mem)
         return -1;
     }
 
-#if 0
-    static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
-                                   2048, 4096, 8192 };
-    ncaches = sizeof(kmalloc_sizes) / sizeof(int);
-#endif
     return 0;
 }
 
