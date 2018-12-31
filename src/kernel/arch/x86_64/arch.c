@@ -1008,11 +1008,11 @@ bsp_start(void)
     }
 
     lapic_start_timer(busfreq, HZ, IV_LOC_TMR);
+    task_restart();
 
+    /* The following code will never be reached... */
     /* Enable interrupt */
     sti();
-
-    task_restart();
 
     /* Sleep forever */
     for ( ;; ) {
