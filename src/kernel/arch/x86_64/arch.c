@@ -736,7 +736,7 @@ _prepare_multitasking(void)
     if ( NULL == taska->ustack ) {
         return -1;
     }
-    taska->rp = taska->ustack + 4096 - 16 - sizeof(struct stackframe64);
+    taska->rp = taska->kstack + 4096 - 16 - sizeof(struct stackframe64);
     kmemset(taska->rp, 0, sizeof(struct stackframe64));
     taska->sp0 = (uint64_t)taska->kstack + 4096 - 16;
     taska->rp->sp = (uint64_t)taska->ustack + 4096 - 16;
@@ -759,7 +759,7 @@ _prepare_multitasking(void)
     if ( NULL == taskb->ustack ) {
         return -1;
     }
-    taskb->rp = taskb->ustack + 4096 - 16 - sizeof(struct stackframe64);
+    taskb->rp = taskb->kstack + 4096 - 16 - sizeof(struct stackframe64);
     kmemset(taskb->rp, 0, sizeof(struct stackframe64));
     taskb->sp0 = (uint64_t)taskb->kstack + 4096 - 16;
     taskb->rp->sp = (uint64_t)taskb->ustack + 4096 - 16;
@@ -783,7 +783,7 @@ _prepare_multitasking(void)
     if ( NULL == taski->ustack ) {
         return -1;
     }
-    taski->rp = taski->ustack + 4096 - 16 - sizeof(struct stackframe64);
+    taski->rp = taski->kstack + 4096 - 16 - sizeof(struct stackframe64);
     kmemset(taski->rp, 0, sizeof(struct stackframe64));
     taski->sp0 = (uint64_t)taski->kstack + 4096 - 16;
     taski->rp->sp = (uint64_t)taski->ustack + 4096 - 16;
