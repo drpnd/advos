@@ -447,8 +447,6 @@ _intr_crash:
 	/* Data section */
 	.data
 
-/* Restart */
-
 keymap_base:
 	.ascii	"  1234567890-=  qwertyuiop[]  as"
 	.ascii	"dfghjkl;'` \\zxcvbnm,./          "
