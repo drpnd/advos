@@ -60,6 +60,65 @@ struct tss {
     uint16_t iomap;
 } __attribute__ ((packed));
 
+/*
+ * Stackframe for 64-bit mode
+ */
+struct stackframe64 {
+    /* Segment registers */
+    uint16_t gs;
+    uint16_t fs;
+
+    /* Base pointer */
+    uint64_t bp;
+
+    /* Index registers */
+    uint64_t di;
+    uint64_t si;
+
+    /* Generic registers */
+    uint64_t r15;
+    uint64_t r14;
+    uint64_t r13;
+    uint64_t r12;
+    uint64_t r11;
+    uint64_t r10;
+    uint64_t r9;
+    uint64_t r8;
+    uint64_t dx;
+    uint64_t cx;
+    uint64_t bx;
+    uint64_t ax;
+
+    /* Restored by `iretq' instruction */
+    uint64_t ip;            /* Instruction pointer */
+    uint64_t cs;            /* Code segment */
+    uint64_t flags;         /* Flags */
+    uint64_t sp;            /* Stack pointer */
+    uint64_t ss;            /* Stack segment */
+} __attribute__ ((packed));
+
+/*
+ * Task
+ */
+struct arch_task {
+    /* Restart point (stackframe) */
+    struct stackframe64 *rp;
+    /* SP0 for TSS */
+    uint64_t sp0;
+    /* User stack */
+    void *ustack;
+    /* Kernel stack */
+    void *kstack;
+} __attribute__ ((packed));
+
+/*
+ * Processor's task information
+ */
+struct arch_cpu_data {
+    struct arch_task *cur_task;
+    struct arch_task *next_task;
+} __attribute__ ((packed));
+
 #define sfence()        __asm__ __volatile__ ("sfence")
 
 void sti(void);
@@ -85,6 +144,8 @@ void ltr(uint16_t);
 void chcs(uint64_t);
 void hlt(void);
 void pause(void);
+
+void task_restart(void);
 
 /* Interrupt handlers */
 void intr_null(void);

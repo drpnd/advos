@@ -50,6 +50,7 @@
 	.globl	_lldt
 	.globl	_ltr
 	.globl	_chcs
+	.globl	_task_restart
 	.globl	_intr_null
 	.globl	_intr_apic_loc_tmr
 	.globl	_intr_gpf
@@ -279,6 +280,56 @@ _chcs:
 1:
 	ret
 
+/* Restart a task */
+_task_restart:
+	/* Task base address (struct arch_task *) */
+	movq	$0xc0068e00,%rbp
+	/* If the next task is not scheduled, immediately restart this task. */
+	cmpq	$0,8(%rbp)	/* next_task */
+	jz	2f
+	movq	8(%rbp),%rax
+	/* If the current task is null, then do not need to save anything. */
+	cmpq	$0,0(%rbp)	/* cur_task */
+	jz	1f
+	/* Save the stack pointer (restart point) */
+	movq	0(%rbp),%rax
+	movq	%rsp,0(%rax)	/* cur_task->rp */
+1:
+	/* Notify that the current task is switched (to the kernel) */
+	movq	0(%rbp),%rdi
+	movq	8(%rbp),%rsi
+	/* Task switch (set the stack frame of the new task) */
+	movq	8(%rbp),%rax	/* next_task */
+	movq	%rax,0(%rbp)	/* cur_task */
+	movq	0(%rax),%rsp	/* next_task->rp */
+	movq	$0,8(%rbp)	/* next_task */
+	/* Setup sp0 in TSS */
+	movq	0(%rbp),%rax	/* cur_task */
+	movq	8(%rax),%rdx	/* cur_task->sp0 */
+	movq	$0xc0078000,%rax	/* TSS */
+	movq	%rdx,TSS_SP0(%rax)
+2:
+	/* Pop all registers from the stackframe */
+	popw	%gs
+	popw	%fs
+	popq	%rbp
+	popq	%rdi
+	popq	%rsi
+	popq	%r15
+	popq	%r14
+	popq	%r13
+	popq	%r12
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdx
+	popq	%rcx
+	popq	%rbx
+	popq	%rax
+	iretq
+
+
 /* Null interrupt handler (do nothing) */
 _intr_null:
 	iretq
@@ -315,25 +366,7 @@ _intr_apic_loc_tmr:
 	addq	%rax,%rdx
 	andq	$0xfffffffffffff000,%rdx        /* APIC Base */
 	movl	$0,0x0b0(%rdx)       /* EOI */
-	/* Pop all registers from the stackframe */
-	popw	%gs
-	popw	%fs
-	popq	%rbp
-	popq	%rdi
-	popq	%rsi
-	popq	%r15
-	popq	%r14
-	popq	%r13
-	popq	%r12
-	popq	%r11
-	popq	%r10
-	popq	%r9
-	popq	%r8
-	popq	%rdx
-	popq	%rcx
-	popq	%rbx
-	popq	%rax
-	iretq
+	jmp	_task_restart
 
 /* General protection fault */
 _intr_gpf:

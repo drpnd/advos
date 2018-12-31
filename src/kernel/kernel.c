@@ -129,46 +129,6 @@ kstrlcpy(char *dst, const char *src, size_t n)
 }
 
 /*
- * kmalloc
- */
-void *
-kmalloc(size_t sz)
-{
-    static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
-                                   2048, 4096, 8192 };
-    char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
-    size_t i;
-    int aligned_size;
-
-    /* Search fitting size */
-    aligned_size = -1;
-    for ( i = 0; i < sizeof(kmalloc_sizes) / sizeof(int); i++ ) {
-        if ( (int)sz <= kmalloc_sizes[i] ) {
-            aligned_size = kmalloc_sizes[i];
-            break;
-        }
-    }
-    if ( aligned_size < 0 ) {
-        /* The requested size is too large. */
-        return NULL;
-    }
-    ksnprintf(cachename, MEMORY_SLAB_CACHE_NAME_MAX, "kmalloc-%d",
-              aligned_size);
-
-    return memory_slab_alloc(NULL, cachename);
-}
-
-/*
- * kfree
- */
-void
-kfree(void *obj)
-{
-    /* Search the slab cache corresponding to the specified object */
-    (void)obj;
-}
-
-/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4

@@ -14,7 +14,7 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
@@ -54,6 +54,36 @@ typedef struct {
     uint32_t type;
     uint32_t attr;
 } __attribute__ ((packed)) sysaddrmap_entry_t;
+
+/*
+ * kmalloc
+ */
+void *
+kmalloc(size_t sz)
+{
+    static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
+                                   2048, 4096, 8192 };
+    char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
+    size_t i;
+    int aligned_size;
+
+    /* Search fitting size */
+    aligned_size = -1;
+    for ( i = 0; i < sizeof(kmalloc_sizes) / sizeof(int); i++ ) {
+        if ( (int)sz <= kmalloc_sizes[i] ) {
+            aligned_size = kmalloc_sizes[i];
+            break;
+        }
+    }
+    if ( aligned_size < 0 ) {
+        /* The requested size is too large. */
+        return NULL;
+    }
+    ksnprintf(cachename, MEMORY_SLAB_CACHE_NAME_MAX, "kmalloc-%d",
+              aligned_size);
+
+    return memory_slab_alloc(&KVAR->slab, cachename);
+}
 
 /*
  * invariant_tsc_freq -- resolve the base frequency of invariant TSC
@@ -548,8 +578,8 @@ arch_memory_map(void *arch, uintptr_t virtual, page_t *page)
     global = 1;
     /* Read-write for all pages (temporary) */
     rw = 1;
-    /* Superuser only (temporary) */
-    user = 0;
+    /* User allowed (temporary) */
+    user = 1;
 
     pgt = (pgt_t *)arch;
     for ( i = 0; i < (1LL << nr); i++ ) {
@@ -607,6 +637,9 @@ arch_memory_unmap(void *arch, uintptr_t virtual, page_t *page)
 /*
  * Local APIC timer handler
  */
+struct arch_task *taska;
+struct arch_task *taskb;
+struct arch_task *taski;
 void
 ksignal_clock(void)
 {
@@ -617,7 +650,158 @@ ksignal_clock(void)
     base += 80 * 24;
     print_hex(base, cnt / 100, 8);
     cnt++;
+
+    /* Schedule next task */
+    struct arch_cpu_data *cpu;
+    cpu = (struct arch_cpu_data *)0xc0068e00;
+    if ( cpu->cur_task == taska ) {
+        cpu->next_task = taskb;
+    } else if ( cpu->cur_task == taskb ) {
+        cpu->next_task = taski;
+    } else {
+        cpu->next_task = taska;
+    }
 }
+
+/*
+ * Idle task
+ */
+void
+task_idle(void)
+{
+    uint16_t *base;
+    uint64_t cnt = 0;
+
+    while ( 1 ) {
+        base = (uint16_t *)0xc00b8000;
+        base += 80 * 21;
+        print_hex(base, cnt, 8);
+        cnt++;
+        __asm__ __volatile__ ("hlt");
+    }
+}
+
+/*
+ * Task A
+ */
+void
+task_a(void)
+{
+    uint16_t *base;
+    uint64_t cnt = 0;
+
+    while ( 1 ) {
+        base = (uint16_t *)0xc00b8000;
+        base += 80 * 22;
+        print_hex(base, cnt, 8);
+        cnt++;
+    }
+}
+
+/*
+ * Task B
+ */
+void
+task_b(void)
+{
+    uint16_t *base;
+    uint64_t cnt = 0;
+
+    while ( 1 ) {
+        base = (uint16_t *)0xc00b8000;
+        base += 80 * 23;
+        print_hex(base, cnt, 8);
+        cnt++;
+    }
+}
+
+/*
+ * Create tasks
+ */
+static int
+_prepare_multitasking(void)
+{
+    struct arch_cpu_data *cpu;
+
+    /* Task A */
+    taska = kmalloc(sizeof(struct arch_task));
+    if ( NULL == taska ) {
+        return -1;
+    }
+    taska->kstack = kmalloc(4096);
+    if ( NULL == taska->kstack ) {
+        return -1;
+    }
+    taska->ustack = kmalloc(4096);
+    if ( NULL == taska->ustack ) {
+        return -1;
+    }
+    taska->rp = taska->ustack + 4096 - 16 - sizeof(struct stackframe64);
+    kmemset(taska->rp, 0, sizeof(struct stackframe64));
+    taska->sp0 = (uint64_t)taska->kstack + 4096 - 16;
+    taska->rp->sp = (uint64_t)taska->ustack + 4096 - 16;
+    taska->rp->ip = (uint64_t)task_a;
+    taska->rp->cs = GDT_RING3_CODE64_SEL + 3;
+    taska->rp->ss = GDT_RING3_DATA64_SEL + 3;
+    taska->rp->fs = GDT_RING3_DATA64_SEL + 3;
+    taska->rp->gs = GDT_RING3_DATA64_SEL + 3;
+    taska->rp->flags = 0x202;
+    /* Task B */
+    taskb = kmalloc(sizeof(struct arch_task));
+    if ( NULL == taskb ) {
+        return -1;
+    }
+    taskb->kstack = kmalloc(4096);
+    if ( NULL == taskb->kstack ) {
+        return -1;
+    }
+    taskb->ustack = kmalloc(4096);
+    if ( NULL == taskb->ustack ) {
+        return -1;
+    }
+    taskb->rp = taskb->ustack + 4096 - 16 - sizeof(struct stackframe64);
+    kmemset(taskb->rp, 0, sizeof(struct stackframe64));
+    taskb->sp0 = (uint64_t)taskb->kstack + 4096 - 16;
+    taskb->rp->sp = (uint64_t)taskb->ustack + 4096 - 16;
+    taskb->rp->ip = (uint64_t)task_b;
+    taskb->rp->cs = GDT_RING3_CODE64_SEL + 3;
+    taskb->rp->ss = GDT_RING3_DATA64_SEL + 3;
+    taskb->rp->fs = GDT_RING3_DATA64_SEL + 3;
+    taskb->rp->gs = GDT_RING3_DATA64_SEL + 3;
+    taskb->rp->flags = 0x202;
+
+    /* Idle task */
+    taski = kmalloc(sizeof(struct arch_task));
+    if ( NULL == taski ) {
+        return -1;
+    }
+    taski->kstack = kmalloc(4096);
+    if ( NULL == taski->kstack ) {
+        return -1;
+    }
+    taski->ustack = kmalloc(4096);
+    if ( NULL == taski->ustack ) {
+        return -1;
+    }
+    taski->rp = taski->ustack + 4096 - 16 - sizeof(struct stackframe64);
+    kmemset(taski->rp, 0, sizeof(struct stackframe64));
+    taski->sp0 = (uint64_t)taski->kstack + 4096 - 16;
+    taski->rp->sp = (uint64_t)taski->ustack + 4096 - 16;
+    taski->rp->ip = (uint64_t)task_idle;
+    taski->rp->cs = GDT_RING0_CODE_SEL;
+    taski->rp->ss = GDT_RING0_DATA_SEL;
+    taski->rp->fs = GDT_RING0_DATA_SEL;
+    taski->rp->gs = GDT_RING0_DATA_SEL;
+    taski->rp->flags = 0x202;
+
+    /* Set the task A as the initial task */
+    cpu = (struct arch_cpu_data *)0xc0068e00;
+    cpu->cur_task = NULL;
+    cpu->next_task = taska;
+
+    return 0;
+}
+
 
 /*
  * Entry point for C code
@@ -718,6 +902,12 @@ bsp_start(void)
         ksnprintf(cachename, MEMORY_SLAB_CACHE_NAME_MAX, "kmalloc-%d",
                   kmalloc_sizes[i]);
         memory_slab_create_cache(&kvar->slab, cachename, kmalloc_sizes[i]);
+    }
+
+    /* Prepare multitasking */
+    ret = _prepare_multitasking();
+    if ( ret < 0 ) {
+        panic("Failed to prepare multitasking");
     }
 
     /* Initialiez I/O APIC */
@@ -821,6 +1011,8 @@ bsp_start(void)
 
     /* Enable interrupt */
     sti();
+
+    task_restart();
 
     /* Sleep forever */
     for ( ;; ) {
