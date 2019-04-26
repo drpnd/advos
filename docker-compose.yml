@@ -9,3 +9,11 @@ services:
     build:
       context: ./
       dockerfile: ./qemu/Dockerfile
+  qemu-efi:
+    build:
+      context: ./
+      dockerfile: ./qemu/Dockerfile.efi
+  qemu-pxe:
+    build:
+      context: ./
+      dockerfile: ./qemu/Dockerfile.pxe
