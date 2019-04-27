@@ -12,6 +12,7 @@ WORKDIR /usr/src
 RUN make
 RUN mkdir -p /tftpboot
 RUN chmod 0777 /tftpboot
+RUN cp boot/pxeboot /tftpboot/pxeadvos
 
 ## For qemu+bridge
 RUN mkdir /etc/qemu
