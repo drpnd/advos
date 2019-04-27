@@ -10,7 +10,7 @@ touch /var/lib/dhcp/dhcpd.leases
 dhcpd -4 -pf /run/dhcpd.pid -cf /etc/dhcp/dhcpd.conf br100
 
 ## Run tftp server
-in.tftpd --listen --secure /tftpboot
+in.tftpd --daemon /tftpboot
 
 qemu-system-x86_64 -m 1024 -smp cores=4,threads=1,sockets=2 \
 	-numa node,nodeid=0,cpus=0-3 \
