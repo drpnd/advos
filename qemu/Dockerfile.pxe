@@ -12,14 +12,11 @@ WORKDIR /usr/src
 RUN make
 RUN mkdir -p /tftpboot
 RUN chmod 0777 /tftpboot
-RUN cp advos.img /tftpboot
+
+## For qemu+bridge
+RUN mkdir /etc/qemu
+RUN echo "allow all" > /etc/qemu/bridge.conf
 
 ## Run the OS with qemu
-#CMD ["qemu-system-x86_64", "-m", "1024", \
-#	"-smp", "cores=4,threads=1,sockets=2", \
-#	"-numa", "node,nodeid=0,cpus=0-3", \
-#	"-numa", "node,nodeid=1,cpus=4-7", \
-#	"-option-rom", "/usr/share/qemu/pxe-e1000.rom", \
-#	"-display", "curses"]
 CMD ["/pxe-cmd.sh"]
 

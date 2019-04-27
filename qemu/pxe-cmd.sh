@@ -1,21 +1,16 @@
 #!/bin/sh
 
+## Create a new bridge interface and add an IPv4 address
 brctl addbr br100
 ip a add 192.168.253.1/24 dev br100
 ip link set br100 up
-ip a
 
-
+## Run dhcp server
 touch /var/lib/dhcp/dhcpd.leases
 dhcpd -4 -pf /run/dhcpd.pid -cf /etc/dhcp/dhcpd.conf br100
 
-mdkir /tftpboot
+## Run tftp server
 in.tftpd --listen --secure /tftpboot
-
-
-## for bridge
-mkdir /etc/qemu
-echo "allow all" > /etc/qemu/bridge.conf
 
 qemu-system-x86_64 -m 1024 -smp cores=4,threads=1,sockets=2 \
 	-numa node,nodeid=0,cpus=0-3 \
