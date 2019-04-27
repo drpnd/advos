@@ -29,6 +29,8 @@
 #define PXENV_SIGNATURE1        0x2b56          /* V+ */
 #define PXE_SIGNATURE           0x45585021      /* !PXE */
 
+#define PXEAPI_OPCODE_CACHED_INFO	0x0071
+
 	.globl	pxeboot
 
 	.text
@@ -104,6 +106,24 @@ pxeboot:
 	movl	%es:16(%bp),%eax
 	movl	%eax,(rm_entry)
 
+	/* Get the cached information, e.g., buffer size */
+	subw	$12,%sp
+	movw	%sp,%di
+	movw	%ss,%ax
+	movw	%ax,%es
+	call	pxeapi_cached_info
+	movw	%es:4(%di),%ax	/* Buffer size */
+	movw	%ax,(buffer_size)
+	movw	%es:6(%di),%ax	/* Buffer offset */
+	movw	%ax,(buffer_off)
+	movw	%es:8(%di),%ax	/* Buffer segment */
+	movw	%ax,(buffer_seg)
+	movw	%es:10(%di),%ax	/* Buffer limit */
+	movw	%ax,(buffer_limit)
+	addw	$12,%sp
+	testw	%ax,%ax
+	jnz	error
+
 	movw	$msg_welcome,%ax
 	movw	%ax,%si
 	call	putstr
@@ -111,6 +131,24 @@ pxeboot:
 halt:
 	hlt
 	jmp	halt
+
+/* Get cached info
+ *  %es:%di: Input buffer
+ *  Returns the status in %ax
+ */
+pxeapi_cached_info:
+	pushw	%bx
+	movw	$0,%es:0(%di)	/* Status */
+	movw	$2,%es:2(%di)	/* Packet type */
+	movw	$0,%es:4(%di)	/* Buffer size */
+	movw	$0,%es:6(%di)	/* Buffer offset */
+	movw	$0,%es:8(%di)	/* Buffer segment */
+	movw	$0,%es:10(%di)	/* Buffer limit */
+	movw	$PXEAPI_OPCODE_CACHED_INFO,%bx
+	call	pxeapi
+	movw	%es:0(%di),%ax	/* Status */
+	popw	%bx
+	ret
 
 /* Error */
 error:
@@ -137,17 +175,17 @@ checksum:
 	ret
 
 /* PXE API call
- *  %ds:%di points to the input buffer
+ *  %es:%di points to the input buffer
  *  %bx specifies the opcode
  */
 pxeapi:
-	pushw	%ds
+	pushw	%es
 	pushw	%di
 	pushw	%bx
 	lcall	*(rm_entry)
 	popw	%bx
 	popw	%di
-	popw	%ds
+	popw	%es
 	ret
 
 
@@ -193,6 +231,15 @@ pxe_off:
 rm_entry:
 	.long	0
 
+/* Buffer size and offset */
+buffer_size:
+	.word	0
+buffer_off:
+	.word	0
+buffer_seg:
+	.word	0
+buffer_limit:
+	.word	0
 
 msg_welcome:
 	.asciz	"Welcome to advos"
