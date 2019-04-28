@@ -29,10 +29,10 @@
 #define MME_SIGN		0x534d4150	/* MME signature ("SMAP")  */
 
 /* Kernel */
-#define KERNEL_SEG		0x1000
-#define KERNEL_OFF		0x0000
+#define KERNEL_OFF		0x00010000
 
 #define TFTP_PORT		69
+#define TFTP_PACKETSIZE		512
 
 #define PXENV_SIGNATURE0	0x4e455850	/* PXEN */
 #define PXENV_SIGNATURE1	0x2b56		/* V+ */
@@ -40,6 +40,7 @@
 
 #define PXEAPI_OPCODE_TFTP_OPEN		0x0020
 #define PXEAPI_OPCODE_TFTP_CLOSE	0x0021
+#define PXEAPI_OPCODE_TFTP_READ		0x0022
 #define PXEAPI_OPCODE_CACHED_INFO	0x0071
 
 #define CACHED_INFO_CIP			12	/* Client IP address*/
@@ -59,6 +60,13 @@
 #define PXEAPI_TFTP_OPEN_PORT		138
 #define PXEAPI_TFTP_OPEN_PACKETSIZE	140
 #define PXEAPI_TFTP_OPEN_SIZE		142
+
+#define PXEAPI_TFTP_READ_STATUS		0
+#define PXEAPI_TFTP_READ_PACKET_NUM	2
+#define PXEAPI_TFTP_READ_BUFFER_SIZE	4
+#define PXEAPI_TFTP_READ_BUFFER_OFF	6
+#define PXEAPI_TFTP_READ_BUFFER_SEG	8
+#define PXEAPI_TFTP_READ_SIZE		10
 
 	.globl	pxeboot
 
@@ -107,21 +115,21 @@ pxeboot:
 	movl	%es:(%bp),%eax
 	/* Check the signature */
 	cmpl	$PXENV_SIGNATURE0,%eax
-	jne	error
+	jne	error_pxe
 	movw	%es:4(%bp),%ax
 	cmpw	$PXENV_SIGNATURE1,%ax
-	jne	error
+	jne	error_pxe
 	/* Check the checksum */
 	movw	%bp,%si
 	xorw	%cx,%cx
 	movb	%es:8(%bp),%cl	/* Length */
 	call	checksum
 	testb	%al,%al
-	jnz	error
+	jnz	error_pxe
 	/* Check the version.  We support >= 2.1 (i.e., !PXE) */
 	movw	%es:6(%bp),%ax
 	cmpw	$0x21,%ax
-	jl	error
+	jl	error_pxe
 
 	/* Parse the !PXE structure */
 	movw	(pxe_seg),%ax
@@ -130,7 +138,7 @@ pxeboot:
 	/* Check the signature */
 	movl	%es:(%bp),%eax
 	cmpl	$PXE_SIGNATURE,%eax
-	jne	error
+	jne	error_pxe
 	/* Get the rm_entry from the structure */
 	movl	%es:16(%bp),%eax
 	movl	%eax,(rm_entry)
@@ -151,7 +159,7 @@ pxeboot:
 	movw	%ax,(buffer_limit)
 	addw	$12,%sp
 	testw	%ax,%ax
-	jnz	error
+	jnz	error_pxe
 
 	/* Enable A20 */
 	call	enable_a20
@@ -179,12 +187,10 @@ pxeboot:
 
 	/* Load kernel */
 	movw	$filename_kernel,%si
-	movw	$KERNEL_SEG,%ax
-	movw	%ax,%gs
 	movl	$KERNEL_OFF,%edi
 	call	load_tftp_file
 	testw	%ax,%ax
-	jnz	error
+	jnz	error_tftp
 
 	movw	$msg_welcome,%si
 	call	putstr
@@ -297,7 +303,7 @@ pxeapi_cached_info:
 	ret
 
 /* Load the content of a file specified by a null-terminated string starting
- * from %ds:(%si) to %gs:(%edi). */
+ * from %ds:(%si) to (%edi). */
 load_tftp_file:
 	pushw	%bx
 	pushw	%cx
@@ -332,7 +338,7 @@ load_tftp_file:
 	movw	$TFTP_PORT,%ax
 	xchgb	%al,%ah
 	movw	%ax,%es:PXEAPI_TFTP_OPEN_PORT(%bp)	/* TFTP port (69) */
-	movw	$512,%ax
+	movw	$TFTP_PACKETSIZE,%ax
 	movw	%ax,%es:PXEAPI_TFTP_OPEN_PACKETSIZE(%bp)
 	/* Copy the null-terminated string */
 	leaw	PXEAPI_TFTP_OPEN_FILENAME(%bp),%di
@@ -353,6 +359,42 @@ load_tftp_file:
 	movw	%es:PXEAPI_TFTP_OPEN_STATUS(%bp),%ax
 	testw	%ax,%ax
 	jnz	load_tftp_file.error
+
+	/* Reset the data structure first */
+	movw	%bp,%di
+	movw	$PXEAPI_GENERIC_BUFFER_SIZE,%cx
+	xorb	%al,%al
+	rep	stosb
+	/* Read */
+	movw	%bp,%di
+	movw	$PXEAPI_OPCODE_TFTP_READ,%bx
+	movl	%es:PXEAPI_GENERIC_BUFFER_SIZE(%bp),%edx	/* arg %edi */
+	xorw	%cx,%cx						/* packet # */
+1:
+	movw	%dx,%ax
+	andw	$0xf,%ax
+	movw	%ax,%es:PXEAPI_TFTP_READ_BUFFER_OFF(%bp)
+	movl	%edx,%eax
+	shrl	$4,%eax
+	movw	%ax,%es:PXEAPI_TFTP_READ_BUFFER_SEG(%bp)
+	call	pxeapi
+	movw	%es:PXEAPI_TFTP_READ_STATUS(%bp),%ax
+	testw	%ax,%ax
+	jnz	load_tftp_file.error
+	/* Check the packet number */
+	incw	%cx
+	movw	$0xffff,%ax			/* pseudo error code */
+	cmpw	%es:PXEAPI_TFTP_READ_PACKET_NUM(%bp),%cx
+	jne	load_tftp_file.error
+	/* Check the size */
+	xorl	%eax,%eax
+	movw	%es:PXEAPI_TFTP_READ_BUFFER_SIZE(%bp),%ax
+	addl	%eax,%edx
+	cmpl	$0x100000,%edx
+	jge	load_tftp_file.error
+	/* Check if it is the last packet */
+	cmpw	$TFTP_PACKETSIZE,%ax
+	jge	1b
 
 	/* Reset the data structure first */
 	movw	%bp,%di
@@ -381,11 +423,14 @@ load_tftp_file.error:
 	popw	%bx
 	ret
 
-
-
 /* Error */
-error:
-	movw	$msg_error,%ax
+error_pxe:
+	movw	$msg_error_pxe,%ax
+	movw	%ax,%si
+	call	putstr
+	jmp	halt
+error_tftp:
+	movw	$msg_error_tftp,%ax
 	movw	%ax,%si
 	call	putstr
 	jmp	halt
@@ -481,9 +526,12 @@ msg_loading:
 crlf:
 	.asciz	"\r\n"
 /* Error message */
-msg_error:
-	.ascii	"Error on PXE boot. "
+msg_error_pxe:
+	.ascii	"Error on PXE boot.\r\n"
 	.asciz	"Invalid PXE data structure or unsupport PXE version."
+msg_error_tftp:
+	.ascii	"Error on PXE boot.\r\n"
+	.asciz	"Cannot load the kernel."
 msg_error_mm:
 	.asciz	"Error on loading the system memory map."
 
