@@ -23,13 +23,42 @@
 
 #include "bootinfo.h"
 
-#define VGA_TEXT_COLOR_80x25    0x03
+#define VGA_TEXT_COLOR_80x25	0x03
+/* Memory map */
+#define MME_SIZE		24		/* Memory map entry size */
+#define MME_SIGN		0x534d4150	/* MME signature ("SMAP")  */
 
-#define PXENV_SIGNATURE0        0x4e455850      /* PXEN */
-#define PXENV_SIGNATURE1        0x2b56          /* V+ */
-#define PXE_SIGNATURE           0x45585021      /* !PXE */
+/* Kernel */
+#define KERNEL_SEG		0x1000
+#define KERNEL_OFF		0x0000
 
+#define TFTP_PORT		69
+
+#define PXENV_SIGNATURE0	0x4e455850	/* PXEN */
+#define PXENV_SIGNATURE1	0x2b56		/* V+ */
+#define PXE_SIGNATURE		0x45585021	/* !PXE */
+
+#define PXEAPI_OPCODE_TFTP_OPEN		0x0020
+#define PXEAPI_OPCODE_TFTP_CLOSE	0x0021
 #define PXEAPI_OPCODE_CACHED_INFO	0x0071
+
+#define CACHED_INFO_CIP			12	/* Client IP address*/
+#define CACHED_INFO_YIP			16	/* Your IP address */
+#define CACHED_INFO_SIP			20	/* Server IP address */
+#define CACHED_INFO_GIP			24	/* Relay agent IP address */
+#define CACHED_INFO_MAC			28	/* MAC address */
+#define CACHED_INFO_SER			40	/* Server host name (64) */
+#define CACHED_INFO_BOO			104	/* Boot file name (128) */
+
+#define PXEAPI_GENERIC_BUFFER_SIZE	192
+
+#define PXEAPI_TFTP_OPEN_STATUS		0
+#define PXEAPI_TFTP_OPEN_SIP		2
+#define PXEAPI_TFTP_OPEN_GIP		6
+#define PXEAPI_TFTP_OPEN_FILENAME	10
+#define PXEAPI_TFTP_OPEN_PORT		138
+#define PXEAPI_TFTP_OPEN_PACKETSIZE	140
+#define PXEAPI_TFTP_OPEN_SIZE		142
 
 	.globl	pxeboot
 
@@ -124,13 +153,130 @@ pxeboot:
 	testw	%ax,%ax
 	jnz	error
 
-	movw	$msg_welcome,%ax
-	movw	%ax,%si
+	/* Enable A20 */
+	call	enable_a20
+
+	/* Load memory map */
+	movw	$BI_MM_TABLE_ADDR,%di
+	movw	$(BI_MM_SIZE/MME_SIZE),%dx
+	call	load_mm
+	jc	1f
+	movw	%ax,(BI_MM_NENT_ADDR)
+	jmp	2f
+1:
+	movw	$msg_error_mm,%si
+	call	putstr
+	jmp	halt
+2:
+
+	/* Print loading kernel message */
+	movw	$msg_loading,%si
+	call	putstr
+	movw	$filename_kernel,%si
+	call	putstr
+	movw	$crlf,%si
+	call	putstr
+
+	/* Load kernel */
+	movw	$filename_kernel,%si
+	movw	$KERNEL_SEG,%ax
+	movw	%ax,%gs
+	movl	$KERNEL_OFF,%edi
+	call	load_tftp_file
+	testw	%ax,%ax
+	jnz	error
+
+	movw	$msg_welcome,%si
 	call	putstr
 
 halt:
 	hlt
 	jmp	halt
+
+/* Enable A20 address line */
+enable_a20:
+	cli
+	pushw	%ax
+	pushw	%cx
+	xorw	%cx,%cx
+1:
+	incw	%cx		/* Try until %cx overflows (2^16 times) */
+	jz	3f		/*  Failed to enable a20 */
+	inb	$0x64,%al	/* Get status from the keyboard controller */
+	testb	$0x2,%al	/* Busy? */
+	jnz	1b		/* Yes, busy.  Then try again */
+	movb	$0xd1,%al	/* Command: Write output port (0x60 to P2) */
+	outb	%al,$0x64	/* Write the command to the command register */
+2:
+	inb	$0x64,%al	/* Get status from the keyboard controller */
+	testb	$0x2,%al	/* Busy? */
+	jnz	2b		/* Yes, busy.  Then try again */
+	movb	$0xdf,%al	/* Command: Enable A20 */
+	outb	%al,$0x60	/* Write to P2 via 0x60 output port */
+3:
+	popw	%cx
+	popw	%ax
+	sti
+	ret
+
+/*
+ * Load memory map entries from BIOS
+ * Parameters:
+ *   %es:%di: destination
+ *   %dx: the maximum number of entries
+ * Return values:
+ *   %ax: the number of entries
+ *   CF: set if an error occurs
+ */
+load_mm:
+	/* Save registers */
+	pushl	%ebx
+	pushl	%ecx
+	pushw	%di
+	pushw	%bp
+
+	xorl	%ebx,%ebx	/* Continuation value for int 0x15 */
+	xorw	%bp,%bp		/* Counter */
+load_mm.1:
+	movl	$0x1,%ecx	/* Write 1 once */
+	movl	%ecx,%es:20(%di)	/*  to check support ACPI >=3.x? */
+	/* Read the system address map */
+	movl	$0xe820,%eax
+	movl	$MME_SIGN,%edx	/* Set the signature */
+	movl	$MME_SIZE,%ecx	/* Set the buffer size */
+	int	$0x15		/* Query system address map */
+	jc	load_mm.error	/* Error */
+	cmpl	$MME_SIGN,%eax	/* Check the signature SMAP */
+	jne	load_mm.error
+
+	cmpl	$24,%ecx	/* Check the read buffer size */
+	je	load_mm.2	/*  %ecx==24 */
+	cmpl	$20,%ecx
+	je	load_mm.3	/*  %ecx==20 */
+	jmp	load_mm.error	/* Error otherwise */
+load_mm.2:
+	/* 24-byte entry */
+	testl	$0x1,%es:20(%di)	/* 1 must be present in the attribute */
+	jz	load_mm.error	/*  error if it's overwritten */
+load_mm.3:
+	/* 20-byte entry or 24-byte entry coming from above */
+	incw	%bp		/* Increment the number of entries */
+	testl	%ebx,%ebx	/* %ebx=0: No remaining info */
+	jz	load_mm.done	/* jz/je */
+	cmpw	%bp,%dx
+	je	load_mm.error	/* Exceeded the maximum number to read */
+load_mm.4:
+	addw	$MME_SIZE,%di	/* Next entry */
+	jmp	load_mm.1	/* Load remaining entries */
+load_mm.error:
+	stc			/* Set CF */
+load_mm.done:
+	movw	%bp,%ax		/* Return value */
+	popw	%bp
+	popw	%di
+	popl	%ecx
+	popl	%ebx
+	ret
 
 /* Get cached info
  *  %es:%di: Input buffer
@@ -149,6 +295,93 @@ pxeapi_cached_info:
 	movw	%es:0(%di),%ax	/* Status */
 	popw	%bx
 	ret
+
+/* Load the content of a file specified by a null-terminated string starting
+ * from %ds:(%si) to %gs:(%edi). */
+load_tftp_file:
+	pushw	%bx
+	pushw	%cx
+	pushl	%edx
+	pushw	%es
+	pushw	%fs
+	pushw	%bp
+	pushw	%si
+	pushl	%edi
+
+	/* Allocate the stack for the command buffer */
+	subw	$PXEAPI_GENERIC_BUFFER_SIZE,%sp
+	movw	%sp,%bp
+	movw	%ss,%bx
+	movw	%bx,%es
+	/* Reset the data structure first */
+	movw	%bp,%di
+	movw	$PXEAPI_GENERIC_BUFFER_SIZE,%cx
+	xorb	%al,%al
+	rep	stosb
+	/* Set the cached info to build a bootph structure */
+	movw	(buffer_size),%cx
+	movw	(buffer_off),%bx
+	movw	(buffer_seg),%dx
+
+	/* Prepare the input buffer to open a file */
+	movw	%dx,%fs
+	movl	%fs:CACHED_INFO_SIP(%bx),%eax
+	movl	%eax,%es:PXEAPI_TFTP_OPEN_SIP(%bp)	/* Server */
+	movl	%fs:CACHED_INFO_GIP(%bx),%eax
+	movl	%eax,%es:PXEAPI_TFTP_OPEN_GIP(%bp)	/* Relay agen */
+	movw	$TFTP_PORT,%ax
+	xchgb	%al,%ah
+	movw	%ax,%es:PXEAPI_TFTP_OPEN_PORT(%bp)	/* TFTP port (69) */
+	movw	$512,%ax
+	movw	%ax,%es:PXEAPI_TFTP_OPEN_PACKETSIZE(%bp)
+	/* Copy the null-terminated string */
+	leaw	PXEAPI_TFTP_OPEN_FILENAME(%bp),%di
+1:
+	movb	(%si),%al
+	testb	%al,%al
+	jz	2f
+	movb	%al,%es:(%di)
+	incw	%si
+	incw	%di
+	jmp	1b
+2:
+
+	/* Open the TFTP session */
+	movw	%bp,%di
+	movw	$PXEAPI_OPCODE_TFTP_OPEN,%bx
+	call	pxeapi
+	movw	%es:PXEAPI_TFTP_OPEN_STATUS(%bp),%ax
+	testw	%ax,%ax
+	jnz	load_tftp_file.error
+
+	/* Reset the data structure first */
+	movw	%bp,%di
+	movw	$PXEAPI_GENERIC_BUFFER_SIZE,%cx
+	xorb	%al,%al
+	rep	stosb
+	/* Close */
+	movw	%bp,%di
+	movw	$PXEAPI_OPCODE_TFTP_CLOSE,%bx
+	call	pxeapi
+	movw	%es:PXEAPI_TFTP_OPEN_STATUS(%bp),%ax
+	testw	%ax,%ax
+	jnz	load_tftp_file.error
+
+load_tftp_file.success:
+	xorw	%ax,%ax
+load_tftp_file.error:
+	addw	$PXEAPI_GENERIC_BUFFER_SIZE,%sp
+	popl	%edi
+	popw	%si
+	popw	%bp
+	popw	%fs
+	popw	%es
+	popl	%edx
+	popw	%cx
+	popw	%bx
+	ret
+
+
 
 /* Error */
 error:
@@ -243,7 +476,17 @@ buffer_limit:
 
 msg_welcome:
 	.asciz	"Welcome to advos"
+msg_loading:
+	.asciz	"Loading "
+crlf:
+	.asciz	"\r\n"
 /* Error message */
 msg_error:
 	.ascii	"Error on PXE boot. "
 	.asciz	"Invalid PXE data structure or unsupport PXE version."
+msg_error_mm:
+	.asciz	"Error on loading the system memory map."
+
+/* TFTP filename */
+filename_kernel:
+	.asciz	"kernel"

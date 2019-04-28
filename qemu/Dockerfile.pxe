@@ -13,6 +13,7 @@ RUN make
 RUN mkdir -p /tftpboot
 RUN chmod 0777 /tftpboot
 RUN cp boot/pxeboot /tftpboot/pxeadvos
+RUN cp kernel/kernel /tftpboot/kernel
 
 ## For qemu+bridge
 RUN mkdir /etc/qemu
