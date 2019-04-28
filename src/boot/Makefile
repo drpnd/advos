@@ -12,7 +12,7 @@ bootmon: bootmon.o entry16.o entry32.o entry64.o boot.o
 	$(LD) -N -T bootmon.ld -o $@ $^
 
 ## PXE boot
-pxeboot: pxeboot.o
+pxeboot: pxeboot.o entry16.o entry32.o entry64.o boot.o
 	$(LD) -N -T pxe.ld -o $@ $^
 
 clean:

@@ -164,6 +164,12 @@ pxeboot:
 	/* Enable A20 */
 	call	enable_a20
 
+	/* Reset the boot information region */
+	xorw	%ax,%ax
+	movl	$BI_START_ADDR,%edi
+	movl	$(BI_SIZE/2),%ecx
+	rep	stosw
+
 	/* Load memory map */
 	movw	$BI_MM_TABLE_ADDR,%di
 	movw	$(BI_MM_SIZE/MME_SIZE),%dx
@@ -192,8 +198,7 @@ pxeboot:
 	testw	%ax,%ax
 	jnz	error_tftp
 
-	movw	$msg_welcome,%si
-	call	putstr
+	jmp	entry16
 
 halt:
 	hlt
