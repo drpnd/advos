@@ -57,6 +57,7 @@
 	.globl	_intr_irq1
 	.globl	_intr_crash
 	.globl	_asm_ioapic_map_intr
+	.globl	_syscall_entry
 
 	/* Code segment */
 	.text
@@ -446,6 +447,11 @@ _intr_crash:
 
 	/* Data section */
 	.data
+
+/* Entry point to the syscall */
+_syscall_entry:
+	call	_ksyscall
+	sysretq
 
 keymap_base:
 	.ascii	"  1234567890-=  qwertyuiop[]  as"

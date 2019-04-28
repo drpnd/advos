@@ -695,6 +695,7 @@ task_a(void)
         base += 80 * 22;
         print_hex(base, cnt, 8);
         cnt++;
+        __asm__ ("syscall");
     }
 }
 
@@ -802,6 +803,29 @@ _prepare_multitasking(void)
     return 0;
 }
 
+/*
+ * syscall_setup
+ */
+void
+syscall_setup(void *table, int nr)
+{
+    uint64_t val;
+
+    /* EFLAG mask */
+    wrmsr(MSR_IA32_FMASK, 0x0002);
+
+    /* Entry point to the system call */
+    wrmsr(MSR_IA32_LSTAR, (uint64_t)syscall_entry);
+
+    /* Syscall/sysret segments */
+    val = GDT_RING0_CODE_SEL | ((GDT_RING3_CODE32_SEL + 3) << 16);
+    wrmsr(MSR_IA32_STAR, val << 32);
+
+    /* Enable syscall */
+    val = rdmsr(MSR_IA32_EFER);
+    val |= 1;
+    wrmsr(MSR_IA32_EFER, val);
+}
 
 /*
  * Entry point for C code
@@ -914,12 +938,15 @@ bsp_start(void)
     ioapic_init();
     ioapic_map_intr(0x21, 1, acpi->ioapic_base);
 
+    /* Setup system call */
+    syscall_setup(NULL, 0);
+
     /* Test interrupt */
     idt_setup_intr_gate(IV_LOC_TMR, intr_apic_loc_tmr);
     idt_setup_trap_gate(13, intr_gpf);
     idt_setup_intr_gate(0x21, intr_irq1);
 
-    /* Load trampoline code */
+    /* Load trampoline code for multicore support */
     sz = (uint64_t)trampoline_end - (uint64_t)trampoline;
     if ( sz > TRAMPOLINE_MAX_SIZE ) {
         panic("Trampoline code is too large to load.");
@@ -1018,6 +1045,15 @@ bsp_start(void)
     for ( ;; ) {
         hlt();
     }
+}
+
+/*
+ * System call handler
+ */
+void
+ksyscall(void)
+{
+    __asm__ __volatile__ ("hlt");
 }
 
 /*
