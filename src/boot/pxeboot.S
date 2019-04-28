@@ -139,6 +139,13 @@ pxeboot:
 	movl	%es:(%bp),%eax
 	cmpl	$PXE_SIGNATURE,%eax
 	jne	error_pxe
+	/* Check the checksum */
+	movw	%bp,%si
+	xorw	%cx,%cx
+	movb	%es:4(%bp),%cl	/* Length */
+	call	checksum
+	testb	%al,%al
+	jnz	error_pxe
 	/* Get the rm_entry from the structure */
 	movl	%es:16(%bp),%eax
 	movl	%eax,(rm_entry)
