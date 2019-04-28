@@ -171,6 +171,7 @@ pxeboot:
 	rep	stosw
 
 	/* Load memory map */
+	movw	%ax,%es
 	movw	$BI_MM_TABLE_ADDR,%di
 	movw	$(BI_MM_SIZE/MME_SIZE),%dx
 	call	load_mm

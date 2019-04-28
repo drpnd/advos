@@ -118,6 +118,8 @@ bootmon:
 	movb	%al,(BI_DRIVE_ADDR)
 
 	/* Load memory map */
+	xorw	%ax,%ax
+	movw	%ax,%es
 	movw	$BI_MM_TABLE_ADDR,%di
 	movw	$(BI_MM_SIZE/MME_SIZE),%dx
 	call	load_mm
