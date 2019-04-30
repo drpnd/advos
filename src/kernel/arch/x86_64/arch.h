@@ -158,6 +158,8 @@ void intr_crash(void);
 void syscall_entry(void);
 void syscall_setup(uint64_t, uint64_t);
 
+unsigned long long syscall(int, ...);
+
 #endif
 
 /*

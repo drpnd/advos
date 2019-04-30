@@ -688,15 +688,11 @@ task_idle(void)
 void
 task_a(void)
 {
-    uint16_t *base;
     uint64_t cnt = 0;
 
     while ( 1 ) {
-        base = (uint16_t *)0xc00b8000;
-        base += 80 * 22;
-        print_hex(base, cnt, 8);
+        syscall(766, cnt);
         cnt++;
-        __asm__ ("syscall" :: "a"(767));
     }
 }
 
@@ -845,6 +841,15 @@ syscall_init(void *table, int nr)
  * System call handler
  */
 void
+sys_print_counter(uint64_t cnt)
+{
+    uint16_t *base;
+
+    base = (uint16_t *)0xc00b8000;
+    base += 80 * 22;
+    print_hex(base, cnt, 8);
+}
+void
 sys_hlt(void)
 {
     __asm__ __volatile__ ("hlt");
@@ -970,6 +975,7 @@ bsp_start(void)
     for ( i = 0; i < SYS_MAXSYSCALL; i++ ) {
         syscall[i] = NULL;
     }
+    syscall[766] = sys_print_counter;
     syscall[767] = sys_hlt;
     syscall_init(syscall, SYS_MAXSYSCALL);
 

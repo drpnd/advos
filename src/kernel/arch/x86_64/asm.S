@@ -59,6 +59,7 @@
 	.globl	_asm_ioapic_map_intr
 	.globl	_syscall_entry
 	.globl	_syscall_setup
+	.globl	_syscall
 
 	/* Code segment */
 	.text
@@ -487,6 +488,20 @@ _syscall_setup:
 	movabs	$syscall_nr,%rbx
 	movq	%rsi,(%rbx)
 	popq	%rbx
+	ret
+
+/* int syscall(arg0, ..., arg5) */
+_syscall:
+	pushq	%rbp
+	movq	%rdi,%rax
+	movq	%rsi,%rdi
+	movq	%rdx,%rsi
+	movq	%rcx,%rdx
+	movq	%r8,%r10
+	movq	%r9,%r8
+	movq	-8(%rsp),%r9
+	syscall
+	popq    %rbp
 	ret
 
 	.data
