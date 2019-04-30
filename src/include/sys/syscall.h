@@ -24,7 +24,6 @@
 #ifndef _SYS_SYSCALL_H
 #define _SYS_SYSCALL_H
 
-
 #define SYS_MAXSYSCALL  768
 
 #endif /* _SYS_SYSCALL_H */

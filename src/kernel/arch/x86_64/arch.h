@@ -27,11 +27,6 @@
 #include <stdint.h>
 #include "const.h"
 
-#define MSR_IA32_EFER       0xc0000080
-#define MSR_IA32_STAR       0xc0000081
-#define MSR_IA32_LSTAR      0xc0000082
-#define MSR_IA32_FMASK      0xc0000084
-
 /*
  * TSS
  */
@@ -161,6 +156,7 @@ void intr_crash(void);
 
 /* Entry point to the syscall */
 void syscall_entry(void);
+void syscall_setup(uint64_t, uint64_t);
 
 #endif
 

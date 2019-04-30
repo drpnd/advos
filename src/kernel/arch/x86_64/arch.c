@@ -33,6 +33,7 @@
 #include "../../kernel.h"
 #include "../../memory.h"
 #include <stdint.h>
+#include <sys/syscall.h>
 
 #define set_cr3(cr3)    __asm__ __volatile__ ("movq %%rax,%%cr3" :: "a"((cr3)))
 #define invlpg(addr)    __asm__ __volatile__ ("invlpg (%%rax)" :: "a"((addr)))
@@ -695,7 +696,7 @@ task_a(void)
         base += 80 * 22;
         print_hex(base, cnt, 8);
         cnt++;
-        __asm__ ("syscall");
+        __asm__ ("syscall" :: "a"(767));
     }
 }
 
@@ -807,9 +808,19 @@ _prepare_multitasking(void)
  * syscall_setup
  */
 void
-syscall_setup(void *table, int nr)
+syscall_init(void *table, int nr)
 {
     uint64_t val;
+    uint64_t rax;
+    uint64_t rbx;
+    uint64_t rcx;
+    uint64_t rdx;
+
+    /* Check CPUID.0x80000001 for syscall support */
+    rax = cpuid(0x80000001, &rbx, &rcx, &rdx);
+    if ( !((rdx >> 29) & 1) ) {
+        panic("syscall is not supported.");
+    }
 
     /* EFLAG mask */
     wrmsr(MSR_IA32_FMASK, 0x0002);
@@ -825,6 +836,18 @@ syscall_setup(void *table, int nr)
     val = rdmsr(MSR_IA32_EFER);
     val |= 1;
     wrmsr(MSR_IA32_EFER, val);
+
+    /* Call assembly syscall_setup() */
+    syscall_setup((uint64_t)table, (uint64_t)nr);
+}
+
+/*
+ * System call handler
+ */
+void
+sys_hlt(void)
+{
+    __asm__ __volatile__ ("hlt");
 }
 
 /*
@@ -848,6 +871,7 @@ bsp_start(void)
                                    2048, 4096, 8192 };
     char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
     uint64_t busfreq;
+    void **syscall;
 
     /* Kernel variables */
     if ( sizeof(kvar_t) > KVAR_SIZE ) {
@@ -939,7 +963,15 @@ bsp_start(void)
     ioapic_map_intr(0x21, 1, acpi->ioapic_base);
 
     /* Setup system call */
-    syscall_setup(NULL, 0);
+    syscall = kmalloc(sizeof(void *) * SYS_MAXSYSCALL);
+    if ( NULL == syscall ) {
+        panic("Failed to allocate the syscall table.");
+    }
+    for ( i = 0; i < SYS_MAXSYSCALL; i++ ) {
+        syscall[i] = NULL;
+    }
+    syscall[767] = sys_hlt;
+    syscall_init(syscall, SYS_MAXSYSCALL);
 
     /* Test interrupt */
     idt_setup_intr_gate(IV_LOC_TMR, intr_apic_loc_tmr);
@@ -1045,15 +1077,6 @@ bsp_start(void)
     for ( ;; ) {
         hlt();
     }
-}
-
-/*
- * System call handler
- */
-void
-ksyscall(void)
-{
-    __asm__ __volatile__ ("hlt");
 }
 
 /*

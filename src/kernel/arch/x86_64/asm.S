@@ -58,6 +58,7 @@
 	.globl	_intr_crash
 	.globl	_asm_ioapic_map_intr
 	.globl	_syscall_entry
+	.globl	_syscall_setup
 
 	/* Code segment */
 	.text
@@ -450,8 +451,50 @@ _intr_crash:
 
 /* Entry point to the syscall */
 _syscall_entry:
-	call	_ksyscall
+	/* N.B., rip and rflags are stored in rcx and r11, respectively. */
+	pushq	%rbp
+	movq	%rsp,%rbp
+	pushq	%rcx
+	pushq	%r11
+	pushq	%rbx
+
+	/* Check the max number of the syscall table */
+	movabs	$syscall_nr,%rbx
+	cmpq	(%rbx),%rax
+	jge	1f
+
+	/* Lookup the system call table and call the corresponding to %rax */
+	movabs	$syscall_table,%rcx
+	movq	(%rcx),%rbx
+	shlq	$3,%rax		/* 8-byte per pointer */
+	addq	%rax,%rbx
+	cmpq	$0,(%rbx)
+	je	1f
+	movq	%r10,%rcx	/* Replace the 4th argument with %r10 */
+	callq	*(%rbx)
+1:
+	popq	%rbx
+	popq	%r11
+	popq	%rcx
+	popq	%rbp
 	sysretq
+
+/* void syscall_setup(void *, uint64_t) */
+_syscall_setup:
+	pushq	%rbx
+	movabs	$syscall_table,%rbx
+	movq	%rdi,(%rbx)
+	movabs	$syscall_nr,%rbx
+	movq	%rsi,(%rbx)
+	popq	%rbx
+	ret
+
+	.data
+
+syscall_table:
+	.quad	0
+syscall_nr:
+	.quad	0
 
 keymap_base:
 	.ascii	"  1234567890-=  qwertyuiop[]  as"
