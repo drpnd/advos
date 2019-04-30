@@ -818,7 +818,7 @@ syscall_init(void *table, int nr)
 
     /* Check CPUID.0x80000001 for syscall support */
     rax = cpuid(0x80000001, &rbx, &rcx, &rdx);
-    if ( !((rdx >> 29) & 1) ) {
+    if ( !((rdx >> 11) & 1) || !((rdx >> 29) & 1) ) {
         panic("syscall is not supported.");
     }
 
