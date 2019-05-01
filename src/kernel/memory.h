@@ -291,7 +291,6 @@ int memory_wire(memory_t *, uintptr_t, size_t, uintptr_t);
 void * memory_alloc_pages(memory_t *, size_t, int, int);
 void memory_free_pages(memory_t *, void *);
 
-/* To be implemented */
 void * kmalloc(size_t);
 void kfree(void *);
 
