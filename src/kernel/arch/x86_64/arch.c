@@ -99,7 +99,7 @@ kfree(void *obj)
     size_t i;
 
     /* Search the slab cache name corresponding to the object */
-    for ( i = 0; i < sizeof(kmalloc_sizes) / sizeof(int); i++ ) {    
+    for ( i = 0; i < sizeof(kmalloc_sizes) / sizeof(int); i++ ) {
         ksnprintf(cachename, MEMORY_SLAB_CACHE_NAME_MAX, "kmalloc-%d",
                   kmalloc_sizes[i]);
         ret = memory_slab_free(&KVAR->slab, cachename, obj);
