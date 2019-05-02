@@ -212,7 +212,7 @@ _find_slab_for_object(memory_slab_cache_t *c, memory_slab_hdr_t *h, void *obj)
 /*
  * Free an object to the slab cache
  */
-void
+int
 memory_slab_free(memory_slab_allocator_t *slab, const char *name, void *obj)
 {
     memory_slab_cache_t *c;
@@ -226,7 +226,7 @@ memory_slab_free(memory_slab_allocator_t *slab, const char *name, void *obj)
     c = _find_slab_cache(slab->root, name);
     if ( NULL == c ) {
         /* Not found */
-        return;
+        return -1;
     }
 
     /* Search a slab containing the object */
@@ -238,7 +238,7 @@ memory_slab_free(memory_slab_allocator_t *slab, const char *name, void *obj)
         s = _find_slab_for_object(c, c->freelist.empty, obj);
         if ( NULL == s ) {
             /* Not found */
-            return;
+            return -1;
         }
     }
 
@@ -282,6 +282,8 @@ memory_slab_free(memory_slab_allocator_t *slab, const char *name, void *obj)
         s->next = c->freelist.full;
         c->freelist.full = s;
     }
+
+    return 0;
 }
 
 /*
