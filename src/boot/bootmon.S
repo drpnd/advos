@@ -59,7 +59,7 @@
 #define MME_SIGN                 0x534d4150     /* MME signature ("SMAP")  */
 /* Kernel */
 #define KERNEL_LBA               33
-#define KERNEL_SIZE              0x80   /* must be <=0x80 for "read" */
+#define KERNEL_SIZE              0x100  /* must be <=0x80 for "read" */
 #define KERNEL_SEG               0x1000
 #define KERNEL_OFF               0x0000
 
@@ -401,7 +401,8 @@ read:
 	movw	%sp,%bp
 	/* Save registers */
 	movw	%ax,-2(%bp)
-	movw	%bx,-4(%bp)
+	movw	%es,%ax
+	movw	%ax,-4(%bp)
 	movw	%cx,-6(%bp)
 	movw	%dx,-8(%bp)
 	/* Prepare space for local variables */
@@ -416,7 +417,9 @@ read:
 	call	lba2chs		/* Convert LBA (%ax) to CHS (%cx,%dh) */
 	call	read_sector	/* Read a sector */
 	/* Next 512-byte buffer */
-	addw	$512,%bx
+	movw	%es,%ax
+	addw	$0x20,%ax
+	movw	%ax,%es
 	/* Increment the counter */
 	movw	-10(%bp),%ax
 	incw	%ax
@@ -427,7 +430,8 @@ read:
 	/* Restore the saved registers */
 	movw	-8(%bp),%dx
 	movw	-6(%bp),%cx
-	movw	-4(%bp),%bx
+	movw	-4(%bp),%ax
+	movw	%ax,%es
 	movw	-2(%bp),%ax
 	movw	%bp,%sp
 	popw	%bp
