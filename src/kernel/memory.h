@@ -291,6 +291,7 @@ int memory_wire(memory_t *, uintptr_t, size_t, uintptr_t);
 void * memory_alloc_pages(memory_t *, size_t, int, int);
 void memory_free_pages(memory_t *, void *);
 
+/* Defined in arch.c */
 void * kmalloc(size_t);
 void kfree(void *);
 

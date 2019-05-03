@@ -56,14 +56,15 @@ typedef struct {
     uint32_t attr;
 } __attribute__ ((packed)) sysaddrmap_entry_t;
 
+static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
+                               2048, 4096, 8192 };
+
 /*
  * kmalloc
  */
 void *
 kmalloc(size_t sz)
 {
-    static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
-                                   2048, 4096, 8192 };
     char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
     size_t i;
     int aligned_size;
@@ -93,8 +94,6 @@ void
 kfree(void *obj)
 {
     int ret;
-    static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
-                                   2048, 4096, 8192 };
     char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
     size_t i;
 
@@ -896,8 +895,6 @@ bsp_start(void)
     int offset;
     sysaddrmap_entry_t *ent;
     int i;
-    static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
-                                   2048, 4096, 8192 };
     char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
     uint64_t busfreq;
     void **syscall;

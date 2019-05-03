@@ -9,7 +9,7 @@ RUN apt-get install -y --no-install-recommends build-essential qemu-system
 ## Copy source to the workdir
 COPY src /usr/src
 WORKDIR /usr/src
-RUN make
+RUN make clean all
 
 ## Run the OS with qemu
 CMD ["qemu-system-x86_64", "-m", "1024", \

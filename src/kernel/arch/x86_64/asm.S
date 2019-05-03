@@ -505,6 +505,7 @@ _syscall:
 	ret
 
 	.data
+	.align	16
 
 syscall_table:
 	.quad	0
