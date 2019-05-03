@@ -258,9 +258,10 @@ static int _rsdp_search_range(acpi_t *, uintptr_t, uintptr_t);
 static int
 _validate_checksum(const uint8_t *ptr, int len)
 {
-    uint8_t sum = 0;
+    uint8_t sum;
     int i;
 
+    sum = 0;
     for ( i = 0; i < len; i++ ) {
         sum += ptr[i];
     }
