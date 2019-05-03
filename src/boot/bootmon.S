@@ -59,7 +59,7 @@
 #define MME_SIGN                 0x534d4150     /* MME signature ("SMAP")  */
 /* Kernel */
 #define KERNEL_LBA               33
-#define KERNEL_SIZE              0x80
+#define KERNEL_SIZE              0x80   /* must be <=0x80 for "read" */
 #define KERNEL_SEG               0x1000
 #define KERNEL_OFF               0x0000
 
