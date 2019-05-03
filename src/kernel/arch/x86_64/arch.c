@@ -179,7 +179,7 @@ hex(int c)
  * Print out the hexdecimal w-byte value
  */
 static int
-print_hex(uint16_t *vbase, uint64_t val, int w)
+print_hex(volatile uint16_t *vbase, uint64_t val, int w)
 {
     int i;
     uint16_t v;
@@ -196,7 +196,7 @@ print_hex(uint16_t *vbase, uint64_t val, int w)
  * Print out the specified string
  */
 static int
-print_str(uint16_t *vbase, char *s)
+print_str(volatile uint16_t *vbase, char *s)
 {
     int offset;
 
@@ -714,7 +714,7 @@ task_a(void)
     uint64_t cnt = 0;
 
     while ( 1 ) {
-        syscall(766, cnt);
+        syscall(766, 22, cnt);
         cnt++;
     }
 }
@@ -725,13 +725,10 @@ task_a(void)
 void
 task_b(void)
 {
-    uint16_t *base;
     uint64_t cnt = 0;
 
     while ( 1 ) {
-        base = (uint16_t *)0xc00b8000;
-        base += 80 * 23;
-        print_hex(base, cnt, 8);
+        syscall(766, 23, cnt);
         cnt++;
     }
 }
@@ -864,12 +861,12 @@ syscall_init(void *table, int nr)
  * System call handler
  */
 void
-sys_print_counter(uint64_t cnt)
+sys_print_counter(int ln, uint64_t cnt)
 {
     uint16_t *base;
 
     base = (uint16_t *)0xc00b8000;
-    base += 80 * 22;
+    base += 80 * ln;
     print_hex(base, cnt, 8);
 }
 void
