@@ -1,5 +1,5 @@
 /*_
- * Copyright (c) 2018 Hirochika Asai <asai@jar.jp>
+ * Copyright (c) 2018-2019 Hirochika Asai <asai@jar.jp>
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,9 +31,11 @@
  * ACPI configuration
  */
 typedef struct {
-    /* Local APIC address */
+    /* Linear mapping */
+    uintptr_t p2v;
+    /* Local APIC address (physical) */
     uint64_t apic_address;
-    /* I/O APIC base */
+    /* I/O APIC base (physical) */
     uint64_t ioapic_base;
     /* ACPI PM timer */
     uint64_t pm_tmr_port;
@@ -61,7 +63,7 @@ typedef struct {
     } memory_domain[MAX_MEMORY_REGIONS];
 } acpi_t;
 
-int acpi_load(acpi_t *);
+int acpi_load(acpi_t *, uintptr_t p2v);
 int acpi_timer_available(acpi_t *);
 uint32_t acpi_get_timer(acpi_t *);
 uint64_t acpi_get_timer_period(acpi_t *);

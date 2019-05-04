@@ -32,6 +32,9 @@
 #define TRAMPOLINE_VEC          0x70
 #define TRAMPOLINE_MAX_SIZE     0x1000
 
+/* Temporary page table */
+#define PGT_BOOT                0x69000
+
 /* GDT and IDT */
 #define GDT_ADDR                0xc0074000ULL
 #define GDT_MAX_SIZE            0x2000

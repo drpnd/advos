@@ -1,5 +1,5 @@
 /*_
- * Copyright (c) 2018 Hirochika Asai <asai@jar.jp>
+ * Copyright (c) 2018-2019 Hirochika Asai <asai@jar.jp>
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -265,6 +265,20 @@ panic(const char *s)
 }
 
 /*
+ * Error handler without error code
+ */
+void
+isr_exception(uint32_t vec, uint64_t rip, uint64_t cs, uint64_t rflags,
+              uint64_t rsp)
+{
+    char buf[4096];
+
+    ksnprintf(buf, sizeof(buf), "Exception: vec=%llx, rip=%llx, "
+              "cs=%llx, rflags=%llx, rsp=%llx", vec, rip, cs, rflags, rsp);
+    panic(buf);
+}
+
+/*
  * Error handler with error code
  */
 void
@@ -275,6 +289,21 @@ isr_exception_werror(uint32_t vec, uint64_t error, uint64_t rip, uint64_t cs,
 
     ksnprintf(buf, sizeof(buf), "Exception: vec=%llx, error=%llx, rip=%llx, "
               "cs=%llx, rflags=%llx, rsp=%llx", vec, error, rip, cs, rflags,
+              rsp);
+    panic(buf);
+}
+
+/*
+ * Error handler for page fault (#PF)
+ */
+void
+isr_page_fault(uint64_t virtual, uint64_t error, uint64_t rip, uint64_t cs,
+               uint64_t rflags, uint64_t rsp)
+{
+    char buf[4096];
+
+    ksnprintf(buf, sizeof(buf), "#PF: virtual=%llx, error=%llx, rip=%llx, "
+              "cs=%llx, rflags=%llx, rsp=%llx", virtual, error, rip, cs, rflags,
               rsp);
     panic(buf);
 }
@@ -339,9 +368,9 @@ _init_temporary_pgt(void)
     int ret;
 
     /* Setup and enable the kernel page table */
-    pgt_init(&tmppgt, (void *)0x69000, 0);
+    pgt_init(&tmppgt, (void *)PGT_BOOT, 0);
     for ( i = 1; i < 6; i++ ) {
-        pgt_push(&tmppgt, (void *)0x69000 + 4096 * i);
+        pgt_push(&tmppgt, (void *)PGT_BOOT + 4096 * i);
     }
     /* 0-1 GiB */
     for ( i = 0; i < 512; i++ ) {
@@ -422,8 +451,8 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     }
 
     /* Initialize the virtual memory management */
-    ret = memory_init(&kvar->mm, &kvar->phys, &kvar->pgt, arch_memory_map,
-                      arch_memory_unmap);
+    ret = memory_init(&kvar->mm, &kvar->phys, &kvar->pgt, KERNEL_LMAP,
+                      arch_memory_map, arch_memory_unmap);
     if ( ret < 0 ) {
         panic("Failed to initialize the memory manager.");
     }
@@ -457,7 +486,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     if ( ret < 0 ) {
         panic("Failed to wire linear mapping region.");
     }
-#if 1
+#if 0
     /* 0-1 GiB (To be removed) */
     ret = memory_block_add(&kvar->mm, 0, 0x40000000);
     if ( ret < 0 ) {
@@ -950,14 +979,15 @@ bsp_start(void)
     }
 
     /* Load ACPI information */
-    ret = acpi_load(acpi);
+    ret = acpi_load(acpi, KERNEL_LMAP);
     if ( ret < 0 ) {
         panic("Failed to load ACPI configuration.");
     }
 
     /* Initialize the NUMA-aware zones */
     ret = _init_numa_zones(&kvar->phys, acpi, nr,
-                           (memory_sysmap_entry_t *)BI_MM_TABLE_ADDR);
+                           (memory_sysmap_entry_t *)(BI_MM_TABLE_ADDR
+                                                     + KERNEL_LMAP));
     if ( ret < 0 ) {
         panic("Failed to initialize the NUMA-aware zones.");
     }
@@ -999,7 +1029,27 @@ bsp_start(void)
 
     /* Test interrupt */
     idt_setup_intr_gate(IV_LOC_TMR, intr_apic_loc_tmr);
-    idt_setup_trap_gate(13, intr_gpf);
+    idt_setup_trap_gate(0, intr_de);
+    idt_setup_trap_gate(1, intr_db);
+    idt_setup_trap_gate(2, intr_nmi);
+    idt_setup_trap_gate(3, intr_bp);
+    idt_setup_trap_gate(4, intr_of);
+    idt_setup_trap_gate(5, intr_br);
+    idt_setup_trap_gate(6, intr_ud);
+    idt_setup_trap_gate(7, intr_nm);
+    idt_setup_trap_gate(8, intr_df);
+    idt_setup_trap_gate(9, intr_cso);
+    idt_setup_trap_gate(10, intr_ts);
+    idt_setup_trap_gate(11, intr_np);
+    idt_setup_trap_gate(12, intr_ss);
+    idt_setup_trap_gate(13, intr_gp);
+    idt_setup_trap_gate(14, intr_pf);
+    idt_setup_trap_gate(16, intr_mf);
+    idt_setup_trap_gate(17, intr_ac);
+    idt_setup_trap_gate(18, intr_mc);
+    idt_setup_trap_gate(19, intr_xm);
+    idt_setup_trap_gate(20, intr_ve);
+    idt_setup_trap_gate(30, intr_sx);
     idt_setup_intr_gate(0x21, intr_irq1);
 
     /* Load trampoline code for multicore support */
@@ -1072,7 +1122,7 @@ bsp_start(void)
     base += 80;
 
     /* System memory */
-    nr = *(uint16_t *)BI_MM_NENT_ADDR;
+    nr = *(uint16_t *)(BI_MM_NENT_ADDR + KERNEL_LMAP);
     offset = print_str(base, "System memory map; # of entries = 0x");
     print_hex(base + offset, nr, 2);
     base += 80;
@@ -1080,7 +1130,7 @@ bsp_start(void)
     print_str(base, "Base             Length           Type     Attribute");
     base += 80;
 
-    ent = (sysaddrmap_entry_t *)BI_MM_TABLE_ADDR;
+    ent = (sysaddrmap_entry_t *)(BI_MM_TABLE_ADDR + KERNEL_LMAP);
     for ( i = 0; i < nr; i++ ) {
         print_hex(base, ent->base, 8);
         print_hex(base + 17, ent->len, 8);

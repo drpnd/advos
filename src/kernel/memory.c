@@ -1,5 +1,5 @@
 /*_
- * Copyright (c) 2018 Hirochika Asai <asai@jar.jp>
+ * Copyright (c) 2018-2019 Hirochika Asai <asai@jar.jp>
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,7 +40,7 @@ _free_delete(virt_memory_block_t *, virt_memory_free_t *);
  * Initialize virtual memory
  */
 int
-memory_init(memory_t *mem, phys_memory_t *phys, void *arch,
+memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
             int (*map)(void *, uintptr_t, page_t *),
             int (*unmap)(void *, uintptr_t, page_t *))
 {
@@ -57,6 +57,8 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch,
     if ( NULL == data ) {
         return -1;
     }
+    /* P2V */
+    data = (void *)data + p2v;
     nr = (MEMORY_PAGESIZE << 9) / sizeof(union virt_memory_data);
     for ( i = 1; i < nr; i++ ){
         data[i - 1].next = &data[i];

@@ -1,5 +1,5 @@
 /*_
- * Copyright (c) 2018 Hirochika Asai <asai@jar.jp>
+ * Copyright (c) 2018-2019 Hirochika Asai <asai@jar.jp>
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -487,14 +487,14 @@ _parse_rsdt(acpi_t *acpi, struct acpi_rsdp *rsdp)
     if ( rsdp->revision >= 1 ) {
         /* ACPI 2.0 or later */
         sz = 8;
-        rsdt = (struct acpi_sdt_hdr *)rsdp->xsdt_addr;
+        rsdt = (struct acpi_sdt_hdr *)(rsdp->xsdt_addr + acpi->p2v);
         if ( 0 != kmemcmp((uint8_t *)rsdt->signature, "XSDT", 4) ) {
             return -1;
         }
     } else {
         /* Parse RSDT (ACPI 1.x) */
         sz = 4;
-        rsdt = (struct acpi_sdt_hdr *)(uintptr_t)rsdp->rsdt_addr;
+        rsdt = (struct acpi_sdt_hdr *)((uintptr_t)rsdp->rsdt_addr + acpi->p2v);
         if ( 0 != kmemcmp((uint8_t *)rsdt->signature, "RSDT", 4) ) {
             return -1;
         }
@@ -512,7 +512,7 @@ _parse_rsdt(acpi_t *acpi, struct acpi_rsdp *rsdp)
             addr = *(uint64_t *)((uintptr_t)(rsdt)
                                  + sizeof(struct acpi_sdt_hdr) + i * sz);
         }
-        tmp = (struct acpi_sdt_hdr *)addr;
+        tmp = (struct acpi_sdt_hdr *)(addr + acpi->p2v);
         if ( 0 == kmemcmp((uint8_t *)tmp->signature, "APIC", 4) ) {
             /* APIC */
             if ( _parse_apic(acpi, tmp) < 0 ) {
@@ -562,25 +562,26 @@ _rsdp_search_range(acpi_t *acpi, uintptr_t start, uintptr_t end)
  * acpi_load -- load and parse ACPI from EBDA or main BIOS area
  */
 int
-acpi_load(acpi_t *acpi)
+acpi_load(acpi_t *acpi, uintptr_t p2v)
 {
     uint16_t ebda;
     uintptr_t ebda_addr;
 
     /* Reset the data structure */
     kmemset(acpi, 0, sizeof(acpi_t));
+    acpi->p2v = p2v;
 
     /* Check 1KB of EBDA, first */
-    ebda = *(uint16_t *)BDA_EDBA;
+    ebda = *(uint16_t *)(BDA_EDBA + p2v);
     if ( ebda ) {
-        ebda_addr = (uintptr_t)ebda << 4;
+        ebda_addr = ((uintptr_t)ebda << 4) + p2v;
         if ( _rsdp_search_range(acpi, ebda_addr, ebda_addr + 0x0400) >= 0 ) {
             return 0;
         }
     }
 
     /* If not found in the EDBA, check main BIOS area */
-    return _rsdp_search_range(acpi, 0xe0000, 0x100000);
+    return _rsdp_search_range(acpi, 0xe0000 + p2v, 0x100000 + p2v);
 }
 
 /*

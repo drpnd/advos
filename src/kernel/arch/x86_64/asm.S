@@ -1,5 +1,5 @@
 /*_
- * Copyright (c) 2018 Hirochika Asai <asai@jar.jp>
+ * Copyright (c) 2018-2019 Hirochika Asai <asai@jar.jp>
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -53,7 +53,6 @@
 	.globl	_task_restart
 	.globl	_intr_null
 	.globl	_intr_apic_loc_tmr
-	.globl	_intr_gpf
 	.globl	_intr_irq1
 	.globl	_intr_crash
 	.globl	_asm_ioapic_map_intr
@@ -371,8 +370,50 @@ _intr_apic_loc_tmr:
 	movl	$0,0x0b0(%rdx)       /* EOI */
 	jmp	_task_restart
 
-/* General protection fault */
-_intr_gpf:
+/* Macro for generic exception handlers */
+.macro  intr_exception_generic name vec
+	.globl	_intr_\name
+_intr_\name:
+	/* Save registers*/
+	pushq	%rbp
+	movq	%rsp,%rbp
+	pushq	%rax
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%rdx
+	pushq	%rcx
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	pushq	%rbx
+	/* Call isr_exception_generic() */
+	movq	$\vec,%rdi
+	movq	8(%rbp),%rdx	/* rip */
+	movq	16(%rbp),%rcx	/* cs */
+	movq	24(%rbp),%r8	/* rflags */
+	movq	32(%rbp),%r9	/* rsp */
+	/* 40(%rbp): ss */
+	call	_isr_exception
+	/* Restore registers */
+	popq	%rbx
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rcx
+	popq	%rdx
+	popq	%rsi
+	popq	%rdi
+	popq	%rax
+	popq	%rbp
+	iretq
+.endm
+
+/* Macro for generic exception handlers */
+.macro  intr_exception_werror name vec
+	.globl	_intr_\name
+_intr_\name:
 	/* Save registers*/
 	pushq	%rbp
 	movq	%rsp,%rbp
@@ -387,7 +428,7 @@ _intr_gpf:
 	pushq	%r11
 	pushq	%rbx
 	/* Call isr_exception_werror() */
-	movq	$13,%rdi
+	movq	$\vec,%rdi
 	movq	8(%rbp),%rsi	/* error code */
 	movq	16(%rbp),%rdx	/* rip */
 	movq	24(%rbp),%rcx	/* cs */
@@ -409,6 +450,87 @@ _intr_gpf:
 	popq	%rbp
 	addq	$0x8,%rsp
 	iretq
+.endm
+
+/* Divide-by-zero Error (#DE) */
+	intr_exception_generic de 0x00
+/* Debug fault or trap */
+	intr_exception_generic db 0x01
+/* Non-maskable Interrupt */
+	intr_exception_generic nmi 0x02
+/* Breakpoint (#BP) */
+	intr_exception_generic bp 0x03
+/* Overflow (#OF) */
+	intr_exception_generic of 0x04
+/* Bound Range Exceeded (#BR) */
+	intr_exception_generic br 0x05
+/* Invalid Opcode (#UD) */
+	intr_exception_generic ud 0x06
+/* Device Not Available (#NM) */
+	intr_exception_generic nm 0x07
+/* Double Fault (#DF) */
+	intr_exception_werror df 0x08
+/* Coprocessor Segment Overrun */
+	intr_exception_generic cso 0x09
+/* Invalid TSS (#TS) */
+	intr_exception_werror ts 0x0a
+/* Segment Not Present (#NP) */
+	intr_exception_werror np 0x0b
+/* Stack-Segment Fault (#ss) */
+	intr_exception_werror ss 0x0c
+/* General Protection Fault (#GP) */
+	intr_exception_werror gp 0x0d
+/* Page Fault (#PF) */
+	.globl	_intr_pf
+_intr_pf:
+	/* Save registers*/
+	pushq	%rbp
+	movq	%rsp,%rbp
+	pushq	%rax
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%rdx
+	pushq	%rcx
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	pushq	%rbx
+	/* Call isr_page_fault() */
+	movq	%cr2,%rdi	/* virtual address */
+	movq	8(%rbp),%rsi	/* error code */
+	movq	16(%rbp),%rdx	/* rip */
+	movq	24(%rbp),%rcx	/* cs */
+	movq	32(%rbp),%r8	/* rflags */
+	movq	40(%rbp),%r9	/* rsp */
+	/* 48(%rbp): ss */
+	call	_isr_page_fault
+	/* Restore registers */
+	popq	%rbx
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rcx
+	popq	%rdx
+	popq	%rsi
+	popq	%rdi
+	popq	%rax
+	popq	%rbp
+	addq	$0x8,%rsp
+	iretq
+/* x87 Floating-Point Exception (#MF) */
+	intr_exception_generic mf 0x10
+/* Alignment Check (#AC) */
+	intr_exception_werror ac 0x11
+/* Machine Check (#MC) */
+	intr_exception_generic mc 0x12
+/* SIMD Floating-Point Exception (#XM/#XF) */
+	intr_exception_generic xm 0x13
+/* Virtualization Exception (#VE) */
+	intr_exception_generic ve 0x14
+/* Security Exception (#SX) */
+	intr_exception_werror sx 0x1e
 
 /* Interrupt handler for IRQ1 */
 _intr_irq1:
