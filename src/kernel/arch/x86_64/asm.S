@@ -308,7 +308,7 @@ _task_restart:
 	/* Setup sp0 in TSS */
 	movq	0(%rbp),%rax	/* cur_task */
 	movq	8(%rax),%rdx	/* cur_task->sp0 */
-	movq	$0xc0078000,%rax	/* TSS */
+	movq	$TSS_ADDR,%rax	/* TSS */
 	movq	%rdx,TSS_SP0(%rax)
 2:
 	/* Pop all registers from the stackframe */

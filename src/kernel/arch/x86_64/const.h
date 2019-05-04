@@ -41,6 +41,9 @@
 #define IDT_ADDR                0xc0076000ULL
 #define IDT_MAX_SIZE            0x2000
 
+/* TSS */
+#define TSS_ADDR                0xc0078000
+
 /* GDT selectors */
 #define GDT_NR                  7
 #define GDT_NULL_SEL            (0 << 3)

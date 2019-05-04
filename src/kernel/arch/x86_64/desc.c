@@ -117,7 +117,7 @@ gdt_init(void)
 
     /* TSS */
     tss = (struct gdt_desc_tss *)(GDT_ADDR + GDT_TSS_SEL_BASE);
-    gdt_setup_desc_tss(&tss[0], 0x00078000, sizeof(struct tss) - 1,
+    gdt_setup_desc_tss(&tss[0], TSS_ADDR, sizeof(struct tss) - 1,
                        TSS_INACTIVE, 0, 0);
 
     /* Set the GDT base address and the table size */
@@ -200,7 +200,7 @@ tss_init(void)
 {
     struct tss *tss;
 
-    tss = (struct tss *)0x00078000;
+    tss = (struct tss *)TSS_ADDR;
     tss->reserved1 = 0;
     tss->rsp0l = 0;
     tss->rsp0h = 0;
