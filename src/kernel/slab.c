@@ -32,7 +32,7 @@ _new_slab(memory_slab_allocator_t *slab, size_t objsize)
 {
     void *pages;
     uintptr_t addr;
-    memory_slab_hdr_t *hdr;
+    volatile memory_slab_hdr_t *hdr;
     size_t size;
     int i;
 
@@ -65,7 +65,7 @@ _new_slab(memory_slab_allocator_t *slab, size_t objsize)
         hdr->marks[i] = 1;
     }
 
-    return hdr;
+    return (memory_slab_hdr_t *)hdr;
 }
 
 /*
