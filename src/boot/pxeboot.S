@@ -418,6 +418,7 @@ load_tftp_file:
 	movw	%bp,%di
 	movw	$PXEAPI_OPCODE_TFTP_CLOSE,%bx
 	call	pxeapi
+
 	movw	%es:PXEAPI_TFTP_OPEN_STATUS(%bp),%ax
 	testw	%ax,%ax
 	jnz	load_tftp_file.error

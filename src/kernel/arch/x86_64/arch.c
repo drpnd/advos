@@ -486,17 +486,6 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     if ( ret < 0 ) {
         panic("Failed to wire linear mapping region.");
     }
-#if 0
-    /* 0-1 GiB (To be removed) */
-    ret = memory_block_add(&kvar->mm, 0, 0x40000000);
-    if ( ret < 0 ) {
-        panic("Failed to add linear mapping memory block (low).");
-    }
-    ret = memory_wire(&kvar->mm, 0, 0x40000, 0);
-    if ( ret < 0 ) {
-        panic("Failed to wire linear mapping region (low).");
-    }
-#endif
 
     /* Activate the page table */
     pgt_set_cr3(&kvar->pgt);
