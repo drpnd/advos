@@ -784,7 +784,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
         p->physical = (uintptr_t)r;
 
         /* Map */
-        mem->map(mem->arch, e->start + i * MEMORY_PAGESIZE, p);
+        ret = mem->map(mem->arch, e->start + i * MEMORY_PAGESIZE, p);
         if ( ret < 0 ) {
             _data_free(mem, (union virt_memory_data *)p);
             phys_mem_free(mem->phys, (void *)p->physical, p->order, p->zone,
