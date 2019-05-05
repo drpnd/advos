@@ -3,8 +3,15 @@
 advos had been developed for my advent calendar 2018 project.
 See https://ja.tech.jar.jp/ac/2018/day00.html (in Japanese) for the detailed description.
 
+## Memory Management
 
-## Memory Map
+### Memory Zones
+
+* ZONE_DMA: 0x00000000 -- 0x01000000 (0--16 MiB)
+* ZONE_KERNEL: 0x01000000 -- 0x04000000 (16--64 MiB)
+* ZONE_NUMA_AWARE: 0x04000000 -- (64-- MiB)
+
+### Memory Map
 
 | Start      | End        | Description |
 | :--------- | :--------- | :---------- |
