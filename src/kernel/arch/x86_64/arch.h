@@ -141,7 +141,6 @@ void lidt(void *);
 void sidt(void *);
 void lldt(uint16_t);
 void ltr(uint16_t);
-void chcs(uint64_t);
 void hlt(void);
 void pause(void);
 

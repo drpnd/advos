@@ -49,7 +49,6 @@
 	.globl	_sidt
 	.globl	_lldt
 	.globl	_ltr
-	.globl	_chcs
 	.globl	_task_restart
 	.globl	_intr_null
 	.globl	_intr_apic_loc_tmr
@@ -259,27 +258,6 @@ _lldt:
 /* void ltr(uint16_t) */
 _ltr:
 	ltr	%di
-	ret
-
-/* void chcs(uint64_t selector) */
-_chcs:
-	/* Setup SP0 in TSS */
-	movq	$0x00010000,%rax
-	movq	$0x00078000,%rdx
-	movq	%rax,TSS_SP0(%rdx)
-	/* Prepare stack for iretq */
-	movq	%rsp,%rdx
-	movq	%rdi,%rax
-	addq	$8,%rax
-	pushq	%rax
-	pushq	%rdx
-	movq	$0x202,%rax
-	pushq	%rax
-	pushq	%rdi
-	movabs	$1f,%rax
-	pushq	%rax
-	iretq
-1:
 	ret
 
 /* Restart a task */

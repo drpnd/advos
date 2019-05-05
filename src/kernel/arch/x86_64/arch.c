@@ -1016,7 +1016,7 @@ bsp_start(void)
     syscall[767] = sys_hlt;
     syscall_init(syscall, SYS_MAXSYSCALL);
 
-    /* Test interrupt */
+    /* Setup trap gates */
     idt_setup_intr_gate(IV_LOC_TMR, intr_apic_loc_tmr);
     idt_setup_trap_gate(0, intr_de);
     idt_setup_trap_gate(1, intr_db);
