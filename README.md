@@ -23,12 +23,11 @@ See https://ja.tech.jar.jp/ac/2018/day00.html (in Japanese) for the detailed des
 | `0000d000` | `0000ffff` | Reserved for boot monitor |
 | `00010000` | `0002ffff` | Kernel (up to 128 KiB) |
 | `00030000` | `00067fff` | Reserved |
-| `00060000` | `0006ffff` | Global variables |
-| `00068000` | `00068fff` | Memory management space for core zone |
+| `00068000` | `00068fff` | Global variables |
 | `00069000` | `0006ffff` | MOVED: Kernel's base page table |
 | `00070000` | `00073fff` | trampoline (16 KiB) |
 | `00074000` | `00075fff` | GDT (8 KiB) |
 | `00076000` | `00077fff` | IDT (8 KiB) |
-| `00078000` | `00078fff` | TSS |
+| `00078000` | `00078fff` | TSS for BSP |
 | `00079000` | `0007ffff` | Moved: Page table for long mode (Must be >= 24 KiB = 6 * 4 KiB) |
 
