@@ -69,7 +69,7 @@
 #define AP_GDT_DATA16_SEL       0x30    /* Data16 selector */
 
 /* # of interrupts */
-#define IDT_NR  256
+#define IDT_NR                  256
 
 #define KERNEL_RELOCBASE        0xc0000000
 
