@@ -56,58 +56,6 @@ typedef struct {
     uint32_t attr;
 } __attribute__ ((packed)) sysaddrmap_entry_t;
 
-static int kmalloc_sizes[] = { 8, 16, 32, 64, 96, 128, 192, 256, 512, 1024,
-                               2048, 4096, 8192 };
-
-/*
- * kmalloc
- */
-void *
-kmalloc(size_t sz)
-{
-    char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
-    size_t i;
-    int aligned_size;
-
-    /* Search fitting size */
-    aligned_size = -1;
-    for ( i = 0; i < sizeof(kmalloc_sizes) / sizeof(int); i++ ) {
-        if ( (int)sz <= kmalloc_sizes[i] ) {
-            aligned_size = kmalloc_sizes[i];
-            break;
-        }
-    }
-    if ( aligned_size < 0 ) {
-        /* The requested size is too large. */
-        return NULL;
-    }
-    ksnprintf(cachename, MEMORY_SLAB_CACHE_NAME_MAX, "kmalloc-%d",
-              aligned_size);
-
-    return memory_slab_alloc(&KVAR->slab, cachename);
-}
-
-/*
- * kfree
- */
-void
-kfree(void *obj)
-{
-    int ret;
-    char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
-    size_t i;
-
-    /* Search the slab cache name corresponding to the object */
-    for ( i = 0; i < sizeof(kmalloc_sizes) / sizeof(int); i++ ) {
-        ksnprintf(cachename, MEMORY_SLAB_CACHE_NAME_MAX, "kmalloc-%d",
-                  kmalloc_sizes[i]);
-        ret = memory_slab_free(&KVAR->slab, cachename, obj);
-        if ( 0 == ret ) {
-            /* Found */
-            break;
-        }
-    }
-}
 
 /*
  * invariant_tsc_freq -- resolve the base frequency of invariant TSC
@@ -910,7 +858,6 @@ bsp_start(void)
     int offset;
     sysaddrmap_entry_t *ent;
     int i;
-    char cachename[MEMORY_SLAB_CACHE_NAME_MAX];
     uint64_t busfreq;
     void **syscall;
 
@@ -987,16 +934,8 @@ bsp_start(void)
         panic("Failed to initialize the slab allocator.");
     }
 
-    /* Initialize the kmalloc slab caches */
-    for ( i = 0; i < (int)(sizeof(kmalloc_sizes) / sizeof(int)); i++ ) {
-        ksnprintf(cachename, MEMORY_SLAB_CACHE_NAME_MAX, "kmalloc-%d",
-                  kmalloc_sizes[i]);
-        ret = memory_slab_create_cache(&kvar->slab, cachename,
-                                       kmalloc_sizes[i]);
-        if ( ret < 0 ) {
-            panic("Failed to create slab cache.");
-        }
-    }
+    /* Initialize kmmaloc */
+    kmalloc_init(&kvar->slab);
 
     /* Prepare multitasking */
     ret = _prepare_multitasking();

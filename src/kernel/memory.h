@@ -292,6 +292,7 @@ void * memory_alloc_pages(memory_t *, size_t, int, int);
 void memory_free_pages(memory_t *, void *);
 
 /* Defined in arch.c */
+int kmalloc_init(memory_slab_allocator_t *);
 void * kmalloc(size_t);
 void kfree(void *);
 
