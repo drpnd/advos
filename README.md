@@ -22,7 +22,8 @@ See https://ja.tech.jar.jp/ac/2018/day00.html (in Japanese) for the detailed des
 | `00009000` | `0000cfff` | Boot monitor (16 KiB) |
 | `0000d000` | `0000ffff` | Reserved for boot monitor |
 | `00010000` | `0002ffff` | Kernel (up to 128 KiB) |
-| `00030000` | `00067fff` | Reserved |
+| `00030000` | `0005ffff` | Reserved |
+| `00060000` | `00067fff` | Per-core data (64-byte * 512) |
 | `00068000` | `00068fff` | Global variables |
 | `00069000` | `0006ffff` | MOVED: Kernel's base page table |
 | `00070000` | `00073fff` | trampoline (16 KiB) |
