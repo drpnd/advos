@@ -274,7 +274,8 @@ _task_restart:
 	shlq	$7,%rax
 	movq	%rax,%rcx
 	/* Task base address (struct arch_task *) */
-	movq	$0xc0068e00,%rbp
+	movq	$CPU_TASK_BASE,%rbp
+	addq	%rcx,%rbp
 	/* If the next task is not scheduled, immediately restart this task. */
 	cmpq	$0,8(%rbp)	/* next_task */
 	jz	2f

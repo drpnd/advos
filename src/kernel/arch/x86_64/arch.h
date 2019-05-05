@@ -112,7 +112,7 @@ struct arch_task {
 } __attribute__ ((packed));
 
 /*
- * Processor's task information
+ * Processor's task information (16 bytes)
  */
 struct arch_cpu_data {
     struct arch_task *cur_task;

@@ -695,7 +695,7 @@ ksignal_clock(void)
 
     /* Schedule next task */
     struct arch_cpu_data *cpu;
-    cpu = (struct arch_cpu_data *)0xc0068e00;
+    cpu = (struct arch_cpu_data *)CPU_TASK(0);
     if ( cpu->cur_task == taska ) {
         cpu->next_task = taskb;
     } else if ( cpu->cur_task == taskb ) {
@@ -831,7 +831,7 @@ _prepare_multitasking(void)
     taski->rp->flags = 0x202;
 
     /* Set the task A as the initial task */
-    cpu = (struct arch_cpu_data *)0xc0068e00;
+    cpu = (struct arch_cpu_data *)CPU_TASK(0);
     cpu->cur_task = NULL;
     cpu->next_task = taska;
 
@@ -984,14 +984,18 @@ bsp_start(void)
     /* Initialize the slab allocator */
     ret = memory_slab_init(&kvar->slab, &kvar->mm);
     if ( ret < 0 ) {
-        panic("Failed to initialize the slab allocator");
+        panic("Failed to initialize the slab allocator.");
     }
 
     /* Initialize the kmalloc slab caches */
     for ( i = 0; i < (int)(sizeof(kmalloc_sizes) / sizeof(int)); i++ ) {
         ksnprintf(cachename, MEMORY_SLAB_CACHE_NAME_MAX, "kmalloc-%d",
                   kmalloc_sizes[i]);
-        memory_slab_create_cache(&kvar->slab, cachename, kmalloc_sizes[i]);
+        ret = memory_slab_create_cache(&kvar->slab, cachename,
+                                       kmalloc_sizes[i]);
+        if ( ret < 0 ) {
+            panic("Failed to create slab cache.");
+        }
     }
 
     /* Prepare multitasking */
