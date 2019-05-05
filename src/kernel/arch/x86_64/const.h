@@ -45,9 +45,9 @@
 #define CPU_DATA_BASE           0xc0060000
 #define CPU_DATA(i)             (CPU_DATA_BASE + ((i) << 7))
 #define CPU_TSS_BASE            (CPU_DATA_BASE + 0)
-#define CPU_TSS(i)              (CPU_DATA_BASE + ((i) << 7))
+#define CPU_TSS(i)              (CPU_TSS_BASE + ((i) << 7))
 #define CPU_TASK_BASE           (CPU_DATA_BASE + 104)
-#define CPU_TASK(i)             (CPU_SP_BASE + ((i) << 7))
+#define CPU_TASK(i)             (CPU_TASK_BASE + ((i) << 7))
 
 /* GDT selectors */
 #define GDT_NR                  7
