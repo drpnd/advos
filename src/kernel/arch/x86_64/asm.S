@@ -262,6 +262,17 @@ _ltr:
 
 /* Restart a task */
 _task_restart:
+	/* Get the APIC ID */
+	movq	$MSR_APIC_BASE,%rcx
+	rdmsr
+	shlq	$32,%rdx
+	addq	%rax,%rdx
+	andq	$0xfffffffffffff000,%rdx	/* APIC Base */
+	xorq	%rax,%rax
+	movl	0x020(%rdx),%eax	/* Local APIC ID */
+	shrl	$24,%eax
+	shlq	$7,%rax
+	movq	%rax,%rcx
 	/* Task base address (struct arch_task *) */
 	movq	$0xc0068e00,%rbp
 	/* If the next task is not scheduled, immediately restart this task. */
@@ -286,7 +297,8 @@ _task_restart:
 	/* Setup sp0 in TSS */
 	movq	0(%rbp),%rax	/* cur_task */
 	movq	8(%rax),%rdx	/* cur_task->sp0 */
-	movq	$TSS_ADDR,%rax	/* TSS */
+	movq	$CPU_TSS_BASE,%rax	/* TSS */
+	addq	%rcx,%rax
 	movq	%rdx,TSS_SP0(%rax)
 2:
 	/* Pop all registers from the stackframe */

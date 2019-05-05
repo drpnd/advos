@@ -28,7 +28,7 @@
 #include "const.h"
 
 /*
- * TSS
+ * TSS (104 bytes)
  */
 struct tss {
     uint32_t reserved1;

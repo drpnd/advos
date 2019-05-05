@@ -94,6 +94,7 @@ gdt_init(void)
     struct gdtr *gdtr;
     uint8_t code;
     uint8_t data;
+    int i;
 
     sz = GDT_NR * sizeof(struct gdt_desc)
         + MAX_PROCESSORS * sizeof(struct gdt_desc_tss);
@@ -117,8 +118,10 @@ gdt_init(void)
 
     /* TSS */
     tss = (struct gdt_desc_tss *)(GDT_ADDR + GDT_TSS_SEL_BASE);
-    gdt_setup_desc_tss(&tss[0], TSS_ADDR, sizeof(struct tss) - 1,
-                       TSS_INACTIVE, 0, 0);
+    for ( i = 0; i < MAX_PROCESSORS; i++ ) {
+        gdt_setup_desc_tss(&tss[i], CPU_TSS(i), sizeof(struct tss) - 1,
+                           TSS_INACTIVE, 0, 0);
+    }
 
     /* Set the GDT base address and the table size */
     gdtr->base = (uint64_t)gdt;
@@ -199,35 +202,38 @@ void
 tss_init(void)
 {
     struct tss *tss;
+    int i;
 
-    tss = (struct tss *)TSS_ADDR;
-    tss->reserved1 = 0;
-    tss->rsp0l = 0;
-    tss->rsp0h = 0;
-    tss->rsp1l = 0;
-    tss->rsp1h = 0;
-    tss->rsp2l = 0;
-    tss->rsp2h = 0;
-    tss->reserved2 = 0;
-    tss->reserved3 = 0;
-    tss->ist1l = 0;
-    tss->ist1h = 0;
-    tss->ist2l = 0;
-    tss->ist2h = 0;
-    tss->ist3l = 0;
-    tss->ist3h = 0;
-    tss->ist4l = 0;
-    tss->ist4h = 0;
-    tss->ist5l = 0;
-    tss->ist5h = 0;
-    tss->ist6l = 0;
-    tss->ist6h = 0;
-    tss->ist7l = 0;
-    tss->ist7h = 0;
-    tss->reserved4 = 0;
-    tss->reserved5 = 0;
-    tss->reserved6 = 0;
-    tss->iomap = 0;
+    for ( i = 0; i < MAX_PROCESSORS; i++ ) {
+        tss = (struct tss *)(uintptr_t)CPU_TSS(i);
+        tss->reserved1 = 0;
+        tss->rsp0l = 0;
+        tss->rsp0h = 0;
+        tss->rsp1l = 0;
+        tss->rsp1h = 0;
+        tss->rsp2l = 0;
+        tss->rsp2h = 0;
+        tss->reserved2 = 0;
+        tss->reserved3 = 0;
+        tss->ist1l = 0;
+        tss->ist1h = 0;
+        tss->ist2l = 0;
+        tss->ist2h = 0;
+        tss->ist3l = 0;
+        tss->ist3h = 0;
+        tss->ist4l = 0;
+        tss->ist4h = 0;
+        tss->ist5l = 0;
+        tss->ist5h = 0;
+        tss->ist6l = 0;
+        tss->ist6h = 0;
+        tss->ist7l = 0;
+        tss->ist7h = 0;
+        tss->reserved4 = 0;
+        tss->reserved5 = 0;
+        tss->reserved6 = 0;
+        tss->iomap = 0;
+    }
 }
 
 /*
