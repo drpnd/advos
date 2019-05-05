@@ -1006,7 +1006,10 @@ bsp_start(void)
 
     /* Initialiez I/O APIC */
     ioapic_init();
-    ioapic_map_intr(0x21, 1, acpi->ioapic_base);
+    /* Map IRQ */
+    for ( i = 0; i < 16; i++ ) {
+        ioapic_map_intr(0x20 + i, i, acpi->ioapic_base);
+    }
 
     /* Setup system call */
     syscall = kmalloc(sizeof(void *) * SYS_MAXSYSCALL);
