@@ -131,6 +131,23 @@ gdt_init(void)
 }
 
 /*
+ * Load global descriptor table
+ */
+void
+gdt_load(void)
+{
+    uint64_t sz;
+    struct gdtr *gdtr;
+
+    sz = GDT_NR * sizeof(struct gdt_desc)
+        + MAX_PROCESSORS * sizeof(struct gdt_desc_tss);
+    /* GDT register */
+    gdtr = (struct gdtr *)(GDT_ADDR + sz);
+
+    lgdt(gdtr, GDT_RING0_CODE_SEL);
+}
+
+/*
  * Setup gate descriptor
  */
 static void
@@ -193,6 +210,18 @@ idt_init(void)
     idtr->size = IDT_NR * sizeof(struct idt_gate_desc) - 1;
 
     return idtr;
+}
+
+/*
+ * Load interrupt descriptor table
+ */
+void
+idt_load(void)
+{
+    struct idtr *idtr;
+
+    idtr = (struct idtr *)(IDT_ADDR + sizeof(struct idt_gate_desc) * IDT_NR);
+    lidt(idtr);
 }
 
 /*

@@ -65,6 +65,7 @@
 #define APIC_TMRDIV_X64                 0x9
 #define APIC_TMRDIV_X128                0xa
 
+int lapic_id(void);
 void lapic_send_init_ipi(void);
 void lapic_send_startup_ipi(uint8_t);
 void lapic_bcast_fixed_ipi(uint8_t);

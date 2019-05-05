@@ -872,11 +872,11 @@ bsp_start(void)
 
     /* Initialize global descriptor table (GDT) */
     gdtr = gdt_init();
-    lgdt(gdtr, GDT_RING0_CODE_SEL);
+    gdt_load();
 
     /* Initialize interrupt descriptor table (IDT)  */
     idtr = idt_init();
-    lidt(idtr);
+    idt_load();
 
     /* Load LDT */
     lldt(0);
@@ -1077,6 +1077,32 @@ bsp_start(void)
 
     lapic_start_timer(busfreq, HZ, IV_LOC_TMR);
     task_restart();
+
+    /* The following code will never be reached... */
+    /* Enable interrupt */
+    sti();
+
+    /* Sleep forever */
+    for ( ;; ) {
+        hlt();
+    }
+}
+
+/*
+ * Entry point for application processors
+ */
+void
+ap_start(void)
+{
+    /* Load GDT and IDT */
+    gdt_load();
+    idt_load();
+
+    /* Load LDT */
+    lldt(0);
+
+    /* Load TSS */
+    tr_load(lapic_id());
 
     /* The following code will never be reached... */
     /* Enable interrupt */
