@@ -35,6 +35,10 @@
 /* Temporary page table */
 #define PGT_BOOT                0x69000
 
+/* Physical addresses for application processor variables */
+#define APVAR_CR3               0x00068f00
+#define APVAR_SP                0x00068f08
+
 /* GDT and IDT */
 #define GDT_ADDR                0xc0074000ULL
 #define GDT_MAX_SIZE            0x2000

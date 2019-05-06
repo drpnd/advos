@@ -46,22 +46,59 @@ ap_entry32:
 	movl	%eax,%fs
 	movl	%eax,%gs
 
+	/* Enable PAE */
+	movl	$0x40220,%eax	/* CR4[bit 5] = PAE */
+	movl	%eax,%cr4	/* CR4[bit 9] = OSFXSR */
+				/* CR4[bit 18] = OSXSAVE */
+
+	/* Setup page table register */
+	movl	$PGT_BOOT,%ebx
+	movl	%ebx,%cr3
+
+	/* Enable long mode */
+	movl	$0xc0000080,%ecx	/* EFER MSR number */
+	rdmsr			/* Read from 64bit-specific register */
+	btsl	$8,%eax		/* LME bit = 1 */
+	wrmsr			/* Write to 64bit-specific register */
+
+	/* Activate page translation and long mode */
+	movl	$0x80000001,%eax
+	movl	%eax,%cr0
+	jmp	hlt
+
+	ljmpl	$AP_GDT_CODE32_SEL,$ap_reentry32
+
+/* To jump to relocated address */
+ap_reentry32:
 	/* Get the local APIC ID */
 	movl    $MSR_APIC_BASE,%ecx
 	rdmsr
-	andl	$0xfffffffffffff000,%eax        /* APIC Base */
+	andl	$0xfffffffffffff000,%eax	/* APIC Base */
 	movl	APIC_LAPIC_ID(%eax),%eax
 	shrl	$24,%eax
+	movl	%eax,%edx
+	incl	%edx
+	shll	$12,%edx	/* One page per core */
 
-	movl	$0xb8000,%ebx
-	movl	$160,%ecx
-	mull	%ecx
-	subl	$2,%eax
-	movl	$0x0721,%edx
-	addl	%eax,%ebx
-	movl	%edx,(%ebx)
+	/* Check the Local APIC ID */
+	cmpl	$MAX_PROCESSORS,%eax
+	jge	hlt
 
+	/* Setup page table register */
+	movl	(APVAR_CR3),%ebx
+	movl	%ebx,%cr3
+
+	/* Setup stack */
+	movl	(APVAR_SP),%ebx
+	addl	%edx,%ebx
+	movl	%ebx,%esp
+
+	/* Load code64 descriptor */
+	pushl	$AP_GDT_CODE64_SEL
+	pushl	$ap_entry64
+	lret
+
+hlt:
 1:
 	hlt
 	jmp	1b
-

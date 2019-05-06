@@ -1,5 +1,5 @@
 /*_
- * Copyright (c) 2018 Hirochika Asai <asai@jar.jp>
+ * Copyright (c) 2018-2019 Hirochika Asai <asai@jar.jp>
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -363,7 +363,6 @@ pgt_map(pgt_t *pgt, uintptr_t virtual, uintptr_t physical, int superpage,
         pd[idx].v |= physical;
         /* Invalidate */
         if ( MASK_PAGE(get_cr3()) == MASK_PAGE(pgt->cr3) ) {
-            panic("xxx");
             invlpg(virtual);
         }
     } else {

@@ -35,9 +35,6 @@
 #include <stdint.h>
 #include <sys/syscall.h>
 
-#define set_cr3(cr3)    __asm__ __volatile__ ("movq %%rax,%%cr3" :: "a"((cr3)))
-#define invlpg(addr)    __asm__ __volatile__ ("invlpg (%%rax)" :: "a"((addr)))
-
 /* For trampoline code */
 void trampoline(void);
 void trampoline_end(void);
@@ -986,6 +983,17 @@ bsp_start(void)
     idt_setup_trap_gate(20, intr_ve);
     idt_setup_trap_gate(30, intr_sx);
     idt_setup_intr_gate(0x21, intr_irq1);
+
+    /* Prepare stack for appliation processors.  N.B., the stack must be in the
+       kernel zone so that 32-bit code can refer to it. */
+    void *bstack;
+    bstack = memory_alloc_pages(&kvar->mm, MAX_PROCESSORS,
+                                MEMORY_ZONE_KERNEL, 0);
+    if ( NULL == bstack ) {
+        panic("Cannot allocate boot stack for application processors.");
+    }
+    *(uintptr_t *)(APVAR_CR3 + KERNEL_RELOCBASE) = kvar->pgt.cr3;
+    *(uintptr_t *)(APVAR_SP + KERNEL_RELOCBASE) = (uintptr_t)bstack;
 
     /* Load trampoline code for multicore support */
     sz = (uint64_t)trampoline_end - (uint64_t)trampoline;
