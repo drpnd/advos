@@ -1,5 +1,5 @@
 /*_
- * Copyright (c) 2018-2019 Hirochika Asai <asai@jar.jp>
+ * Copyright (c) 2019 Hirochika Asai <asai@jar.jp>
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,45 +23,22 @@
 
 #include "const.h"
 
-#define MSR_APIC_BASE           0x1b
-#define APIC_LAPIC_ID           0x020
-
-	.globl	ap_entry32
+	.globl	ap_entry64
 
 	.text
-	.code32
+	.code64
 
-/*
- * Entry point to the 32-bit protected mode for application processors
- */
-ap_entry32:
+ap_entry64:
 	cli
-
-	/* %cs is automatically set after the long jump operation */
-	/* Setup other segment registers */
 	movl	$AP_GDT_DATA64_SEL,%eax
 	movl	%eax,%ss
 	movl	%eax,%ds
+	xorl	%eax,%eax
 	movl	%eax,%es
 	movl	%eax,%fs
 	movl	%eax,%gs
-
-	/* Get the local APIC ID */
-	movl    $MSR_APIC_BASE,%ecx
-	rdmsr
-	andl	$0xfffffffffffff000,%eax        /* APIC Base */
-	movl	APIC_LAPIC_ID(%eax),%eax
-	shrl	$24,%eax
-
-	movl	$0xb8000,%ebx
-	movl	$160,%ecx
-	mull	%ecx
-	subl	$2,%eax
-	movl	$0x0721,%edx
-	addl	%eax,%ebx
-	movl	%edx,(%ebx)
-
+	sti
+	call	_ap_start
 1:
 	hlt
 	jmp	1b
-

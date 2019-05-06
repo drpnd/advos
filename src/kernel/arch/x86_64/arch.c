@@ -883,7 +883,7 @@ bsp_start(void)
 
     /* Initialize TSS and load BSP's task register */
     tss_init();
-    tr_load(0);
+    tr_load(lapic_id());
 
     /* Ensure the i8254 timer is stopped */
     i8254_stop_timer();
