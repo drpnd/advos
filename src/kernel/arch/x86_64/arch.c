@@ -535,7 +535,7 @@ _estimate_bus_freq(acpi_t *acpi)
     /* Start timer */
     t0 = 0xffffffff;
     lapic_set_timer(0xffffffff, APIC_TMRDIV_X16);
-    
+
     /* Set probe timer (100 ms) */
     probe = 100000;
 
