@@ -581,8 +581,12 @@ arch_memory_map(void *arch, uintptr_t virtual, page_t *page)
     }
     /* Global (temporary) */
     global = 1;
-    /* Read-write for all pages (temporary) */
-    rw = 1;
+    /* Check the read-write bit */
+    if ( page->flags & MEMORY_PGF_RW ) {
+        rw = 1;
+    } else {
+        rw = 0;
+    }
     /* User allowed (temporary) */
     user = 1;
 

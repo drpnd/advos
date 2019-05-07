@@ -44,6 +44,7 @@
 
 /* Page flags */
 #define MEMORY_PGF_WIRED                (1 << 0)
+#define MEMORY_PGF_RW                   (1 << 1)
 
 #define MEMORY_SLAB_NUM_PAGES           8
 #define MEMORY_SLAB_CACHE_NAME_MAX      64

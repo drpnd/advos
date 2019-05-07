@@ -395,7 +395,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
             goto error_page;
         }
         p->physical = physical;
-        p->flags = MEMORY_PGF_WIRED;
+        p->flags = MEMORY_PGF_WIRED | MEMORY_PGF_RW;
         p->next = NULL;
         /* Calculate the order to minimize the number of page_t */
         order = _order(virtual, physical, endplus1 - virtual);
@@ -738,7 +738,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
         }
         p->zone = zone;
         p->numadomain = numadomain;
-        p->flags = 0;
+        p->flags = MEMORY_PGF_RW;
         p->order = MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT;
         p->next = NULL;
 
@@ -771,7 +771,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
         }
         p->zone = zone;
         p->numadomain = numadomain;
-        p->flags = 0;
+        p->flags = MEMORY_PGF_RW;
         p->order = 0;
         p->next = NULL;
 
