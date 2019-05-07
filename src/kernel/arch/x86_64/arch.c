@@ -633,20 +633,22 @@ ksignal_clock(void)
     uint16_t *base;
     static uint64_t cnt = 0;
 
-    base = (uint16_t *)0xc00b8000;
-    base += 80 * 24;
-    print_hex(base, cnt / 100, 8);
-    cnt++;
+    if ( lapic_id() == 0 ) {
+        base = (uint16_t *)0xc00b8000;
+        base += 80 * 24;
+        print_hex(base, cnt / 100, 8);
+        cnt++;
 
-    /* Schedule next task */
-    struct arch_cpu_data *cpu;
-    cpu = (struct arch_cpu_data *)CPU_TASK(0);
-    if ( cpu->cur_task == taska ) {
-        cpu->next_task = taskb;
-    } else if ( cpu->cur_task == taskb ) {
-        cpu->next_task = taski;
-    } else {
-        cpu->next_task = taska;
+        /* Schedule next task */
+        struct arch_cpu_data *cpu;
+        cpu = (struct arch_cpu_data *)CPU_TASK(0);
+        if ( cpu->cur_task == taska ) {
+            cpu->next_task = taskb;
+        } else if ( cpu->cur_task == taskb ) {
+            cpu->next_task = taski;
+        } else {
+            cpu->next_task = taska;
+        }
     }
 }
 
@@ -657,14 +659,18 @@ void
 task_idle(void)
 {
     uint16_t *base;
-    uint64_t cnt = 0;
+    uint64_t cnt;
 
+    base = (uint16_t *)0xc00b8000;
+    cnt = 0;
     while ( 1 ) {
-        base = (uint16_t *)0xc00b8000;
-        base += 80 * 21;
-        print_hex(base, cnt, 8);
+        if ( (cnt / 10) & 1 )  {
+            *(base + 80 * lapic_id() + 79) = 0x0700 | '!';
+        } else {
+            *(base + 80 * lapic_id() + 79) = 0x0700 | ' ';
+        }
         cnt++;
-        __asm__ __volatile__ ("hlt");
+        hlt();
     }
 }
 
@@ -779,6 +785,7 @@ _prepare_multitasking(void)
     cpu = (struct arch_cpu_data *)CPU_TASK(0);
     cpu->cur_task = NULL;
     cpu->next_task = taska;
+    cpu->idle_task = taski;
 
     return 0;
 }
@@ -996,6 +1003,9 @@ bsp_start(void)
     *(uintptr_t *)(APVAR_CR3 + KERNEL_LMAP) = kvar->pgt.cr3;
     *(uintptr_t *)(APVAR_SP + KERNEL_LMAP) = (uintptr_t)bstack;
 
+    /* ACPI */
+    kvar->acpi = acpi;
+
     /* Load trampoline code for multicore support */
     sz = (uint64_t)trampoline_end - (uint64_t)trampoline;
     if ( sz > TRAMPOLINE_MAX_SIZE ) {
@@ -1098,12 +1108,56 @@ bsp_start(void)
 }
 
 /*
+ * Create tasks
+ */
+static int
+_prepare_idle_task(int lapic_id)
+{
+    struct arch_cpu_data *cpu;
+    struct arch_task *idle;
+
+    /* Idle task */
+    idle = kmalloc(sizeof(struct arch_task));
+    if ( NULL == idle ) {
+        return -1;
+    }
+    idle->kstack = kmalloc(4096);
+    if ( NULL == idle->kstack ) {
+        return -1;
+    }
+    idle->ustack = kmalloc(4096);
+    if ( NULL == idle->ustack ) {
+        return -1;
+    }
+    idle->rp = idle->kstack + 4096 - 16 - sizeof(struct stackframe64);
+    kmemset(idle->rp, 0, sizeof(struct stackframe64));
+    idle->sp0 = (uint64_t)idle->kstack + 4096 - 16;
+    idle->rp->sp = (uint64_t)idle->ustack + 4096 - 16;
+    idle->rp->ip = (uint64_t)task_idle;
+    idle->rp->cs = GDT_RING0_CODE_SEL;
+    idle->rp->ss = GDT_RING0_DATA_SEL;
+    idle->rp->fs = GDT_RING0_DATA_SEL;
+    idle->rp->gs = GDT_RING0_DATA_SEL;
+    idle->rp->flags = 0x202;
+
+    /* Set the task A as the initial task */
+    cpu = (struct arch_cpu_data *)(uintptr_t)CPU_TASK(lapic_id);
+    cpu->cur_task = NULL;
+    cpu->next_task = idle;
+    cpu->idle_task = idle;
+
+    return 0;
+}
+
+/*
  * Entry point for application processors
  */
 void
 ap_start(void)
 {
     uint16_t *base;
+    int ret;
+    uint64_t busfreq;
 
     base = (uint16_t *)0xc00b8000;
     *(base + 80 * lapic_id() + 79) = 0x0700 | '!';
@@ -1115,12 +1169,20 @@ ap_start(void)
     /* Load LDT */
     lldt(0);
 
-    for ( ;; ) {
-        hlt();
-    }
-
     /* Load TSS */
     tr_load(lapic_id());
+
+    /* Estimate bus frequency */
+    busfreq = _estimate_bus_freq(KVAR->acpi);
+
+    /* Prepare per-core data */
+    ret = _prepare_idle_task(lapic_id());
+    if ( ret < 0 ) {
+        panic("Cannot initialize the idle task.");
+    }
+
+    lapic_start_timer(busfreq, HZ, IV_LOC_TMR);
+    task_restart();
 
     /* The following code will never be reached... */
     /* Enable interrupt */

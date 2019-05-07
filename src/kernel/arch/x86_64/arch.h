@@ -112,11 +112,12 @@ struct arch_task {
 } __attribute__ ((packed));
 
 /*
- * Processor's task information (16 bytes)
+ * Processor's task information (24 bytes)
  */
 struct arch_cpu_data {
     struct arch_task *cur_task;
     struct arch_task *next_task;
+    struct arch_task *idle_task;
 } __attribute__ ((packed));
 
 #define sfence()        __asm__ __volatile__ ("sfence")

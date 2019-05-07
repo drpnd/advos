@@ -28,6 +28,7 @@
 #include "const.h"
 #include "../../memory.h"
 #include "pgt.h"
+#include "acpi.h"
 
 /*
  * Kernel variable
@@ -36,6 +37,7 @@ typedef struct {
     phys_memory_t phys;
     memory_t mm;
     memory_slab_allocator_t slab;
+    acpi_t *acpi;
     /* Architecture specific data */
     pgt_t pgt;
 } kvar_t;

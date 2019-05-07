@@ -271,33 +271,33 @@ _task_restart:
 	xorq	%rax,%rax
 	movl	0x020(%rdx),%eax	/* Local APIC ID */
 	shrl	$24,%eax
-	shlq	$7,%rax
+	shlq	$CPU_DATA_SIZE_SHIFT,%rax
 	movq	%rax,%rcx
 	/* Task base address (struct arch_task *) */
 	movq	$CPU_TASK_BASE,%rbp
 	addq	%rcx,%rbp
 	/* If the next task is not scheduled, immediately restart this task. */
-	cmpq	$0,8(%rbp)	/* next_task */
+	cmpq	$0,TASK_NEXT(%rbp)	/* next_task */
 	jz	2f
-	movq	8(%rbp),%rax
+	movq	TASK_NEXT(%rbp),%rax
 	/* If the current task is null, then do not need to save anything. */
-	cmpq	$0,0(%rbp)	/* cur_task */
+	cmpq	$0,TASK_CUR(%rbp)	/* cur_task */
 	jz	1f
 	/* Save the stack pointer (restart point) */
-	movq	0(%rbp),%rax
-	movq	%rsp,0(%rax)	/* cur_task->rp */
+	movq	TASK_CUR(%rbp),%rax
+	movq	%rsp,0(%rax)		/* cur_task->rp */
 1:
 	/* Notify that the current task is switched (to the kernel) */
-	movq	0(%rbp),%rdi
-	movq	8(%rbp),%rsi
+	movq	TASK_CUR(%rbp),%rdi
+	movq	TASK_NEXT(%rbp),%rsi
 	/* Task switch (set the stack frame of the new task) */
-	movq	8(%rbp),%rax	/* next_task */
-	movq	%rax,0(%rbp)	/* cur_task */
-	movq	0(%rax),%rsp	/* next_task->rp */
-	movq	$0,8(%rbp)	/* next_task */
+	movq	TASK_NEXT(%rbp),%rax	/* next_task */
+	movq	%rax,TASK_CUR(%rbp)	/* cur_task */
+	movq	0(%rax),%rsp		/* next_task->rp */
+	movq	$0,TASK_NEXT(%rbp)	/* next_task */
 	/* Setup sp0 in TSS */
-	movq	0(%rbp),%rax	/* cur_task */
-	movq	8(%rax),%rdx	/* cur_task->sp0 */
+	movq	TASK_CUR(%rbp),%rax	/* cur_task */
+	movq	8(%rax),%rdx		/* cur_task->sp0 */
 	movq	$CPU_TSS_BASE,%rax	/* TSS */
 	addq	%rcx,%rax
 	movq	%rdx,TSS_SP0(%rax)
