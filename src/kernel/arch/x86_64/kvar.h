@@ -37,9 +37,10 @@ typedef struct {
     phys_memory_t phys;
     memory_t mm;
     memory_slab_allocator_t slab;
-    acpi_t *acpi;
     /* Architecture specific data */
+    acpi_t *acpi;
     pgt_t pgt;
+    int mp_enable;
 } kvar_t;
 
 /* For kernel variables */

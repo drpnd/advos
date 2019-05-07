@@ -52,8 +52,8 @@
 	.globl	_task_restart
 	.globl	_intr_null
 	.globl	_intr_apic_loc_tmr
-	.globl	_intr_irq1
 	.globl	_intr_crash
+	.globl	_intr_irq1
 	.globl	_asm_ioapic_map_intr
 	.globl	_syscall_entry
 	.globl	_syscall_setup
@@ -361,6 +361,12 @@ _intr_apic_loc_tmr:
 	movl	$0,0x0b0(%rdx)       /* EOI */
 	jmp	_task_restart
 
+/* Crash interrupt (hlt forever) */
+_intr_crash:
+1:
+	hlt
+	jmp	1b
+
 /* Macro for generic exception handlers */
 .macro  intr_exception_generic name vec
 	.globl	_intr_\name
@@ -553,12 +559,6 @@ _intr_irq1:
 	popq	%rcx
 	popq	%rax
 	iretq
-
-/* Crash interrupt (hang here) */
-_intr_crash:
-1:
-	hlt
-	jmp	1b
 
 	/* Data section */
 	.data

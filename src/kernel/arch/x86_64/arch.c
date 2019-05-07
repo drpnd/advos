@@ -175,6 +175,15 @@ panic(const char *fmt, ...)
     kvsnprintf(buf, 80 * 25, fmt, ap);
     va_end(ap);
 
+    /* Disable interrupt */
+    cli();
+
+    if ( KVAR->mp_enable ) {
+        /* Notify other processors to halt */
+        /* Broadcast IPI with IV_CRASH */
+        lapic_bcast_fixed_ipi(IV_CRASH);
+    }
+
     /* Video RAM */
     video = (uint16_t *)0xc00b8000;
 
@@ -879,6 +888,7 @@ bsp_start(void)
         panic("kvar_t exceeds the expected size.");
     }
     kvar = KVAR;
+    kmemset(kvar, 0, sizeof(kvar_t));
 
     /* Setup and enable the kernel page table */
     _init_temporary_pgt();
@@ -977,6 +987,7 @@ bsp_start(void)
 
     /* Setup trap gates */
     idt_setup_intr_gate(IV_LOC_TMR, intr_apic_loc_tmr);
+    idt_setup_intr_gate(IV_CRASH, intr_apic_loc_tmr);
     idt_setup_trap_gate(0, intr_de);
     idt_setup_trap_gate(1, intr_db);
     idt_setup_trap_gate(2, intr_nmi);

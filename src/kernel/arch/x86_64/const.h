@@ -96,6 +96,7 @@
 
 /* Interrupt vectors */
 #define IV_LOC_TMR              0x40
+#define IV_CRASH                0xfe
 
 /* TSS */
 #define TSS_SP0                 4

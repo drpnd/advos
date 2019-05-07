@@ -150,6 +150,7 @@ void task_restart(void);
 /* Interrupt handlers */
 void intr_null(void);
 void intr_apic_loc_tmr(void);
+void intr_crash(void);
 void intr_de(void);
 void intr_db(void);
 void intr_nmi(void);
