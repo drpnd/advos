@@ -54,7 +54,7 @@ ap_entry64:
 
 	/* Check the Local APIC ID */
 	cmpl	$MAX_PROCESSORS,%eax
-	jge	hlt
+	jge	unlock_hlt
 
 	/* Setup stack */
 	movq	(APVAR_SP),%rbx
@@ -76,13 +76,16 @@ ap_entry64:
 
 	/* Jump to the C code */
 	call	_ap_start
-	jmp	1f
 
-hlt:
+	/* Not to be reached here */
+	jmp	hlt
+
+unlock_hlt:
 	/* Release the lock */
 	movq	$AP_SPIN_LOCK,%rdi
 	xorl	%eax,%eax
 	lock xchgl	(%rdi),%eax
+hlt:
 1:
 	hlt
 	jmp	1b
