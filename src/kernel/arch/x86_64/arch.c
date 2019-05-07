@@ -159,13 +159,21 @@ print_str(volatile uint16_t *vbase, char *s)
  * damn blue screen, lovely green screen
  */
 void
-panic(const char *s)
+panic(const char *fmt, ...)
 {
+    va_list ap;
     uint16_t *video;
     uint16_t val;
     int i;
     int col;
     int ln;
+    char buf[80 * 25];
+    char *s;
+
+    /* Format */
+    va_start(ap, fmt);
+    kvsnprintf(buf, 80 * 25, fmt, ap);
+    va_end(ap);
 
     /* Video RAM */
     video = (uint16_t *)0xc00b8000;
@@ -177,6 +185,7 @@ panic(const char *s)
 
     col = 0;
     ln = 0;
+    s = buf;
     for ( i = 0; *s; s++  ) {
         switch ( *s ) {
         case '\r':

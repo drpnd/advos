@@ -42,7 +42,7 @@ typedef __builtin_va_list va_list;
 #define HZ      100
 
 /* Defined in arch/<architecture>/arch.c */
-void panic(const char *);
+void panic(const char *, ...);
 
 #define kassert(cond)        do {                                       \
         char buf[4096];                                                 \
