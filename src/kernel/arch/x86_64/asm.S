@@ -617,6 +617,22 @@ _syscall:
 	popq    %rbp
 	ret
 
+/* void spin_lock(void *) */
+_spin_lock:
+	xorl	%ecx,%ecx
+	incl	%ecx
+1:
+	xorl	%eax,%eax
+	lock cmpxchgl	%ecx,(%rdi)
+	jnz	1b
+	ret
+
+/* void spin_unlock(void *) */
+_spin_unlock:
+	xorl	%eax,%eax
+	lock xchgl	(%rdi),%eax
+	ret
+
 	.data
 	.align	16
 

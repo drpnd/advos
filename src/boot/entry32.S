@@ -53,8 +53,9 @@ entry32:
 	movl	%eax,%esp
 
 	/* Enable Page Address Extension (PAE) */
-	movl	$0x20,%eax		/* CR4[bit 5] = PAE */
-	movl	%eax,%cr4
+	movl	$0x40220,%eax	/* CR4[bit 5] = PAE */
+	movl	%eax,%cr4	/* CR4[bit 9] = OSFXSR */
+				/* CR4[bit 18] = OSXSAVE */
 
 /* Create 64bit page table */
 pg_setup:

@@ -992,8 +992,9 @@ bsp_start(void)
     if ( NULL == bstack ) {
         panic("Cannot allocate boot stack for application processors.");
     }
-    *(uintptr_t *)(APVAR_CR3 + KERNEL_RELOCBASE) = kvar->pgt.cr3;
-    *(uintptr_t *)(APVAR_SP + KERNEL_RELOCBASE) = (uintptr_t)bstack;
+    kmemset(bstack, 0, MAX_PROCESSORS * MEMORY_PAGESIZE);
+    *(uintptr_t *)(APVAR_CR3 + KERNEL_LMAP) = kvar->pgt.cr3;
+    *(uintptr_t *)(APVAR_SP + KERNEL_LMAP) = (uintptr_t)bstack;
 
     /* Load trampoline code for multicore support */
     sz = (uint64_t)trampoline_end - (uint64_t)trampoline;
@@ -1102,12 +1103,21 @@ bsp_start(void)
 void
 ap_start(void)
 {
+    uint16_t *base;
+
+    base = (uint16_t *)0xc00b8000;
+    *(base + 80 * lapic_id() + 79) = 0x0700 | '!';
+
     /* Load GDT and IDT */
     gdt_load();
     idt_load();
 
     /* Load LDT */
     lldt(0);
+
+    for ( ;; ) {
+        hlt();
+    }
 
     /* Load TSS */
     tr_load(lapic_id());

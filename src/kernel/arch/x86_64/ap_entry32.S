@@ -39,12 +39,25 @@ ap_entry32:
 
 	/* %cs is automatically set after the long jump operation */
 	/* Setup other segment registers */
-	movl	$AP_GDT_DATA64_SEL,%eax
+	movl	$AP_GDT_DATA32_SEL,%eax
 	movl	%eax,%ss
 	movl	%eax,%ds
 	movl	%eax,%es
 	movl	%eax,%fs
 	movl	%eax,%gs
+
+	/* Spin lock to get the temporary stack memory space */
+	movl	$AP_SPIN_LOCK,%edi
+	xorl	%ecx,%ecx
+	incl	%ecx
+1:
+	xorl	%eax,%eax
+	lock cmpxchgl	%ecx,(%edi)
+	jnz	1b
+
+	/* Setup the stack */
+	movl	$AP_SHARED_STACK,%ebx
+	movl	%ebx,%esp
 
 	/* Enable PAE */
 	movl	$0x40220,%eax	/* CR4[bit 5] = PAE */
@@ -64,41 +77,8 @@ ap_entry32:
 	/* Activate page translation and long mode */
 	movl	$0x80000001,%eax
 	movl	%eax,%cr0
-	jmp	hlt
-
-	ljmpl	$AP_GDT_CODE32_SEL,$ap_reentry32
-
-/* To jump to relocated address */
-ap_reentry32:
-	/* Get the local APIC ID */
-	movl    $MSR_APIC_BASE,%ecx
-	rdmsr
-	andl	$0xfffffffffffff000,%eax	/* APIC Base */
-	movl	APIC_LAPIC_ID(%eax),%eax
-	shrl	$24,%eax
-	movl	%eax,%edx
-	incl	%edx
-	shll	$12,%edx	/* One page per core */
-
-	/* Check the Local APIC ID */
-	cmpl	$MAX_PROCESSORS,%eax
-	jge	hlt
-
-	/* Setup page table register */
-	movl	(APVAR_CR3),%ebx
-	movl	%ebx,%cr3
-
-	/* Setup stack */
-	movl	(APVAR_SP),%ebx
-	addl	%edx,%ebx
-	movl	%ebx,%esp
 
 	/* Load code64 descriptor */
 	pushl	$AP_GDT_CODE64_SEL
 	pushl	$ap_entry64
 	lret
-
-hlt:
-1:
-	hlt
-	jmp	1b

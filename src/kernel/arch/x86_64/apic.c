@@ -57,7 +57,7 @@ lapic_id(void)
     uint64_t apic_base;
 
     apic_base = lapic_base_addr();
-    reg = *(uint32_t *)(apic_base + APIC_LAPIC_ID);
+    reg = *(volatile uint32_t *)(apic_base + APIC_LAPIC_ID);
 
     return reg >> 24;
 }
@@ -191,13 +191,13 @@ ioapic_map_intr(uint64_t intvec, uint64_t tbldst, uint64_t ioapic_base)
     val = intvec;
 
     sfence();
-    *(uint32_t *)(ioapic_base + 0x00) = tbldst * 2 + 0x10;
+    *(volatile uint32_t *)(ioapic_base + 0x00) = tbldst * 2 + 0x10;
     sfence();
-    *(uint32_t *)(ioapic_base + 0x10) = (uint32_t)val;
+    *(volatile uint32_t *)(ioapic_base + 0x10) = (uint32_t)val;
     sfence();
-    *(uint32_t *)(ioapic_base + 0x00) = tbldst * 2 + 0x10 + 1;
+    *(volatile uint32_t *)(ioapic_base + 0x00) = tbldst * 2 + 0x10 + 1;
     sfence();
-    *(uint32_t *)(ioapic_base + 0x10) = (uint32_t)(val >> 32);
+    *(volatile uint32_t *)(ioapic_base + 0x10) = (uint32_t)(val >> 32);
 }
 
 /*

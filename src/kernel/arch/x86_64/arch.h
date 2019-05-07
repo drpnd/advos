@@ -179,6 +179,9 @@ void syscall_setup(uint64_t, uint64_t);
 
 unsigned long long syscall(int, ...);
 
+void spin_lock(void *);
+void spin_unlock(void *);
+
 #endif
 
 /*

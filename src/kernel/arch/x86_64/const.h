@@ -38,6 +38,8 @@
 /* Physical addresses for application processor variables */
 #define APVAR_CR3               0x00068f00
 #define APVAR_SP                0x00068f08
+#define AP_SPIN_LOCK            0x00005d00
+#define AP_SHARED_STACK         0x00005c00
 
 /* GDT and IDT */
 #define GDT_ADDR                0xc0074000ULL

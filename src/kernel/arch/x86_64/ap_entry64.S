@@ -23,13 +23,16 @@
 
 #include "const.h"
 
+#define MSR_APIC_BASE           0x1b
+#define APIC_LAPIC_ID           0x020
+
 	.globl	ap_entry64
 
 	.text
 	.code64
 
 ap_entry64:
-	cli
+	/* Move to 64-bit mode*/
 	movl	$AP_GDT_DATA64_SEL,%eax
 	movl	%eax,%ss
 	movl	%eax,%ds
@@ -37,8 +40,49 @@ ap_entry64:
 	movl	%eax,%es
 	movl	%eax,%fs
 	movl	%eax,%gs
+
+	/* Get the local APIC ID */
+	movl	$MSR_APIC_BASE,%ecx
+	rdmsr
+	andl	$0xfffffffffffff000,%eax	/* APIC Base */
+	movl	APIC_LAPIC_ID(%eax),%eax
+	shrl	$24,%eax
+	xorq	%rdx,%rdx
+	movl	%eax,%edx
+	incl	%edx
+	shll	$12,%edx	/* One page per core */
+
+	/* Check the Local APIC ID */
+	cmpl	$MAX_PROCESSORS,%eax
+	jge	hlt
+
+	/* Setup stack */
+	movq	(APVAR_SP),%rbx
+	addq	%rdx,%rbx
+	subq	$16,%rbx
+	movq	%rbx,%rsp
+
+	/* Release the lock */
+	movq	$AP_SPIN_LOCK,%rdi
+	xorl	%eax,%eax
+	lock xchgl	(%rdi),%eax
+
+	/* Setup page table register */
+	movq	(APVAR_CR3),%rbx
+	movq	%rbx,%cr3
+
+	/* Enable interrupt */
 	sti
+
+	/* Jump to the C code */
 	call	_ap_start
+	jmp	1f
+
+hlt:
+	/* Release the lock */
+	movq	$AP_SPIN_LOCK,%rdi
+	xorl	%eax,%eax
+	lock xchgl	(%rdi),%eax
 1:
 	hlt
 	jmp	1b
