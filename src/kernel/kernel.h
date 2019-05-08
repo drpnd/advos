@@ -41,6 +41,37 @@ typedef __builtin_va_list va_list;
 
 #define HZ      100
 
+/* Maximum bytes in the path name */
+#define PATH_MAX                1024
+
+typedef enum {
+    TASK_CREATED,
+    TASK_READY,
+    TASK_BLOCKED,
+    TASK_TERMINATED,
+} task_state_t;
+
+/*
+ * Task
+ */
+typedef struct _task task_t;
+struct _task {
+    /* Architecture-specific structure; i.e., struct arch_task */
+    void *arch;
+
+    /* Task ID */
+    int id;
+
+    /* State */
+    task_state_t state;
+
+    /* Next scheduled task (runqueue) */
+    task_t *next;
+
+    /* Quantum */
+    int credit;
+};
+
 /* Defined in arch/<architecture>/arch.c */
 void panic(const char *, ...);
 
@@ -59,6 +90,7 @@ int kmemcmp(void *, void *, size_t);
 int kmemcpy(void *__restrict, void *__restrict, size_t);
 
 /* Defined in kernel.c */
+void kernel_init(void);
 int kstrcmp(const char *, const char *);
 int kstrncmp(const char *, const char *, size_t);
 char * kstrcpy(char *, const char *);

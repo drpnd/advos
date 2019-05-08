@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include "const.h"
+#include "../../kernel.h"
 
 /*
  * TSS (104 bytes)
@@ -109,6 +110,8 @@ struct arch_task {
     void *ustack;
     /* Kernel stack */
     void *kstack;
+    /* Kernel task (architecture-independent data structure) */
+    task_t *task;
 } __attribute__ ((packed));
 
 /*

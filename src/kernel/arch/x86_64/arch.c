@@ -977,6 +977,9 @@ bsp_start(void)
         ioapic_map_intr(0x20 + i, i, acpi->ioapic_base);
     }
 
+    /* Initialize the kernel in C code */
+    kernel_init();
+
     /* Setup system call */
     syscall = kmalloc(sizeof(void *) * SYS_MAXSYSCALL);
     if ( NULL == syscall ) {

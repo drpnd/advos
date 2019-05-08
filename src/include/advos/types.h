@@ -46,6 +46,11 @@ typedef signed long long int int64_t;
 /* Pointer */
 typedef uint64_t uintptr_t;
 
+/* IDs */
+typedef signed int pid_t;
+typedef signed int uid_t;
+typedef signed int gid_t;
+
 #else
 #error "Unsupported compiler"
 #endif
