@@ -36,6 +36,23 @@ kernel_init(void)
 }
 
 /*
+ * kprintf
+ */
+int
+kprintf(const char *format, ...)
+{
+    int ret;
+    va_list ap;
+    char buf[1024];
+
+    va_start(ap, format);
+    ret = kvsnprintf(buf, 1024, format, ap);
+    va_end(ap);
+
+    return 0;
+}
+
+/*
  * kstrcmp
  */
 int
