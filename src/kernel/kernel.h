@@ -72,6 +72,21 @@ struct _task {
     int credit;
 };
 
+/*
+ * Console for kernel
+ */
+typedef struct {
+    /* Buffer  */
+    char *buf;
+
+    /* Current row and column */
+    int row;
+    int column;
+
+    /* Architecture-specific data structure */
+    void *arch;
+} console_t;
+
 /* Defined in arch/<architecture>/arch.c */
 void panic(const char *, ...);
 
