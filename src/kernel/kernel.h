@@ -73,18 +73,26 @@ struct _task {
 };
 
 /*
+ * Console device (output only)
+ */
+typedef struct _console_dev console_dev_t;
+struct _console {
+    /* write() */
+    int (*write)(const void *, size_t);
+
+    /* Pointer to the next device (linked list) */
+    console_dev_t *next;
+
+    /* Data for drivers */
+    void *spec;
+};
+
+/*
  * Console for kernel
  */
 typedef struct {
-    /* Buffer  */
-    char *buf;
-
-    /* Current row and column */
-    int row;
-    int column;
-
-    /* Architecture-specific data structure */
-    void *arch;
+    /* Console device */
+    console_dev_t *dev;
 } console_t;
 
 /* Defined in arch/<architecture>/arch.c */
