@@ -128,7 +128,7 @@ kernel_init(void)
 }
 
 /*
- * kprintf
+ * kprintf -- print a formatted string (up to 1023 characters)
  */
 int
 kprintf(const char *format, ...)
@@ -136,10 +136,18 @@ kprintf(const char *format, ...)
     int ret;
     va_list ap;
     char buf[1024];
+    console_dev_t *dev;
 
     va_start(ap, format);
     ret = kvsnprintf(buf, 1024, format, ap);
     va_end(ap);
+
+    /* Write the string to the console device(s) */
+    dev = g_kvar->console->dev;
+    while ( NULL != dev ) {
+        dev->write(buf, ret);
+        dev = dev->next;
+    }
 
     return 0;
 }
