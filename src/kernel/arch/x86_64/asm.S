@@ -543,7 +543,8 @@ _intr_irq1:
 	addl	%eax,%edx
 	movb	(%edx),%al
 	movb	$0x07,%ah
-	movw	%ax,(0xb8000+80*25*2-2)
+	movabs	$0xc00b8000+80*25*2-2,%rcx
+	movw	%ax,(%rcx)
 1:
 	/* APIC EOI */
 	movq	$MSR_APIC_BASE,%rcx
