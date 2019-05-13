@@ -126,7 +126,7 @@ _kmemcpy:
 	ret
 
 /* int kmemmove(void *dst, void *src, size_t len) */
-_memmove:
+_kmemmove:
 	cmpq	%rdi,%rsi	/* Compare the addresses of dst/src */
 	ja	_kmemcpy	/* If %rsi > %rdi, just execute memcpy() */
 	/* Copy backwards */
