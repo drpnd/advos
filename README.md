@@ -27,7 +27,7 @@ See https://ja.tech.jar.jp/ac/2018/day00.html (in Japanese) for the detailed des
 | `00030000` | `0005ffff` | Reserved |
 | `00060000` | `00067fff` | Per-core data (128-byte * 256) |
 | `00068000` | `00068e00` | Global variables |
-|  00068f00  |  00068fff  | Global variables for assembly |
+| `00068f00` | `00068fff` | Global variables for assembly |
 | `00069000` | `0006ffff` | MOVED: Kernel's base page table |
 | `00070000` | `00073fff` | trampoline (16 KiB) |
 | `00074000` | `00075fff` | GDT (8 KiB) |
