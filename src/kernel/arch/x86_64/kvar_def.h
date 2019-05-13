@@ -28,7 +28,8 @@
 #define KVAR_ADDR       0xc0068000
 #define KVAR_SIZE       0x00000e00
 
-#define KERNEL_LMAP             0x100000000
+/* Linear mapping for physical memory */
+#define KERNEL_LMAP     0x100000000
 
 #endif
 
