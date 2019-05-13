@@ -76,7 +76,7 @@ struct _task {
  * Console device (output only)
  */
 typedef struct _console_dev console_dev_t;
-struct _console {
+struct _console_dev {
     /* write() */
     int (*write)(const void *, size_t);
 
