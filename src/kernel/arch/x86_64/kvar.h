@@ -21,12 +21,13 @@
  * SOFTWARE.
  */
 
-#ifndef _ADVOS_KVAR_H
-#define _ADVOS_KVAR_H
+#ifndef _ADVOS_ARCH_VAR_H
+#define _ADVOS_ARCH_VAR_H
 
 #include "kvar_def.h"
 #include "const.h"
 #include "../../memory.h"
+#include "../../kvar.h"
 #include "pgt.h"
 #include "acpi.h"
 
@@ -34,14 +35,12 @@
  * Kernel variable
  */
 typedef struct {
-    phys_memory_t phys;
-    memory_t mm;
-    memory_slab_allocator_t slab;
+    kvar_t *kvar;
     /* Architecture specific data */
     acpi_t *acpi;
     pgt_t pgt;
     int mp_enable;
-} kvar_t;
+} arch_var_t;
 
 /* For kernel variables */
 #define KVAR                    ((kvar_t *)KVAR_ADDR)

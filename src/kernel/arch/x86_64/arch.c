@@ -32,8 +32,12 @@
 #include "const.h"
 #include "../../kernel.h"
 #include "../../memory.h"
+#include "../../kvar.h"
 #include <stdint.h>
 #include <sys/syscall.h>
+
+/* Global variables */
+arch_var_t *g_arch_var;
 
 /* For trampoline code */
 void trampoline(void);
@@ -178,7 +182,7 @@ panic(const char *fmt, ...)
     /* Disable interrupt */
     cli();
 
-    if ( KVAR->mp_enable ) {
+    if ( g_arch_var->mp_enable ) {
         /* Notify other processors to halt */
         /* Broadcast IPI with IV_CRASH */
         lapic_bcast_fixed_ipi(IV_CRASH);
@@ -388,6 +392,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     size_t npg;
     void *pages;
     int ret;
+    pgt_t *pgt;
 
     /* Get the maximum address of the system memory */
     maxaddr = 0;
@@ -408,13 +413,14 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     }
 
     /* Initialize the kernel page table */
-    pgt_init(&kvar->pgt, pages, KERNEL_LMAP);
+    pgt = &((arch_var_t *)kvar->arch)->pgt;
+    pgt_init(pgt, pages, KERNEL_LMAP);
     for ( i = 1; i < (1 << 9); i++ ) {
-        pgt_push(&kvar->pgt, pages + i * 4096);
+        pgt_push(pgt, pages + i * 4096);
     }
 
     /* Initialize the virtual memory management */
-    ret = memory_init(&kvar->mm, &kvar->phys, &kvar->pgt, KERNEL_LMAP,
+    ret = memory_init(&kvar->mm, &kvar->phys, pgt, KERNEL_LMAP,
                       arch_memory_map, arch_memory_unmap);
     if ( ret < 0 ) {
         panic("Failed to initialize the memory manager.");
@@ -451,7 +457,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     }
 
     /* Activate the page table */
-    pgt_set_cr3(&kvar->pgt);
+    pgt_set_cr3(pgt);
 
     return 0;
 }
@@ -888,11 +894,13 @@ bsp_start(void)
     void **syscall;
 
     /* Kernel variables */
-    if ( sizeof(kvar_t) > KVAR_SIZE ) {
+    kvar = KVAR;
+    ret = kvar_init(kvar, KVAR_SIZE, sizeof(arch_var_t));
+    if ( ret < 0 ) {
         panic("kvar_t exceeds the expected size.");
     }
-    kvar = KVAR;
-    kmemset(kvar, 0, sizeof(kvar_t));
+    g_arch_var = kvar->arch;
+    g_arch_var->kvar = kvar;
 
     /* Setup and enable the kernel page table */
     _init_temporary_pgt();
@@ -1027,11 +1035,12 @@ bsp_start(void)
         panic("Cannot allocate boot stack for application processors.");
     }
     kmemset(bstack, 0, MAX_PROCESSORS * MEMORY_PAGESIZE);
-    *(uintptr_t *)(APVAR_CR3 + KERNEL_LMAP) = kvar->pgt.cr3;
+    *(uintptr_t *)(APVAR_CR3 + KERNEL_LMAP)
+        = ((arch_var_t *)kvar->arch)->pgt.cr3;
     *(uintptr_t *)(APVAR_SP + KERNEL_LMAP) = (uintptr_t)bstack;
 
     /* ACPI */
-    kvar->acpi = acpi;
+    ((arch_var_t *)kvar->arch)->acpi = acpi;
 
     /* Load trampoline code for multicore support */
     sz = (uint64_t)trampoline_end - (uint64_t)trampoline;
@@ -1200,7 +1209,7 @@ ap_start(void)
     tr_load(lapic_id());
 
     /* Estimate bus frequency */
-    busfreq = _estimate_bus_freq(KVAR->acpi);
+    busfreq = _estimate_bus_freq(((arch_var_t *)KVAR->arch)->acpi);
 
     /* Prepare per-core data */
     ret = _prepare_idle_task(lapic_id());

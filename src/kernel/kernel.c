@@ -23,9 +23,29 @@
 
 #include "kasm.h"
 #include "kernel.h"
+#include "kvar.h"
 #include "memory.h"
 #include <stdint.h>
 #include <sys/syscall.h>
+
+/* Global variable for kernel variables */
+kvar_t *g_kvar;
+
+/*
+ * kvar_init
+ */
+int
+kvar_init(void *buf, size_t size, size_t archsize)
+{
+    if ( sizeof(kvar_t) + archsize > size ) {
+        return -1;
+    }
+    g_kvar = (kvar_t *)buf;
+    kmemset(g_kvar, 0, sizeof(kvar_t) + archsize);
+    g_kvar->arch = buf + sizeof(kvar_t);
+
+    return 0;
+}
 
 /*
  * Initialize the kernel

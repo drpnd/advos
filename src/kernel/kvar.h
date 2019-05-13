@@ -35,16 +35,8 @@ typedef struct {
     memory_t mm;
     memory_slab_allocator_t slab;
     /* Architecture specific data */
-    acpi_t *acpi;
-    pgt_t pgt;
-    int mp_enable;
+    void *arch;
 } kvar_t;
-
-/* For kernel variables */
-#define KVAR                    ((kvar_t *)KVAR_ADDR)
-
-/* Pointer to per-core data (flags, tss, stack); 256 */
-#define KVAR_KDATA_PER_CORE     ((void *)KDATA_PER_CORE)
 
 #endif
 
