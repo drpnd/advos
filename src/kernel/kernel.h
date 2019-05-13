@@ -88,6 +88,7 @@ void panic(const char *, ...);
 void * kmemset(void *, int, size_t);
 int kmemcmp(void *, void *, size_t);
 int kmemcpy(void *__restrict, void *__restrict, size_t);
+int kmemmove(void *, void *, size_t);
 
 /* Defined in kernel.c */
 int kvar_init(void *, size_t, size_t);

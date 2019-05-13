@@ -124,6 +124,20 @@ _kmemcpy:
 	rep	movsb		/* Copy byte at (%rsi) to (%rdi) */
 	ret
 
+/* int kmemmove(void *dst, void *src, size_t len) */
+_memmove:
+	cmpq	%rdi,%rsi	/* Compare the addresses of dst/src */
+	ja	_kmemcpy	/* If %rsi > %rdi, just execute memcpy() */
+	/* Copy backwards */
+	movq	%rdi,%rax	/* Return value */
+	movq	%rdx,%rcx	/* n */
+	std			/* Ensure the DF set */
+	addq	%rcx,%rdi
+	addq	%rcx,%rsi
+	rep	movsb		/* Copy byte at (%rsi) to (%rdi), backwards */
+	cld			/* Reset DF flag */
+	ret
+
 /* uint64_t cpuid(uint64_t rax, uint64_t *rbx, uint64_t *rcx, uint64_t *rdx) */
 _cpuid:
 	pushq	%rbx
