@@ -946,7 +946,10 @@ bsp_start(void)
     }
 
     /* Initialize kmmaloc */
-    kmalloc_init(&kvar->slab);
+    ret = kmalloc_init(&kvar->slab);
+    if ( ret < 0 ) {
+        panic("Failed to initialize the kmalloc slab.");
+    }
 
     /* Prepare multitasking */
     ret = _prepare_multitasking();
