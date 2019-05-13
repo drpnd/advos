@@ -38,6 +38,8 @@ typedef struct {
     void *arch;
 } kvar_t;
 
+extern kvar_t *g_kvar;
+
 #endif
 
 /*

@@ -36,9 +36,6 @@
 #include <stdint.h>
 #include <sys/syscall.h>
 
-/* Global variables */
-arch_var_t *g_arch_var;
-
 /* For trampoline code */
 void trampoline(void);
 void trampoline_end(void);
@@ -182,7 +179,7 @@ panic(const char *fmt, ...)
     /* Disable interrupt */
     cli();
 
-    if ( g_arch_var->mp_enable ) {
+    if ( ((arch_var_t *)g_kvar->arch)->mp_enable ) {
         /* Notify other processors to halt */
         /* Broadcast IPI with IV_CRASH */
         lapic_bcast_fixed_ipi(IV_CRASH);
@@ -894,13 +891,11 @@ bsp_start(void)
     void **syscall;
 
     /* Kernel variables */
-    kvar = KVAR;
+    kvar = (kvar_t *)KVAR_ADDR;
     ret = kvar_init(kvar, KVAR_SIZE, sizeof(arch_var_t));
     if ( ret < 0 ) {
         panic("kvar_t exceeds the expected size.");
     }
-    g_arch_var = kvar->arch;
-    g_arch_var->kvar = kvar;
 
     /* Setup and enable the kernel page table */
     _init_temporary_pgt();
@@ -1209,7 +1204,7 @@ ap_start(void)
     tr_load(lapic_id());
 
     /* Estimate bus frequency */
-    busfreq = _estimate_bus_freq(((arch_var_t *)KVAR->arch)->acpi);
+    busfreq = _estimate_bus_freq(((arch_var_t *)g_kvar->arch)->acpi);
 
     /* Prepare per-core data */
     ret = _prepare_idle_task(lapic_id());

@@ -35,18 +35,11 @@
  * Kernel variable
  */
 typedef struct {
-    kvar_t *kvar;
     /* Architecture specific data */
     acpi_t *acpi;
     pgt_t pgt;
     int mp_enable;
 } arch_var_t;
-
-/* For kernel variables */
-#define KVAR                    ((kvar_t *)KVAR_ADDR)
-
-/* Pointer to per-core data (flags, tss, stack); 256 */
-#define KVAR_KDATA_PER_CORE     ((void *)KDATA_PER_CORE)
 
 #endif
 
