@@ -26,6 +26,7 @@
 
 #include "const.h"
 #include "memory.h"
+#include <sys/syscall.h>
 
 /*
  * Kernel variable
@@ -34,6 +35,7 @@ typedef struct {
     phys_memory_t phys;
     memory_t mm;
     memory_slab_allocator_t slab;
+    void **syscalls;
     /* Architecture specific data */
     void *arch;
 } kvar_t;

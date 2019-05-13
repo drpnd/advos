@@ -48,11 +48,83 @@ kvar_init(void *buf, size_t size, size_t archsize)
 }
 
 /*
- * Initialize the kernel
+ * Convert a hexdecimal 4-bit value to an ascii code
+ */
+static int
+hex(int c)
+{
+    if ( c > 9 ) {
+        return 'a' + c - 10;
+    } else {
+        return '0' + c;
+    }
+}
+
+/*
+ * Print out the hexdecimal w-byte value
+ */
+static int
+print_hex(volatile uint16_t *vbase, uint64_t val, int w)
+{
+    int i;
+    uint16_t v;
+
+    for ( i = 0; i < w * 2; i++ ) {
+        v = (val >> (w * 8 - 4 - i * 4)) & 0xf;
+        *(vbase + i) = 0x0700 | hex(v);
+    }
+
+    return i;
+}
+
+/*
+ * System call handler
  */
 void
+sys_print_counter(int ln, uint64_t cnt)
+{
+    uint16_t *base;
+
+    base = (uint16_t *)0xc00b8000;
+    base += 80 * ln;
+    print_hex(base, cnt, 8);
+}
+void
+sys_hlt(void)
+{
+    __asm__ __volatile__ ("hlt");
+}
+
+/*
+ * Initialize the kernel
+ */
+int
 kernel_init(void)
 {
+    size_t sz;
+    int nr;
+    void **syscalls;
+    int i;
+
+    /* Allocate memory for system calls */
+    sz = sizeof(void *) * SYS_MAXSYSCALL;
+    nr = (sz + MEMORY_PAGESIZE - 1) >> MEMORY_PAGESIZE_SHIFT;
+    syscalls = memory_alloc_pages(&g_kvar->mm, nr, MEMORY_ZONE_KERNEL, 0);
+    if ( NULL == syscalls ) {
+        return -1;
+    }
+
+    /* Setup systemcalls */
+    for ( i = 0; i < SYS_MAXSYSCALL; i++ ) {
+        syscalls[i] = NULL;
+    }
+    syscalls[766] = sys_print_counter;
+    syscalls[767] = sys_hlt;
+
+    /* Set the table to the kernel variable */
+    g_kvar->syscalls = syscalls;
+
+    return 0;
 }
 
 /*

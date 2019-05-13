@@ -853,24 +853,6 @@ syscall_init(void *table, int nr)
 }
 
 /*
- * System call handler
- */
-void
-sys_print_counter(int ln, uint64_t cnt)
-{
-    uint16_t *base;
-
-    base = (uint16_t *)0xc00b8000;
-    base += 80 * ln;
-    print_hex(base, cnt, 8);
-}
-void
-sys_hlt(void)
-{
-    __asm__ __volatile__ ("hlt");
-}
-
-/*
  * Entry point for C code
  */
 void
@@ -888,7 +870,6 @@ bsp_start(void)
     sysaddrmap_entry_t *ent;
     int i;
     uint64_t busfreq;
-    void **syscall;
 
     /* Kernel variables */
     kvar = (kvar_t *)KVAR_ADDR;
@@ -981,19 +962,13 @@ bsp_start(void)
     }
 
     /* Initialize the kernel in C code */
-    kernel_init();
+    ret = kernel_init();
+    if ( ret < 0 ) {
+        panic("Failed to initialize the kernel.");
+    }
 
     /* Setup system call */
-    syscall = kmalloc(sizeof(void *) * SYS_MAXSYSCALL);
-    if ( NULL == syscall ) {
-        panic("Failed to allocate the syscall table.");
-    }
-    for ( i = 0; i < SYS_MAXSYSCALL; i++ ) {
-        syscall[i] = NULL;
-    }
-    syscall[766] = sys_print_counter;
-    syscall[767] = sys_hlt;
-    syscall_init(syscall, SYS_MAXSYSCALL);
+    syscall_init(g_kvar->syscalls, SYS_MAXSYSCALL);
 
     /* Setup trap gates */
     idt_setup_intr_gate(IV_LOC_TMR, intr_apic_loc_tmr);

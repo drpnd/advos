@@ -114,7 +114,7 @@ int kmemcpy(void *__restrict, void *__restrict, size_t);
 
 /* Defined in kernel.c */
 int kvar_init(void *, size_t, size_t);
-void kernel_init(void);
+int kernel_init(void);
 int kstrcmp(const char *, const char *);
 int kstrncmp(const char *, const char *, size_t);
 char * kstrcpy(char *, const char *);
