@@ -23,7 +23,7 @@
 
 #include "../../../boot/bootinfo.h"
 #include "arch.h"
-#include "kvar.h"
+#include "arch_var.h"
 #include "acpi.h"
 #include "apic.h"
 #include "desc.h"
