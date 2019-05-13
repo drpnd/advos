@@ -72,29 +72,6 @@ struct _task {
     int credit;
 };
 
-/*
- * Console device (output only)
- */
-typedef struct _console_dev console_dev_t;
-struct _console_dev {
-    /* write() */
-    int (*write)(const void *, size_t);
-
-    /* Pointer to the next device (linked list) */
-    console_dev_t *next;
-
-    /* Data for drivers */
-    void *spec;
-};
-
-/*
- * Console for kernel
- */
-typedef struct {
-    /* Console device */
-    console_dev_t *dev;
-} console_t;
-
 /* Defined in arch/<architecture>/arch.c */
 void panic(const char *, ...);
 
