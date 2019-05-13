@@ -5,6 +5,13 @@ See https://ja.tech.jar.jp/ac/2018/day00.html (in Japanese) for the detailed des
 
 ![Test run](./run.png "Test run")
 
+## How to execute
+
+```
+$ docker-compose build
+$ docker-compose run qemu
+```
+
 ## Memory Management
 
 ### Memory Zones
