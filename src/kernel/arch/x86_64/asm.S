@@ -31,6 +31,7 @@
 	.globl	_kmemset
 	.globl	_kmemcmp
 	.globl	_kmemcpy
+	.globl	_kmemmove
 	.globl	_cpuid
 	.globl	_rdtsc
 	.globl	_rdmsr
