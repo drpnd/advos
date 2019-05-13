@@ -637,11 +637,13 @@ _spin_unlock:
 	.data
 	.align	16
 
+/* Data for system calls */
 syscall_table:
 	.quad	0
 syscall_nr:
 	.quad	0
 
+/* Keyboard mapping (to be removed) */
 keymap_base:
 	.ascii	"  1234567890-=  qwertyuiop[]  as"
 	.ascii	"dfghjkl;'` \\zxcvbnm,./          "
