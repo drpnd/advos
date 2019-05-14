@@ -1087,19 +1087,16 @@ bsp_start(void)
 
     /* System memory */
     nr = *(uint16_t *)(BI_MM_NENT_ADDR + KERNEL_LMAP);
-    offset = print_str(base, "System memory map; # of entries = 0x");
-    print_hex(base + offset, nr, 2);
+    kprintf("System memory map; # of entries = %lld\r\n", nr);
     base += 80;
 
-    print_str(base, "Base             Length           Type     Attribute");
+    kprintf("Base             Length           Type     Attribute\r\n");
     base += 80;
 
     ent = (sysaddrmap_entry_t *)(BI_MM_TABLE_ADDR + KERNEL_LMAP);
     for ( i = 0; i < nr; i++ ) {
-        print_hex(base, ent->base, 8);
-        print_hex(base + 17, ent->len, 8);
-        print_hex(base + 34, ent->type, 4);
-        print_hex(base + 43, ent->attr, 4);
+        kprintf("%016llx %016llx %016llx %016llx\r\n", ent->base, ent->len,
+                ent->type, ent->attr);
         base += 80;
         ent++;
     }
