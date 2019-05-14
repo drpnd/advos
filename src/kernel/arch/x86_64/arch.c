@@ -139,23 +139,6 @@ print_hex(volatile uint16_t *vbase, uint64_t val, int w)
 }
 
 /*
- * Print out the specified string
- */
-static int
-print_str(volatile uint16_t *vbase, char *s)
-{
-    int offset;
-
-    offset = 0;
-    while ( s[offset] ) {
-        *(vbase + offset) = 0x0700 | s[offset];
-        offset++;
-    }
-
-    return offset;
-}
-
-/*
  * panic -- print an error message and stop everything
  * damn blue screen, lovely green screen
  */
