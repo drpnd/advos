@@ -1059,19 +1059,7 @@ bsp_start(void)
     base = (uint16_t *)0xc00b8000;
     base += 80;
     busfreq = _estimate_bus_freq(acpi);
-    kprintf("Bus frequency: %lld Hz", busfreq);
-    base += 80;
-    /* Testing memory allocator */
-    void *ptr;
-    ptr = memory_slab_alloc(&kvar->slab, "kmalloc-64");
-    print_hex(base, (uintptr_t)ptr, 8);
-    base += 80;
-    ptr = memory_slab_alloc(&kvar->slab, "kmalloc-64");
-    print_hex(base, (uintptr_t)ptr, 8);
-    base += 80;
-    memory_slab_free(&kvar->slab, "kmalloc-64", ptr);
-    ptr = memory_slab_alloc(&kvar->slab, "kmalloc-64");
-    print_hex(base, (uintptr_t)ptr, 8);
+    kprintf("Bus frequency: %lld Hz\r\n", busfreq);
     base += 80;
 
     /* Print CPU domain */
@@ -1081,21 +1069,20 @@ bsp_start(void)
             nr++;
         }
     }
-    offset = print_str(base, "# of CPU cores = 0x");
-    print_hex(base + offset, nr, 4);
+    kprintf("# of CPU cores: %lld\r\n", nr);
     base += 80;
 
     /* Print memory information */
-    print_str(base, "Base             Length           Domain");
+    kprintf("Base             Length           Domain\r\n");
     base += 80;
     for ( i = 0; i < acpi->num_memory_region; i++ ) {
-        print_hex(base, (uintptr_t)acpi->memory_domain[i].base, 8);
-        print_hex(base + 17, (uintptr_t)acpi->memory_domain[i].length, 8);
-        print_hex(base + 34, (uintptr_t)acpi->memory_domain[i].domain, 8);
+        kprintf("%016llx %016llx %016llx\r\n",
+                (uintptr_t)acpi->memory_domain[i].base,
+                (uintptr_t)acpi->memory_domain[i].length,
+                (uintptr_t)acpi->memory_domain[i].domain);
         base += 80;
     }
-
-    print_str(base, "----------");
+    kprintf("----------\r\n");
     base += 80;
 
     /* System memory */
