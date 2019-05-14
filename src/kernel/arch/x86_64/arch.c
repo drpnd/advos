@@ -1059,7 +1059,7 @@ bsp_start(void)
     base = (uint16_t *)0xc00b8000;
     base += 80;
     busfreq = _estimate_bus_freq(acpi);
-    print_hex(base, busfreq, 8);
+    kprintf("Bus frequency: %lld Hz", busfreq);
     base += 80;
     /* Testing memory allocator */
     void *ptr;
