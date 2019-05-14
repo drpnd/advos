@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include "const.h"
 #include "../../kernel.h"
+#include "../../console.h"
 
 /*
  * TSS (104 bytes)
@@ -186,6 +187,10 @@ unsigned long long syscall(int, ...);
 
 void spin_lock(void *);
 void spin_unlock(void *);
+
+/* vconsole.c */
+console_dev_t * vconsole_init(void);
+int vconsole_write(console_dev_t *, const void *, size_t);
 
 #endif
 

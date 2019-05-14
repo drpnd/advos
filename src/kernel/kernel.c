@@ -145,7 +145,7 @@ kprintf(const char *format, ...)
     /* Write the string to the console device(s) */
     dev = g_kvar->console->dev;
     while ( NULL != dev ) {
-        dev->write(buf, ret);
+        dev->write(dev, buf, ret);
         dev = dev->next;
     }
 

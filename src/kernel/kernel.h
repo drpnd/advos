@@ -93,6 +93,7 @@ int kmemmove(void *, void *, size_t);
 /* Defined in kernel.c */
 int kvar_init(void *, size_t, size_t);
 int kernel_init(void);
+int kprintf(const char *, ...);
 int kstrcmp(const char *, const char *);
 int kstrncmp(const char *, const char *, size_t);
 char * kstrcpy(char *, const char *);

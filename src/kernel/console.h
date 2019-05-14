@@ -32,7 +32,7 @@
 typedef struct _console_dev console_dev_t;
 struct _console_dev {
     /* write() */
-    int (*write)(const void *, size_t);
+    int (*write)(console_dev_t *, const void *, size_t);
 
     /* Pointer to the next device (linked list) */
     console_dev_t *next;

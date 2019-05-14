@@ -999,6 +999,20 @@ bsp_start(void)
     idt_setup_trap_gate(30, intr_sx);
     idt_setup_intr_gate(0x21, intr_irq1);
 
+    /* Console */
+    console_t *con;
+    console_dev_t *dev;
+    con = kmalloc(sizeof(console_t));
+    if ( NULL == con ) {
+        panic("Cannot allocate the console.");
+    }
+    dev = vconsole_init();
+    if ( NULL == dev ) {
+        panic("Cannot initialize the video console.");
+    }
+    con->dev = dev;
+    g_kvar->console = con;
+
     /* Prepare stack for appliation processors.  N.B., the stack must be in the
        kernel zone so that 32-bit code can refer to it. */
     void *bstack;
@@ -1041,8 +1055,8 @@ bsp_start(void)
     acpi_busy_usleep(acpi, 200);
 
     /* Messaging region */
+    kprintf("Welcome to advos (64-bit)!\r\n");
     base = (uint16_t *)0xc00b8000;
-    print_str(base, "Welcome to advos (64-bit)!");
     base += 80;
     busfreq = _estimate_bus_freq(acpi);
     print_hex(base, busfreq, 8);
