@@ -42,7 +42,7 @@ void trampoline_end(void);
 
 /* Prototype declarations */
 int arch_memory_map(void *, uintptr_t, page_t *);
-int arch_memory_unmap(void *arch, uintptr_t, page_t *);
+int arch_memory_unmap(void *, uintptr_t, page_t *);
 
 /*
  * System memory map entry
