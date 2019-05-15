@@ -1061,7 +1061,7 @@ bsp_start(void)
 
     ent = (sysaddrmap_entry_t *)(BI_MM_TABLE_ADDR + KERNEL_LMAP);
     for ( i = 0; i < nr; i++ ) {
-        kprintf("%016llx %016llx %016llx %016llx\r\n", ent->base, ent->len,
+        kprintf("%016llx %016llx %08llx %08llx\r\n", ent->base, ent->len,
                 ent->type, ent->attr);
         ent++;
     }
