@@ -169,7 +169,7 @@ panic(const char *fmt, ...)
     }
 
     /* Video RAM */
-    video = (uint16_t *)0xc00b8000;
+    video = (uint16_t *)VIDEO_RAM_80X25;
 
     /* Fill out with green */
     for ( i = 0; i < 80 * 25; i++ ) {
@@ -642,7 +642,7 @@ ksignal_clock(void)
     static uint64_t cnt = 0;
 
     if ( lapic_id() == 0 ) {
-        base = (uint16_t *)0xc00b8000;
+        base = (uint16_t *)VIDEO_RAM_80X25;
         base += 80 * 24;
         print_hex(base, cnt / 100, 8);
         cnt++;
@@ -669,7 +669,7 @@ task_idle(void)
     uint16_t *base;
     uint64_t cnt;
 
-    base = (uint16_t *)0xc00b8000;
+    base = (uint16_t *)VIDEO_RAM_80X25;
     cnt = 0;
     while ( 1 ) {
         if ( (cnt / 10) & 1 )  {
@@ -1131,7 +1131,7 @@ ap_start(void)
     int ret;
     uint64_t busfreq;
 
-    base = (uint16_t *)0xc00b8000;
+    base = (uint16_t *)VIDEO_RAM_80X25;
     *(base + 80 * lapic_id() + 79) = 0x0700 | '!';
 
     /* Load GDT and IDT */

@@ -61,7 +61,7 @@ vconsole_init(void)
     }
 
     /* Video RAM */
-    vcon->video = (uint16_t *)0xc00b8000;
+    vcon->video = (uint16_t *)VIDEO_RAM_80X25;
     vcon->pos = 0;
     vcon->column = 0;
     vcon->column_save = 0;

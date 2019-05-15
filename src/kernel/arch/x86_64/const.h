@@ -101,6 +101,9 @@
 /* TSS */
 #define TSS_SP0                 4
 
+/* Video RAM */
+#define VIDEO_RAM_80X25         0xc00b8000
+
 #endif
 
 /*
