@@ -143,7 +143,7 @@ kprintf(const char *format, ...)
     va_end(ap);
 
     /* Write the string to the console device(s) */
-    dev = g_kvar->console->dev;
+    dev = g_kvar->console.dev;
     while ( NULL != dev ) {
         dev->write(dev, buf, ret);
         dev = dev->next;

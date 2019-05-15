@@ -848,11 +848,10 @@ bsp_start(void)
     struct idtr *idtr;
     acpi_t *acpi;
     size_t sz;
-    uint16_t *base;
-    int offset;
     sysaddrmap_entry_t *ent;
     int i;
     uint64_t busfreq;
+    console_dev_t *dev;
 
     /* Kernel variables */
     kvar = (kvar_t *)KVAR_ADDR;
@@ -934,6 +933,13 @@ bsp_start(void)
         panic("Failed to initialize the kmalloc slab.");
     }
 
+    /* Initialize the console */
+    dev = vconsole_init();
+    if ( NULL == dev ) {
+        panic("Cannot initialize the video console.");
+    }
+    g_kvar->console.dev = dev;
+
     /* Prepare multitasking */
     ret = _prepare_multitasking();
     if ( ret < 0 ) {
@@ -982,20 +988,6 @@ bsp_start(void)
     idt_setup_trap_gate(30, intr_sx);
     idt_setup_intr_gate(0x21, intr_irq1);
 
-    /* Console */
-    console_t *con;
-    console_dev_t *dev;
-    con = kmalloc(sizeof(console_t));
-    if ( NULL == con ) {
-        panic("Cannot allocate the console.");
-    }
-    dev = vconsole_init();
-    if ( NULL == dev ) {
-        panic("Cannot initialize the video console.");
-    }
-    con->dev = dev;
-    g_kvar->console = con;
-
     /* Prepare stack for appliation processors.  N.B., the stack must be in the
        kernel zone so that 32-bit code can refer to it. */
     void *bstack;
@@ -1039,11 +1031,8 @@ bsp_start(void)
 
     /* Messaging region */
     kprintf("Welcome to advos (64-bit)!\r\n");
-    base = (uint16_t *)0xc00b8000;
-    base += 80;
     busfreq = _estimate_bus_freq(acpi);
-    kprintf("Bus frequency: %lld Hz\r\n", busfreq);
-    base += 80;
+    kprintf("Estimated bus frequency: %lld Hz\r\n", busfreq);
 
     /* Print CPU domain */
     nr = 0;
@@ -1053,34 +1042,27 @@ bsp_start(void)
         }
     }
     kprintf("# of CPU cores: %lld\r\n", nr);
-    base += 80;
 
     /* Print memory information */
     kprintf("Base             Length           Domain\r\n");
-    base += 80;
     for ( i = 0; i < acpi->num_memory_region; i++ ) {
         kprintf("%016llx %016llx %016llx\r\n",
                 (uintptr_t)acpi->memory_domain[i].base,
                 (uintptr_t)acpi->memory_domain[i].length,
                 (uintptr_t)acpi->memory_domain[i].domain);
-        base += 80;
     }
     kprintf("----------\r\n");
-    base += 80;
 
     /* System memory */
     nr = *(uint16_t *)(BI_MM_NENT_ADDR + KERNEL_LMAP);
     kprintf("System memory map; # of entries = %lld\r\n", nr);
-    base += 80;
 
     kprintf("Base             Length           Type     Attribute\r\n");
-    base += 80;
 
     ent = (sysaddrmap_entry_t *)(BI_MM_TABLE_ADDR + KERNEL_LMAP);
     for ( i = 0; i < nr; i++ ) {
         kprintf("%016llx %016llx %016llx %016llx\r\n", ent->base, ent->len,
                 ent->type, ent->attr);
-        base += 80;
         ent++;
     }
 

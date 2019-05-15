@@ -27,6 +27,8 @@
 #include "../../memory.h"
 #include <stdint.h>
 
+#define VIDEO_PORT      0x3d4
+
 /*
  * Kernel console information
  */
@@ -36,6 +38,7 @@ typedef struct {
     int column;
     int column_save;
 } arch_video_console_t;
+
 
 /*
  * Initialize the console
@@ -63,6 +66,7 @@ vconsole_init(void)
     vcon->column = 0;
     vcon->column_save = 0;
 
+    /* Setup the console device */
     dev->write = vconsole_write;
     dev->next = NULL;
     dev->spec = vcon;
@@ -73,7 +77,6 @@ vconsole_init(void)
 /*
  * Update the position of the cursor
  */
-#define VIDEO_PORT      0x3d4
 static void
 _update_cursor(int pos)
 {
@@ -82,7 +85,6 @@ _update_cursor(int pos)
     /* High */
     outw(VIDEO_PORT, (((pos >> 8) & 0xff) << 8) | 0x0e);
 }
-
 
 /*
  * console_write
@@ -103,7 +105,6 @@ vconsole_write(console_dev_t *dev, const void *buf, size_t nbyte)
             /* CR */
             vcon->pos -= vcon->column;
             vcon->column = 0;
-            _update_cursor(vcon->pos);
             break;
         case '\n':
             /* LF */
@@ -116,21 +117,37 @@ vconsole_write(console_dev_t *dev, const void *buf, size_t nbyte)
                 vcon->pos = next;
             }
             vcon->column_save = 0;
-            _update_cursor(vcon->pos);
             break;
         default:
-            *(volatile uint16_t *)(vcon->video + vcon->pos) = 0x0700 | c;
-            vcon->pos++;
-            vcon->column++;
-            vcon->column_save = vcon->column;
-            if ( vcon->pos >= 80 * 25 ) {
-                kmemmove(vcon->video, vcon->video + 80, 80 * 24);
-                vcon->pos -= 80;
+            if ( c >= 0x20 && c <= 0x7e ) {
+                /* Printable characters */
+                *(volatile uint16_t *)(vcon->video + vcon->pos) = 0x0700 | c;
+                vcon->pos++;
+                vcon->column++;
+                vcon->column_save = vcon->column;
+                if ( vcon->pos >= 80 * 25 ) {
+                    kmemmove(vcon->video, vcon->video + 80, 80 * 24);
+                    vcon->pos -= 80;
+                }
+            } else if ( c == '\t' ) {
+                /* Tab */
+                do {
+                    *(volatile uint16_t *)(vcon->video + vcon->pos) = 0x0720;
+                    vcon->pos++;
+                    vcon->column++;
+                    vcon->column_save = vcon->column;
+                    if ( vcon->pos >= 80 * 25 ) {
+                        kmemmove(vcon->video, vcon->video + 80, 80 * 24);
+                        vcon->pos -= 80;
+                    }
+                } while ( (vcon->column % 4) != 0 );
             }
-            _update_cursor(vcon->pos);
             break;
         }
     }
+
+    /* Update the cursor */
+    _update_cursor(vcon->pos);
 
     return 0;
 }
