@@ -202,6 +202,20 @@ union virt_memory_data {
 };
 
 /*
+ * Memory management per process
+ */
+typedef struct {
+    /* List of blocks */
+    virt_memory_block_t *blocks;
+
+    /* List of memory management data structure */
+    union virt_memory_data *lists;
+
+    /* Architecture-specific data structure */
+    void *arch;
+} virt_memory_t;
+
+/*
  * Memory
  */
 typedef struct {
