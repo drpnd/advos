@@ -852,6 +852,7 @@ bsp_start(void)
     int i;
     uint64_t busfreq;
     console_dev_t *dev;
+    void *bstack;
 
     /* Kernel variables */
     kvar = (kvar_t *)KVAR_ADDR;
@@ -990,16 +991,15 @@ bsp_start(void)
 
     /* Prepare stack for appliation processors.  N.B., the stack must be in the
        kernel zone so that 32-bit code can refer to it. */
-    void *bstack;
     bstack = memory_alloc_pages(&kvar->mm, MAX_PROCESSORS,
                                 MEMORY_ZONE_KERNEL, 0);
     if ( NULL == bstack ) {
         panic("Cannot allocate boot stack for application processors.");
     }
     kmemset(bstack, 0, MAX_PROCESSORS * MEMORY_PAGESIZE);
-    *(uintptr_t *)(APVAR_CR3 + KERNEL_LMAP)
+    *(volatile uintptr_t *)(APVAR_CR3 + KERNEL_LMAP)
         = ((arch_var_t *)kvar->arch)->pgt.cr3;
-    *(uintptr_t *)(APVAR_SP + KERNEL_LMAP) = (uintptr_t)bstack;
+    *(volatile uintptr_t *)(APVAR_SP + KERNEL_LMAP) = (uintptr_t)bstack;
 
     /* ACPI */
     ((arch_var_t *)kvar->arch)->acpi = acpi;

@@ -44,6 +44,9 @@ typedef __builtin_va_list va_list;
 /* Maximum bytes in the path name */
 #define PATH_MAX                1024
 
+#define KSTACK_SIZE             8192
+#define KSTACK_GUARD            16
+
 typedef enum {
     TASK_CREATED,
     TASK_READY,
@@ -58,6 +61,9 @@ typedef struct _task task_t;
 struct _task {
     /* Architecture-specific structure; i.e., struct arch_task */
     void *arch;
+
+    /* Kernel stack */
+    void *kstack;
 
     /* Task ID */
     int id;
