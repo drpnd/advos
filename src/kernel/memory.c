@@ -1026,6 +1026,26 @@ memory_free_pages(memory_t *mem, void *ptr)
 }
 
 /*
+ * Initialize virtual memory
+ */
+virt_memory_t *
+virt_memory_init(memory_t *mem)
+{
+    virt_memory_t *vm;
+
+    vm = kmalloc(sizeof(virt_memory_t));
+    if ( NULL == vm ) {
+        return NULL;
+    }
+    vm->mem = mem;
+    vm->blocks = NULL;
+    vm->lists = NULL;
+    vm->arch = mem->fork(mem->arch);
+
+    return vm;
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4

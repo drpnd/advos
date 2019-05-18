@@ -43,6 +43,7 @@ void trampoline_end(void);
 /* Prototype declarations */
 int arch_memory_map(void *, uintptr_t, page_t *);
 int arch_memory_unmap(void *, uintptr_t, page_t *);
+void * arch_memory_fork(void *);
 
 /*
  * System memory map entry
@@ -573,6 +574,38 @@ arch_memory_unmap(void *arch, uintptr_t virtual, page_t *page)
     }
 
     return 0;
+}
+
+/*
+ * Clone the architecture-specific page management data structure
+ */
+void *
+arch_memory_fork(void *arch)
+{
+    pgt_t *pgt;
+    pgt_t *orig;
+    void *pages;
+    int i;
+
+    orig = (pgt_t *)arch;
+    pgt = kmalloc(sizeof(pgt_t));
+    if ( NULL == pgt ) {
+        return NULL;
+    }
+    pages = phys_mem_buddy_alloc(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
+                                 9);
+    if ( NULL == pages ) {
+        kfree(pgt);
+        return NULL;
+    }
+
+    /* Initialize the kernel page table */
+    pgt_init(pgt, pages, KERNEL_LMAP);
+    for ( i = 1; i < (1 << 9); i++ ) {
+        pgt_push(pgt, pages + i * 4096);
+    }
+
+    return pgt;
 }
 
 /*

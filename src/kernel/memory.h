@@ -202,20 +202,6 @@ union virt_memory_data {
 };
 
 /*
- * Memory management per process
- */
-typedef struct {
-    /* List of blocks */
-    virt_memory_block_t *blocks;
-
-    /* List of memory management data structure */
-    union virt_memory_data *lists;
-
-    /* Architecture-specific data structure */
-    void *arch;
-} virt_memory_t;
-
-/*
  * Memory
  */
 typedef struct {
@@ -232,7 +218,25 @@ typedef struct {
     void *arch;
     int (*map)(void *, uintptr_t, page_t *);
     int (*unmap)(void *, uintptr_t, page_t *);
+    void * (*fork)(void *);
 } memory_t;
+
+/*
+ * Virtual memory management per process
+ */
+typedef struct {
+    /* Kernel memory management */
+    memory_t *mem;
+
+    /* List of blocks */
+    virt_memory_block_t *blocks;
+
+    /* List of memory management data structure */
+    union virt_memory_data *lists;
+
+    /* Architecture-specific data structure */
+    void *arch;
+} virt_memory_t;
 
 /*
  * Define memory_slab_cache_t first
