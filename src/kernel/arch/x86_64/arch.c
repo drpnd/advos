@@ -93,7 +93,7 @@ void
 panic(const char *fmt, ...)
 {
     va_list ap;
-    uint16_t *video;
+    volatile uint16_t *video;
     uint16_t val;
     int i;
     int col;
@@ -116,7 +116,7 @@ panic(const char *fmt, ...)
     }
 
     /* Video RAM */
-    video = (uint16_t *)VIDEO_RAM_80X25;
+    video = (volatile uint16_t *)VIDEO_RAM_80X25;
 
     /* Fill out with green */
     for ( i = 0; i < 80 * 25; i++ ) {
