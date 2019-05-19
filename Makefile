@@ -1,3 +1,7 @@
+#
+# Authors:
+#      Hirochika Asai  <asai@jar.jp>
+#
 
 PHONY=all
 all:
