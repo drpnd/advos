@@ -135,11 +135,11 @@ kprintf(const char *format, ...)
 {
     int ret;
     va_list ap;
-    char buf[1024];
+    char buf[2048];
     console_dev_t *dev;
 
     va_start(ap, format);
-    ret = kvsnprintf(buf, 1024, format, ap);
+    ret = kvsnprintf(buf, 2048, format, ap);
     va_end(ap);
 
     /* Write the string to the console device(s) */
