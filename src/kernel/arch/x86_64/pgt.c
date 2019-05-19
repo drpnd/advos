@@ -183,7 +183,6 @@ _v2p(pgt_t *pgt, uintptr_t physical)
     return (physical - pgt->p2v);
 }
 
-
 /*
  * Resolve the virtual address from a physical address
  */
