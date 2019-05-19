@@ -14,13 +14,22 @@ $ docker-compose run qemu
 
 ## Memory Management
 
-### Memory Zones
+### Virtual memory
+
+* `00000000 00000000` -- `00000000 bfffffff` : User process
+* `00000000 c0000000` -- `00000000 ffffffff` : Kernel
+* `00000001 00000000` -- `XXXXXXXX XXXXXXXX` : Linear mapping to physical memory
+* `XXXXXXXX XXXXXXXX` -- : (User process if needed)
+
+### Physical memory
+
+#### Memory Zones
 
 * ZONE_DMA: 0x00000000 -- 0x01000000 (0--16 MiB)
 * ZONE_KERNEL: 0x01000000 -- 0x04000000 (16--64 MiB)
 * ZONE_NUMA_AWARE: 0x04000000 -- (64-- MiB)
 
-### Memory Map
+#### Memory Map
 
 | Start      | End        | Description |
 | :--------- | :--------- | :---------- |
