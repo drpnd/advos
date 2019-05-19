@@ -203,6 +203,8 @@ pgt_init(pgt_t *pgt, void *buf, size_t nr, uintptr_t p2v)
     union pgt_pd_entry *pd;
     size_t i;
 
+    kassert( nr >= 3 );
+
     pgt->p2v = p2v;
     pgt->free = NULL;
     kmemset(buf, 0, 4096 * 3);
@@ -213,16 +215,19 @@ pgt_init(pgt_t *pgt, void *buf, size_t nr, uintptr_t p2v)
     pdpt = (union pgt_pdpt_entry *)(buf + 4096);
     pd = (union pgt_pd_entry *)(buf + 8192);
 
+    /* Set up 0-512 GiB PML4 entry */
     pml4[0].ptr.present = 1;
     pml4[0].ptr.rw = 1;
     pml4[0].ptr.us = 1;
     pml4[0].v |= _v2p(pgt, (uint64_t)pdpt);
 
+    /* Set up 3-4 GiB PDPT entry */
     pdpt[3].ptr.present = 1;
     pdpt[3].ptr.rw = 1;
     pdpt[3].ptr.us = 1;
     pdpt[3].v |= _v2p(pgt, (uint64_t)pd);
 
+    /* Push the remaining pages to the free list */
     for ( i = 3; i < nr; i++ ) {
         pgt_push(pgt, buf + i * 4096);
     }
