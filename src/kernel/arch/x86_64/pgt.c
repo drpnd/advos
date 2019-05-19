@@ -196,12 +196,36 @@ _p2v(pgt_t *pgt, uintptr_t physical)
  * Initialize the page table
  */
 void
-pgt_init(pgt_t *pgt, void *pml4, uintptr_t p2v)
+pgt_init(pgt_t *pgt, void *buf, size_t nr, uintptr_t p2v)
 {
+    union pgt_pml4_entry *pml4;
+    union pgt_pdpt_entry *pdpt;
+    union pgt_pd_entry *pd;
+    size_t i;
+
     pgt->p2v = p2v;
     pgt->free = NULL;
-    kmemset(pml4, 0, 4096);
-    pgt->cr3 = _v2p(pgt, (uintptr_t)pml4);
+    kmemset(buf, 0, 4096 * 3);
+    pgt->cr3 = _v2p(pgt, (uintptr_t)buf);
+
+    /* Prepare a PDPT and a PD for the kernel space */
+    pml4 = (union pgt_pml4_entry *)buf;
+    pdpt = (union pgt_pdpt_entry *)(buf + 4096);
+    pd = (union pgt_pd_entry *)(buf + 8192);
+
+    pml4[0].ptr.present = 1;
+    pml4[0].ptr.rw = 1;
+    pml4[0].ptr.us = 1;
+    pml4[0].v |= _v2p(pgt, (uint64_t)pdpt);
+
+    pdpt[3].ptr.present = 1;
+    pdpt[3].ptr.rw = 1;
+    pdpt[3].ptr.us = 1;
+    pdpt[3].v |= _v2p(pgt, (uint64_t)pd);
+
+    for ( i = 3; i < nr; i++ ) {
+        pgt_push(pgt, buf + i * 4096);
+    }
 }
 
 /*

@@ -262,10 +262,7 @@ _init_temporary_pgt(void)
     int ret;
 
     /* Setup and enable the kernel page table */
-    pgt_init(&tmppgt, (void *)PGT_BOOT, 0);
-    for ( i = 1; i < 6; i++ ) {
-        pgt_push(&tmppgt, (void *)PGT_BOOT + 4096 * i);
-    }
+    pgt_init(&tmppgt, (void *)PGT_BOOT, 6, 0);
     /* 0-1 GiB */
     for ( i = 0; i < 512; i++ ) {
         ret = pgt_map(&tmppgt, i * MEMORY_SUPERPAGESIZE,
@@ -341,10 +338,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
 
     /* Initialize the kernel page table */
     pgt = &((arch_var_t *)kvar->arch)->pgt;
-    pgt_init(pgt, pages, KERNEL_LMAP);
-    for ( i = 1; i < (1 << 9); i++ ) {
-        pgt_push(pgt, pages + i * 4096);
-    }
+    pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
 
     /* Initialize the virtual memory management */
     ret = memory_init(&kvar->mm, &kvar->phys, pgt, KERNEL_LMAP,
@@ -600,10 +594,7 @@ arch_memory_fork(void *arch)
     }
 
     /* Initialize the kernel page table */
-    pgt_init(pgt, pages, KERNEL_LMAP);
-    for ( i = 1; i < (1 << 9); i++ ) {
-        pgt_push(pgt, pages + i * 4096);
-    }
+    pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
 
     return pgt;
 }
