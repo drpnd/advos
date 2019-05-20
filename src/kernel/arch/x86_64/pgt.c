@@ -237,12 +237,14 @@ pgt_init(pgt_t *pgt, void *buf, size_t nr, uintptr_t p2v)
  * Initialize the process page table
  */
 void
-pgt_process_init(pgt_t *kpgt, pgt_t *upgt, void *pml4, uintptr_t p2v)
+pgt_process_init(pgt_t *kpgt, pgt_t *upgt, void *pml4, size_t nr, uintptr_t p2v)
 {
     union pgt_pml4_entry *kpml4;
     union pgt_pml4_entry *upml4;
     union pgt_pdpt_entry *kpdpt;
     union pgt_pdpt_entry *updpt;
+
+    kassert( nr >= 3 );
 
     upgt->p2v = p2v;
     upgt->free = NULL;
