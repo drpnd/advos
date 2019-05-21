@@ -263,7 +263,7 @@ pgt_process_init(pgt_t *kpgt, pgt_t *upgt, void *pml4, size_t nr, uintptr_t p2v)
     upml4[0].ptr.us = 1;
     upml4[0].v |= _v2p(upgt, (uint64_t)updpt);
 
-    /* Copy the kernel region */
+    /* Point to the shared kernel region (3-4 GiiB region) */
     updpt[3].v = kpdpt[3].v;
 }
 
