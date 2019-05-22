@@ -1,5 +1,5 @@
 /*_
- * Copyright (c) 2018 Hirochika Asai <asai@jar.jp>
+ * Copyright (c) 2018-2019 Hirochika Asai <asai@jar.jp>
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -48,6 +48,7 @@ typedef struct {
 
 /* Prototype declarations */
 void pgt_init(pgt_t *, void *, size_t, uintptr_t);
+void pgt_process_init(pgt_t *, pgt_t *, void *, size_t, uintptr_t);
 void * pgt_pop(pgt_t *);
 void pgt_push(pgt_t *, pgt_entry_t *);
 void * pgt_v2p(pgt_t *, uintptr_t);

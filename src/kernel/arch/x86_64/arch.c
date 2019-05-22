@@ -579,7 +579,6 @@ arch_memory_fork(void *arch)
     pgt_t *pgt;
     pgt_t *orig;
     void *pages;
-    int i;
 
     orig = (pgt_t *)arch;
     pgt = kmalloc(sizeof(pgt_t));
@@ -594,7 +593,9 @@ arch_memory_fork(void *arch)
     }
 
     /* Initialize the kernel page table */
-    pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
+    pgt_process_init(orig, pgt, pages, 1 << 9, KERNEL_LMAP);
+
+    /* ToDo: Implement the fork (e.g., copy-on-write) mechnism */
 
     return pgt;
 }
