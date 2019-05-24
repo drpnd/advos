@@ -43,6 +43,7 @@ void trampoline_end(void);
 /* Prototype declarations */
 int arch_memory_map(void *, uintptr_t, page_t *);
 int arch_memory_unmap(void *, uintptr_t, page_t *);
+int arch_memory_ctxsw(void *);
 void * arch_memory_fork(void *);
 
 /*
@@ -566,6 +567,17 @@ arch_memory_unmap(void *arch, uintptr_t virtual, page_t *page)
     for ( i = 0; i < (1LL << nr); i++ ) {
         pgt_unmap(pgt, virtual + pagesize * i, superpage);
     }
+
+    return 0;
+}
+
+/*
+ * Switch the page table
+ */
+int
+arch_memory_ctxsw(void *arch)
+{
+    pgt_set_cr3((pgt_t *)arch);
 
     return 0;
 }

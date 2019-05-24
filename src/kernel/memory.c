@@ -42,7 +42,7 @@ _free_delete(virt_memory_block_t *, virt_memory_free_t *);
 int
 memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
             int (*map)(void *, uintptr_t, page_t *),
-            int (*unmap)(void *, uintptr_t, page_t *))
+            int (*unmap)(void *, uintptr_t, page_t *), int (*ctxsw)(void *))
 {
     union virt_memory_data *data;
     size_t nr;
@@ -70,6 +70,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     mem->arch = arch;
     mem->map = map;
     mem->unmap = unmap;
+    mem->ctxsw = ctxsw;
 
     return 0;
 }
