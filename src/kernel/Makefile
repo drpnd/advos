@@ -3,8 +3,14 @@
 #      Hirochika Asai  <asai@jar.jp>
 #
 
+.PHONY: clean
+
 CFLAGS=-g -O3 -fleading-underscore -mcmodel=large -nostdlib -nodefaultlibs -fno-builtin -fno-stack-protector -fno-pie -mno-sse -mno-sse2 -mno-avx -I../include
 
+# header dependencies
+kernel: kernel.h memory.h
+
+# kernel
 kernel: arch/x86_64/asm.o kernel.o memory.o physmem.o slab.o kmalloc.o strfmt.o \
 	task.o \
 	arch/x86_64/trampoline.o arch/x86_64/ap_entry32.o arch/x86_64/ap_entry64.o \
