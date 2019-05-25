@@ -1047,6 +1047,25 @@ virt_memory_init(memory_t *mem)
 }
 
 /*
+ * Allocate virtual memory
+ */
+void *
+virt_memory_alloc_pages(virt_memory_t *vmem, size_t nr, int zone, int domain)
+{
+    virt_memory_block_t *block;
+    void *ptr;
+
+    block = vmem->blocks;
+    ptr = NULL;
+    while ( NULL != block && NULL == ptr ) {
+        //ptr = _alloc_pages_block(mem, block, nr, zone, domain);
+        block = block->next;
+    }
+
+    return ptr;
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4
