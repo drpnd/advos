@@ -27,7 +27,7 @@
 /*
  * Prototype declarations
  */
-static union virt_memory_data * _data_alloc(memory_t *);
+static union virt_memory_data * _data_alloc(virt_memory_t *);
 static void _data_free(memory_t *, union virt_memory_data *);
 static virt_memory_block_t * _find_block(memory_t *, uintptr_t);
 static int _free_add(virt_memory_block_t *, virt_memory_free_t *);
@@ -49,8 +49,8 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     size_t i;
 
     mem->phys = phys;
-    mem->blocks = NULL;
-    mem->lists = NULL;
+    mem->kmem.blocks = NULL;
+    mem->kmem.lists = NULL;
 
     /* Allocate 8 MiB for page management */
     data = phys_mem_alloc(phys, 11, MEMORY_ZONE_KERNEL, 0);
@@ -64,7 +64,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
         data[i - 1].next = &data[i];
     }
     data[nr - 1].next = NULL;
-    mem->lists = data;
+    mem->kmem.lists = data;
 
     /* Architecture specific data structure */
     mem->arch = arch;
@@ -79,15 +79,15 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
  * Allocate virtual memory data
  */
 static union virt_memory_data *
-_data_alloc(memory_t *mem)
+_data_alloc(virt_memory_t *vmem)
 {
     union virt_memory_data *data;
 
-    if ( NULL == mem->lists ) {
+    if ( NULL == vmem->lists ) {
         return NULL;
     }
-    data = mem->lists;
-    mem->lists = data->next;
+    data = vmem->lists;
+    vmem->lists = data->next;
 
     /* Zeros */
     kmemset(data, 0, sizeof(union virt_memory_data));
@@ -101,8 +101,8 @@ _data_alloc(memory_t *mem)
 static void
 _data_free(memory_t *mem, union virt_memory_data *data)
 {
-    data->next = mem->lists;
-    mem->lists = data;
+    data->next = mem->kmem.lists;
+    mem->kmem.lists = data;
 }
 
 /*
@@ -116,7 +116,7 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
     virt_memory_block_t **b;
 
     /* Allocate data and initialize the block */
-    n = (virt_memory_block_t *)_data_alloc(mem);
+    n = (virt_memory_block_t *)_data_alloc(&mem->kmem);
     if ( NULL == n ) {
         return -1;
     }
@@ -128,7 +128,7 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
     n->frees.stree = NULL;
 
     /* Add a free entry aligned to the block and the page size */
-    fr = (virt_memory_free_t *)_data_alloc(mem);
+    fr = (virt_memory_free_t *)_data_alloc(&mem->kmem);
     if ( NULL == fr ) {
         _data_free(mem, (union virt_memory_data *)n);
         return -1;
@@ -140,7 +140,7 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
     n->frees.stree = fr;
 
     /* Insert the block to the sorted list */
-    b = &mem->blocks;
+    b = &mem->kmem.blocks;
     while ( NULL != *b ) {
         if ( (*b)->start > n->start ) {
             /* Try to insert here */
@@ -169,7 +169,7 @@ _find_block(memory_t *mem, uintptr_t addr)
     virt_memory_block_t *b;
 
     /* Search a block */
-    b = mem->blocks;
+    b = mem->kmem.blocks;
     while ( NULL != b ) {
         if ( addr >= b->start && addr <= b->end ) {
             /* Found */
@@ -363,13 +363,13 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     }
 
     /* Prepare an entry and an object */
-    e = (virt_memory_entry_t *)_data_alloc(mem);
+    e = (virt_memory_entry_t *)_data_alloc(&mem->kmem);
     if ( NULL == e ) {
         goto error_entry;
     }
     e->start = virtual;
     e->size = nr * MEMORY_PAGESIZE;
-    e->object = (virt_memory_object_t *)_data_alloc(mem);
+    e->object = (virt_memory_object_t *)_data_alloc(&mem->kmem);
     if ( NULL == e->object ) {
         goto error_obj;
     }
@@ -377,11 +377,11 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     e->object->pages = NULL;
 
     /* Prepare for free spaces */
-    f0 = (virt_memory_free_t *)_data_alloc(mem);
+    f0 = (virt_memory_free_t *)_data_alloc(&mem->kmem);
     if ( NULL == f0 ) {
         goto error_f0;
     }
-    f1 = (virt_memory_free_t *)_data_alloc(mem);
+    f1 = (virt_memory_free_t *)_data_alloc(&mem->kmem);
     if ( NULL == f1 ) {
         goto error_f1;
     }
@@ -391,7 +391,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     pp = &e->object->pages;
     while ( virtual < endplus1 ) {
         /* Allocate a page data structure */
-        p = (page_t *)_data_alloc(mem);
+        p = (page_t *)_data_alloc(&mem->kmem);
         if ( NULL == p ) {
             goto error_page;
         }
@@ -692,12 +692,12 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
     }
 
     /* Allocate an entry and an object */
-    e = (virt_memory_entry_t *)_data_alloc(mem);
+    e = (virt_memory_entry_t *)_data_alloc(&mem->kmem);
     if ( NULL == e ) {
         goto error_entry;
     }
     e->size = nr * MEMORY_PAGESIZE;
-    e->object = (virt_memory_object_t *)_data_alloc(mem);
+    e->object = (virt_memory_object_t *)_data_alloc(&mem->kmem);
     if ( NULL == e->object ) {
         goto error_obj;
     }
@@ -705,11 +705,11 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
     e->object->pages = NULL;;
 
     /* Prepare for free spaces */
-    f0 = (virt_memory_free_t *)_data_alloc(mem);
+    f0 = (virt_memory_free_t *)_data_alloc(&mem->kmem);
     if ( NULL == f0 ) {
         goto error_f0;
     }
-    f1 = (virt_memory_free_t *)_data_alloc(mem);
+    f1 = (virt_memory_free_t *)_data_alloc(&mem->kmem);
     if ( NULL == f1 ) {
         goto error_f1;
     }
@@ -733,7 +733,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
     for ( i = 0;
           i + (1 << (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT)) <= nr;
           i += (1 << (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT)) ) {
-        p = (page_t *)_data_alloc(mem);
+        p = (page_t *)_data_alloc(&mem->kmem);
         if ( NULL == p ) {
             goto error_page;
         }
@@ -766,7 +766,7 @@ _alloc_pages_block(memory_t *mem, virt_memory_block_t *block, size_t nr,
 
     /* Allocate and map pages */
     for ( ; i < nr; i++ ) {
-        p = (page_t *)_data_alloc(mem);
+        p = (page_t *)_data_alloc(&mem->kmem);
         if ( NULL == p ) {
             goto error_page;
         }
@@ -883,7 +883,7 @@ memory_alloc_pages(memory_t *mem, size_t nr, int zone, int domain)
     virt_memory_block_t *block;
     void *ptr;
 
-    block = mem->blocks;
+    block = mem->kmem.blocks;
     ptr = NULL;
     while ( NULL != block && NULL == ptr ) {
         ptr = _alloc_pages_block(mem, block, nr, zone, domain);

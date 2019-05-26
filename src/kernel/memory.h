@@ -201,38 +201,13 @@ union virt_memory_data {
     union virt_memory_data *next;
 };
 
-typedef struct virt_memory virt_memory_t;
 
-/*
- * Memory
- */
-typedef struct {
-    /* List of blocks */
-    virt_memory_block_t *blocks;
-
-    /* Physical memory manager */
-    phys_memory_t *phys;
-
-    /* List of memory management data structures */
-    union virt_memory_data *lists;
-
-    /* Kernel memory region */
-    virt_memory_t *kernel_vmem;
-
-    /* Architecture-specific defintions */
-    void *arch;
-
-    /* Interfaces to architecture-specific operations */
-    int (*map)(void *, uintptr_t, page_t *);
-    int (*unmap)(void *, uintptr_t, page_t *);
-    void * (*fork)(void *);
-    int (*ctxsw)(void *);
-} memory_t;
+typedef struct memory memory_t;
 
 /*
  * Virtual memory management per process
  */
-struct virt_memory {
+typedef struct {
     /* Kernel memory management */
     memory_t *mem;
 
@@ -244,6 +219,26 @@ struct virt_memory {
 
     /* Architecture-specific data structure */
     void *arch;
+} virt_memory_t;
+
+/*
+ * Memory
+ */
+struct memory {
+    /* Physical memory manager */
+    phys_memory_t *phys;
+
+    /* Kernel memory region */
+    virt_memory_t kmem;
+
+    /* Architecture-specific defintions */
+    void *arch;
+
+    /* Interfaces to architecture-specific operations */
+    int (*map)(void *, uintptr_t, page_t *);
+    int (*unmap)(void *, uintptr_t, page_t *);
+    void * (*fork)(void *);
+    int (*ctxsw)(void *);
 };
 
 /*
