@@ -201,6 +201,8 @@ union virt_memory_data {
     union virt_memory_data *next;
 };
 
+typedef struct virt_memory virt_memory_t;
+
 /*
  * Memory
  */
@@ -213,6 +215,9 @@ typedef struct {
 
     /* List of memory management data structures */
     union virt_memory_data *lists;
+
+    /* Kernel memory region */
+    virt_memory_t *kernel_vmem;
 
     /* Architecture-specific defintions */
     void *arch;
@@ -227,7 +232,7 @@ typedef struct {
 /*
  * Virtual memory management per process
  */
-typedef struct {
+struct virt_memory {
     /* Kernel memory management */
     memory_t *mem;
 
@@ -239,7 +244,7 @@ typedef struct {
 
     /* Architecture-specific data structure */
     void *arch;
-} virt_memory_t;
+};
 
 /*
  * Define memory_slab_cache_t first
