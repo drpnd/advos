@@ -51,6 +51,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     mem->phys = phys;
     mem->kmem.blocks = NULL;
     mem->kmem.lists = NULL;
+    mem->kmem.mem = mem;
 
     /* Allocate 8 MiB for page management */
     data = phys_mem_alloc(phys, 11, MEMORY_ZONE_KERNEL, 0);
