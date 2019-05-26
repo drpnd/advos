@@ -1030,7 +1030,7 @@ memory_free_pages(memory_t *mem, void *ptr)
     /* Retuurn to the free entry */
     r = _entry_delete(&b->entries, e);
     kassert( r == e );
-    _entry_free(mem, b, e);
+    _entry_free(&mem->kmem, b, e);
 }
 
 /*
