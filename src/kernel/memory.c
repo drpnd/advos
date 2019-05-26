@@ -926,15 +926,15 @@ _find_entry(virt_memory_entry_t *e, uintptr_t addr)
  * Free pages from the list of the specified page list
  */
 static void
-_pages_free(memory_t *mem, page_t *p)
+_pages_free(virt_memory_t *vmem, page_t *p)
 {
     while ( NULL != p ) {
         /* Free physical pages */
-        phys_mem_free(mem->phys, (void *)p->physical, p->order, p->zone,
+        phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order, p->zone,
                       p->numadomain);
 
         /* Free this page */
-        _data_free(&mem->kmem, (union virt_memory_data *)p);
+        _data_free(vmem, (union virt_memory_data *)p);
 
         p = p->next;
     }
@@ -944,7 +944,7 @@ _pages_free(memory_t *mem, page_t *p)
  * Free an entry
  */
 static int
-_entry_free(memory_t *mem, virt_memory_block_t *b, virt_memory_entry_t *e)
+_entry_free(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
 {
     virt_memory_free_t free;
     virt_memory_free_t *f;
@@ -978,7 +978,7 @@ _entry_free(memory_t *mem, virt_memory_block_t *b, virt_memory_entry_t *e)
         } else {
             f->size = f->size + e->size;
         }
-        _data_free(&mem->kmem, (union virt_memory_data*)e);
+        _data_free(vmem, (union virt_memory_data*)e);
 
         /* Rebalance the size-based tree */
         ret = _free_add(b, f);
@@ -1024,7 +1024,7 @@ memory_free_pages(memory_t *mem, void *ptr)
     /* Find pages from the object */
     page = e->object->pages;
     /* Free the corersponding pages */
-    _pages_free(mem, page);
+    _pages_free(&mem->kmem, page);
     /* Free the object */
     _data_free(&mem->kmem, (union virt_memory_data *)e->object);
     /* Retuurn to the free entry */
@@ -1070,6 +1070,51 @@ virt_memory_alloc_pages(virt_memory_t *vmem, size_t nr, int zone, int domain)
     }
 
     return ptr;
+}
+
+/*
+ * Free pages
+ */
+void
+virt_memory_free_pages(virt_memory_t *vmem, void *ptr)
+{
+    virt_memory_block_t *b;
+    uintptr_t addr;
+    virt_memory_entry_t *e;
+    page_t *page;
+    void *r;
+
+    /* Convert the pointer to the address in integer */
+    addr = (uintptr_t)ptr;
+
+    /* Find a block */
+    b = _find_block(vmem, addr);
+    if ( NULL == b ) {
+        /* Not found */
+        return;
+    }
+
+    /* Find an entry corresponding to the virtual address */
+    e = _find_entry(b->entries, addr);
+    if ( NULL == e ) {
+        /* Not found */
+        return;
+    }
+    if ( addr != e->start ) {
+        /* Start address does not match. */
+        return;
+    }
+
+    /* Find pages from the object */
+    page = e->object->pages;
+    /* Free the corersponding pages */
+    _pages_free(vmem, page);
+    /* Free the object */
+    _data_free(vmem, (union virt_memory_data *)e->object);
+    /* Retuurn to the free entry */
+    r = _entry_delete(&b->entries, e);
+    kassert( r == e );
+    _entry_free(vmem, b, e);
 }
 
 /*
