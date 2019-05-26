@@ -232,7 +232,6 @@ struct memory {
     virt_memory_t kmem;
 
     /* Architecture-specific defintions */
-    void *arch;
 
     /* Interfaces to architecture-specific operations */
     int (*map)(void *, uintptr_t, page_t *);
