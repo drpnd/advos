@@ -29,7 +29,7 @@
  */
 static union virt_memory_data * _data_alloc(virt_memory_t *);
 static void _data_free(virt_memory_t *, union virt_memory_data *);
-static virt_memory_block_t * _find_block(memory_t *, uintptr_t);
+static virt_memory_block_t * _find_block(virt_memory_t *, uintptr_t);
 static int _free_add(virt_memory_block_t *, virt_memory_free_t *);
 static virt_memory_free_t *
 _free_atree_delete(virt_memory_free_t **, virt_memory_free_t *);
@@ -165,12 +165,12 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
  * Find a memory block including the specified address
  */
 static virt_memory_block_t *
-_find_block(memory_t *mem, uintptr_t addr)
+_find_block(virt_memory_t *vmem, uintptr_t addr)
 {
     virt_memory_block_t *b;
 
     /* Search a block */
-    b = mem->kmem.blocks;
+    b = vmem->blocks;
     while ( NULL != b ) {
         if ( addr >= b->start && addr <= b->end ) {
             /* Found */
@@ -344,7 +344,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     }
 
     /* Find a block including the virtual address */
-    b = _find_block(mem, virtual);
+    b = _find_block(&mem->kmem, virtual);
     if ( NULL == b ) {
         /* Not found */
         return -1;
@@ -998,7 +998,7 @@ memory_free_pages(memory_t *mem, void *ptr)
     addr = (uintptr_t)ptr;
 
     /* Find a block */
-    b = _find_block(mem, addr);
+    b = _find_block(&mem->kmem, addr);
     if ( NULL == b ) {
         /* Not found */
         return;
