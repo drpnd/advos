@@ -1182,6 +1182,123 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
 }
 
 /*
+ * Copy entries
+ */
+static int
+_entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
+{
+    virt_memory_entry_t *n;
+    int ret;
+
+    n = (virt_memory_entry_t *)_data_alloc(vmem);
+    if ( NULL == n ) {
+        return -1;
+    }
+    n->start = e->start;
+    n->size = e->size;
+    n->object = NULL;
+    n->atree.left = NULL;
+    n->atree.right = NULL;
+
+    /* Add this entry to the entry tree */
+    ret = _entry_add(&b->entries, n);
+    if ( ret < 0 ) {
+        /* Failed to add the entry */
+        _data_free(vmem, (union virt_memory_data *)n);
+        return -1;
+    }
+
+    /* FIXME: Copy objects */
+
+    /* Traverse the tree */
+    if ( NULL != e->atree.left ) {
+        ret = _entry_fork(vmem, b, e->atree.left);
+        if ( ret < 0 ) {
+            return -1;
+        }
+    }
+    if ( NULL != e->atree.right ) {
+        ret = _entry_fork(vmem, b, e->atree.right);
+        if ( ret < -1 ) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/*
+ * Free all entries
+ */
+static void
+_entry_free_all(virt_memory_t *vmem, virt_memory_entry_t *e)
+{
+    if ( NULL != e->atree.left ) {
+        _entry_free_all(vmem, e->atree.left);
+    }
+    if ( NULL != e->atree.right ) {
+        _entry_free_all(vmem, e->atree.right);
+    }
+    _data_free(vmem, (union virt_memory_data *)e);
+}
+
+/*
+ * Copy a block
+ */
+static int
+_block_fork(virt_memory_t *vmem, virt_memory_block_t *src)
+{
+    int ret;
+    virt_memory_block_t *n;
+    virt_memory_entry_t *e;
+
+    /* Allocate data and initialize the block */
+    n = (virt_memory_block_t *)_data_alloc(vmem);
+    if ( NULL == n ) {
+        return -1;
+    }
+    n->start = src->start;
+    n->end = src->end;
+    n->next = NULL;
+    n->entries = NULL;
+    n->frees.atree = NULL;
+    n->frees.stree = NULL;
+
+    /* Copy entries */
+    ret = _entry_fork(vmem, n, src->entries);
+    if ( ret < 0 ) {
+        /* Free all entries */
+        _entry_free_all(vmem, n->entries);
+        _data_free(vmem, (union virt_memory_data *)n);
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
+ * Fork
+ */
+int
+virt_memory_fork(virt_memory_t *dst, virt_memory_t *src)
+{
+    virt_memory_block_t *b;
+    int ret;
+
+    b = src->blocks;
+    while ( NULL != b ) {
+        ret = _block_fork(dst, b);
+        if ( ret < 0 ) {
+            /* dst may change since the function call. */
+            return -1;
+        }
+        b = b->next;
+    }
+
+    return 0;
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4
