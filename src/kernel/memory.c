@@ -111,6 +111,33 @@ _data_free(virt_memory_t *vmem, union virt_memory_data *data)
 }
 
 /*
+ * Insert a memory block to the specified virtual memory
+ */
+static int
+_block_insert(virt_memory_t *vmem, virt_memory_block_t *n)
+{
+    virt_memory_block_t **b;
+
+    /* Insert the block to the sorted list */
+    b = &vmem->blocks;
+    while ( NULL != *b ) {
+        if ( (*b)->start > n->start ) {
+            /* Try to insert here */
+            if ( n->end >= (*b)->start ) {
+                /* Overlapping space, then raise an error */
+                return -1;
+            }
+            break;
+        }
+        b = &(*b)->next;
+    }
+    n->next = *b;
+    *b = n;
+
+    return 0;
+}
+
+/*
  * Add a new memory block
  */
 int
@@ -119,6 +146,7 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
     virt_memory_free_t *fr;
     virt_memory_block_t *n;
     virt_memory_block_t **b;
+    int ret;
 
     /* Allocate data and initialize the block */
     n = (virt_memory_block_t *)_data_alloc(&mem->kmem);
@@ -145,22 +173,12 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
     n->frees.stree = fr;
 
     /* Insert the block to the sorted list */
-    b = &mem->kmem.blocks;
-    while ( NULL != *b ) {
-        if ( (*b)->start > n->start ) {
-            /* Try to insert here */
-            if ( n->end >= (*b)->start ) {
-                /* Overlapping space, then raise an error */
-                _data_free(&mem->kmem, (union virt_memory_data *)fr);
-                _data_free(&mem->kmem, (union virt_memory_data *)n);
-                return -1;
-            }
-            break;
-        }
-        b = &(*b)->next;
+    ret = _block_insert(&mem->kmem, n);
+    if ( ret < 0 ) {
+        _data_free(&mem->kmem, (union virt_memory_data *)fr);
+        _data_free(&mem->kmem, (union virt_memory_data *)n);
+        return -1;
     }
-    n->next = *b;
-    *b = n;
 
     return 0;
 }
@@ -1115,6 +1133,52 @@ virt_memory_free_pages(virt_memory_t *vmem, void *ptr)
     r = _entry_delete(&b->entries, e);
     kassert( r == e );
     _entry_free(vmem, b, e);
+}
+
+/*
+ * Add a new memory block
+ */
+int
+virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
+{
+    virt_memory_free_t *fr;
+    virt_memory_block_t *n;
+    virt_memory_block_t **b;
+    int ret;
+
+    /* Allocate data and initialize the block */
+    n = (virt_memory_block_t *)_data_alloc(vmem);
+    if ( NULL == n ) {
+        return -1;
+    }
+    n->start = start;
+    n->end = end;
+    n->next = NULL;
+    n->entries = NULL;
+    n->frees.atree = NULL;
+    n->frees.stree = NULL;
+
+    /* Add a free entry aligned to the block and the page size */
+    fr = (virt_memory_free_t *)_data_alloc(vmem);
+    if ( NULL == fr ) {
+        _data_free(vmem, (union virt_memory_data *)n);
+        return -1;
+    }
+    fr->start = (start + MEMORY_PAGESIZE - 1)
+        & ~(uintptr_t)(MEMORY_PAGESIZE - 1);
+    fr->size = ((end + 1) & ~(uintptr_t)(MEMORY_PAGESIZE - 1)) - fr->start;
+    n->frees.atree = fr;
+    n->frees.stree = fr;
+
+    /* Insert the block to the sorted list */
+    ret = _block_insert(vmem, n);
+    if ( ret < 0 ) {
+        _data_free(vmem, (union virt_memory_data *)fr);
+        _data_free(vmem, (union virt_memory_data *)n);
+        return -1;
+    }
+
+    return 0;
 }
 
 /*

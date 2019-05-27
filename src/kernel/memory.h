@@ -313,6 +313,8 @@ int memory_wire(memory_t *, uintptr_t, size_t, uintptr_t);
 void * memory_alloc_pages(memory_t *, size_t, int, int);
 void memory_free_pages(memory_t *, void *);
 
+int virt_memory_block_add(virt_memory_t *, uintptr_t, uintptr_t);
+
 /* Defined in arch.c */
 int kmalloc_init(memory_slab_allocator_t *);
 void * kmalloc(size_t);
