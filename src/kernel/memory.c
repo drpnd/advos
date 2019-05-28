@@ -392,6 +392,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     }
     e->start = virtual;
     e->size = nr * MEMORY_PAGESIZE;
+    e->offset = 0;
     e->object = (virt_memory_object_t *)_data_alloc(&mem->kmem);
     if ( NULL == e->object ) {
         goto error_obj;

@@ -137,6 +137,8 @@ struct virt_memory_entry {
     size_t size;
     /* Pointer to the object */
     virt_memory_object_t *object;
+    /* Offset from the head of the object */
+    off_t offset;
 
     /* Binary tree for start address ordering */
     struct {
