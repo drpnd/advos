@@ -1192,6 +1192,8 @@ _entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
 {
     virt_memory_entry_t *n;
     int ret;
+    page_t *p;
+    uintptr_t addr;
 
     n = (virt_memory_entry_t *)_data_alloc(vmem);
     if ( NULL == n ) {
@@ -1215,6 +1217,19 @@ _entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
     /* Reference the same object */
     n->object = e->object;
     n->object->refs++;
+
+    /* Map the page table */
+    p = n->object->pages;
+    addr = n->start;
+    while ( NULL != p ) {
+        /* Map */
+        ret = vmem->mem->map(vmem->arch, addr, p);
+        if ( ret < 0 ) {
+            return -1;
+        }
+        addr += MEMORY_PAGESIZE << p->order;
+        p = p->next;
+    }
 
     /* Traverse the tree */
     if ( NULL != e->atree.left ) {
