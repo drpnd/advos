@@ -124,6 +124,8 @@ struct virt_memory_object {
     page_t *pages;
     /* Size */
     size_t size;
+    /* Reference counter */
+    int refs;
 };
 
 /*
