@@ -1251,7 +1251,6 @@ _block_fork(virt_memory_t *vmem, virt_memory_block_t *src)
 {
     int ret;
     virt_memory_block_t *n;
-    virt_memory_entry_t *e;
 
     /* Allocate data and initialize the block */
     n = (virt_memory_block_t *)_data_alloc(vmem);
