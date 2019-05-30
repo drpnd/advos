@@ -126,6 +126,8 @@ struct virt_memory_object {
     size_t size;
     /* Reference counter */
     int refs;
+    /* Shadow object */
+    virt_memory_object_t *shadow;
 };
 
 /*
