@@ -400,6 +400,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     e->object->size = nr * MEMORY_PAGESIZE;
     e->object->pages = NULL;
     e->object->refs = 1;
+    e->object->shadow = NULL;
 
     /* Prepare for free spaces */
     f0 = (virt_memory_free_t *)_data_alloc(&mem->kmem);
@@ -729,6 +730,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
     e->object->size = nr * MEMORY_PAGESIZE;
     e->object->pages = NULL;
     e->object->refs = 1;
+    e->object->shadow = NULL;
 
     /* Prepare for free spaces */
     f0 = (virt_memory_free_t *)_data_alloc(vmem);
@@ -1214,9 +1216,17 @@ _entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
         return -1;
     }
 
+    /* Shadow object for copy on write */
+    n->object = (virt_memory_object_t *)_data_alloc(vmem);
+    if ( NULL == n->object ) {
+        _data_free(vmem, (union virt_memory_data *)n);
+        return -1;
+    }
+
     /* Reference the same object */
-    n->object = e->object;
-    n->object->refs++;
+    n->object->shadow = e->object;
+    e->object->refs++;
+    n->object->refs = 1;
 
     /* Map the page table */
     p = n->object->pages;
