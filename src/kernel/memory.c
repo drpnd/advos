@@ -393,6 +393,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     e->start = virtual;
     e->size = nr * MEMORY_PAGESIZE;
     e->offset = 0;
+    e->flags = 0;
     e->object = (virt_memory_object_t *)_data_alloc(&mem->kmem);
     if ( NULL == e->object ) {
         goto error_obj;
@@ -723,6 +724,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         goto error_entry;
     }
     e->size = nr * MEMORY_PAGESIZE;
+    e->flags = 0;
     e->object = (virt_memory_object_t *)_data_alloc(vmem);
     if ( NULL == e->object ) {
         goto error_obj;
@@ -1204,6 +1206,7 @@ _entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
     n->start = e->start;
     n->size = e->size;
     n->offset = e->offset;
+    n->flags = 0;
     n->object = NULL;
     n->atree.left = NULL;
     n->atree.right = NULL;
@@ -1233,7 +1236,7 @@ _entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
     addr = n->start;
     while ( NULL != p ) {
         /* Map */
-        ret = vmem->mem->map(vmem->arch, addr, p, 0);
+        ret = vmem->mem->map(vmem->arch, addr, p, n->flags);
         if ( ret < 0 ) {
             return -1;
         }
