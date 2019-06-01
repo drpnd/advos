@@ -41,7 +41,7 @@ void trampoline(void);
 void trampoline_end(void);
 
 /* Prototype declarations */
-int arch_memory_map(void *, uintptr_t, page_t *);
+int arch_memory_map(void *, uintptr_t, page_t *, int);
 int arch_memory_unmap(void *, uintptr_t, page_t *);
 int arch_memory_ctxsw(void *);
 void * arch_memory_fork(void *);
@@ -483,7 +483,7 @@ _estimate_bus_freq(acpi_t *acpi)
  * Map virtual address to physical address
  */
 int
-arch_memory_map(void *arch, uintptr_t virtual, page_t *page)
+arch_memory_map(void *arch, uintptr_t virtual, page_t *page, int flags)
 {
     pgt_t *pgt;
     int ret;

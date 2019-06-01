@@ -427,7 +427,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
         /* Calculate the order to minimize the number of page_t */
         order = _order(virtual, physical, endplus1 - virtual);
         p->order = order;
-        ret = mem->map(mem->kmem.arch, virtual, p);
+        ret = mem->map(mem->kmem.arch, virtual, p, 0);
         if ( ret < 0 ) {
             _data_free(&mem->kmem, (union virt_memory_data *)p);
             goto error_page;
@@ -781,7 +781,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
 
         /* Map */
         ret = vmem->mem->map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
-                             p);
+                             p, 0);
         if ( ret < 0 ) {
             _data_free(vmem, (union virt_memory_data *)p);
             phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
@@ -815,7 +815,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
 
         /* Map */
         ret = vmem->mem->map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
-                             p);
+                             p, 0);
         if ( ret < 0 ) {
             _data_free(vmem, (union virt_memory_data *)p);
             phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
@@ -1233,7 +1233,7 @@ _entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
     addr = n->start;
     while ( NULL != p ) {
         /* Map */
-        ret = vmem->mem->map(vmem->arch, addr, p);
+        ret = vmem->mem->map(vmem->arch, addr, p, 0);
         if ( ret < 0 ) {
             return -1;
         }

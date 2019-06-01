@@ -143,6 +143,8 @@ struct virt_memory_entry {
     virt_memory_object_t *object;
     /* Offset from the head of the object */
     off_t offset;
+    /* Flags */
+    int flags;
 
     /* Binary tree for start address ordering */
     struct {
@@ -240,7 +242,7 @@ struct memory {
     /* Architecture-specific defintions */
 
     /* Interfaces to architecture-specific operations */
-    int (*map)(void *, uintptr_t, page_t *);
+    int (*map)(void *, uintptr_t, page_t *, int);
     int (*unmap)(void *, uintptr_t, page_t *);
     void * (*fork)(void *);
     int (*ctxsw)(void *);
