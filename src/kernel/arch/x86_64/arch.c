@@ -507,8 +507,12 @@ arch_memory_map(void *arch, uintptr_t virtual, page_t *page, int flags)
         pagesize = MEMORY_PAGESIZE;
         nr = page->order;
     }
-    /* Global (temporary) */
-    global = 1;
+    /* Global */
+    if ( MEMORY_VMF_GLOBAL & flags ) {
+        global = 1;
+    } else {
+        global = 0;
+    }
     /* Check the read-write bit */
     if ( (page->flags & MEMORY_PGF_RW) && !(flags & MEMORY_VMF_COW) ) {
         rw = 1;

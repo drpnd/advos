@@ -1206,7 +1206,7 @@ _entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
     n->start = e->start;
     n->size = e->size;
     n->offset = e->offset;
-    n->flags = 0;
+    n->flags = MEMORY_VMF_COW;
     n->object = NULL;
     n->atree.left = NULL;
     n->atree.right = NULL;
@@ -1318,6 +1318,7 @@ virt_memory_fork(virt_memory_t *dst, virt_memory_t *src)
     virt_memory_block_t *b;
     int ret;
 
+    /* Copy blocks */
     b = src->blocks;
     while ( NULL != b ) {
         ret = _block_fork(dst, b);
