@@ -1205,7 +1205,7 @@ _entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
     n->start = e->start;
     n->size = e->size;
     n->offset = e->offset;
-    n->flags = MEMORY_VMF_COW;
+    n->flags = e->flags | MEMORY_VMF_COW;
     n->object = NULL;
     n->atree.left = NULL;
     n->atree.right = NULL;
