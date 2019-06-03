@@ -145,7 +145,6 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
 {
     virt_memory_free_t *fr;
     virt_memory_block_t *n;
-    virt_memory_block_t **b;
     int ret;
 
     /* Allocate data and initialize the block */
