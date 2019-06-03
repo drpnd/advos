@@ -47,9 +47,9 @@
 #define MEMORY_PGF_RW                   (1 << 1)
 #define MEMORY_PGF_EXEC                 (1 << 2)
 /* Virtual memory entry Flags */
-#define MEMORY_VMF_GLOBAL               (1 << 0)
 #define MEMORY_VMF_RW                   (1 << 1)
 #define MEMORY_VMF_EXEC                 (1 << 2)
+#define MEMORY_VMF_GLOBAL               (1 << 6)
 #define MEMORY_VMF_COW                  (1 << 7)
 
 #define MEMORY_SLAB_NUM_PAGES           8
