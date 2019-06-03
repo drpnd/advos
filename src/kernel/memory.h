@@ -318,10 +318,11 @@ void phys_mem_free(phys_memory_t *, void *, int, int, int);
 int phys_memory_init(phys_memory_t *, int, memory_sysmap_entry_t *, uint64_t);
 
 /* Defined in memory.c */
-int memory_init(memory_t *, phys_memory_t *, void *, uintptr_t,
-                int (*map)(void *, uintptr_t, page_t *),
-                int (*unmap)(void *, uintptr_t, page_t *),
-                int (*ctxsw)(void *));
+int
+memory_init(memory_t *, phys_memory_t *, void *, uintptr_t,
+            int (*map)(void *, uintptr_t, page_t *, int),
+            int (*unmap)(void *, uintptr_t, page_t *),
+            int (*ctxsw)(void *));
 int memory_block_add(memory_t *, uintptr_t, uintptr_t);
 int memory_wire(memory_t *, uintptr_t, size_t, uintptr_t);
 void * memory_alloc_pages(memory_t *, size_t, int, int);

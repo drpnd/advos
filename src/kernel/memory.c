@@ -45,7 +45,7 @@ _alloc_pages_block(virt_memory_t *, virt_memory_block_t *, size_t, int, int);
  */
 int
 memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
-            int (*map)(void *, uintptr_t, page_t *),
+            int (*map)(void *, uintptr_t, page_t *, int),
             int (*unmap)(void *, uintptr_t, page_t *), int (*ctxsw)(void *))
 {
     union virt_memory_data *data;
