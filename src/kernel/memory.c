@@ -353,6 +353,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     size_t size;
     page_t *p;
     page_t **pp;
+    uintptr_t idx;
     int ret;
     int order;
 
@@ -415,12 +416,14 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     /* Allocate and map all pages */
     endplus1 = virtual + size;
     pp = &e->object->pages;
+    idx = 0;
     while ( virtual < endplus1 ) {
         /* Allocate a page data structure */
         p = (page_t *)_data_alloc(&mem->kmem);
         if ( NULL == p ) {
             goto error_page;
         }
+        p->index = 0;
         p->physical = physical;
         p->flags = MEMORY_PGF_WIRED | MEMORY_PGF_RW;
         p->next = NULL;
@@ -434,6 +437,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
         }
         virtual += 1ULL << (order + MEMORY_PAGESIZE_SHIFT);
         physical += 1ULL << (order + MEMORY_PAGESIZE_SHIFT);
+        idx += 1ULL << order;
 
         *pp = p;
         pp = &p->next;
@@ -766,6 +770,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         if ( NULL == p ) {
             goto error_page;
         }
+        p->index = i;
         p->zone = zone;
         p->numadomain = numadomain;
         p->flags = MEMORY_PGF_RW;
@@ -800,6 +805,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         if ( NULL == p ) {
             goto error_page;
         }
+        p->index = i;
         p->zone = zone;
         p->numadomain = numadomain;
         p->flags = MEMORY_PGF_RW;

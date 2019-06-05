@@ -107,6 +107,8 @@ typedef struct {
  */
 typedef struct page page_t;
 struct page {
+    /* Page index */
+    uintptr_t index;
     /* Physical address */
     uintptr_t physical;
     /* Flags */
