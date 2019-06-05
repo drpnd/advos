@@ -393,7 +393,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     e->start = virtual;
     e->size = nr * MEMORY_PAGESIZE;
     e->offset = 0;
-    e->flags = 0;
+    e->flags = MEMORY_VMF_RW;
     e->object = (virt_memory_object_t *)_data_alloc(&mem->kmem);
     if ( NULL == e->object ) {
         goto error_obj;
@@ -425,7 +425,10 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
         }
         p->index = 0;
         p->physical = physical;
-        p->flags = MEMORY_PGF_WIRED | MEMORY_PGF_RW;
+        p->flags = MEMORY_PGF_WIRED;
+        if ( e->flags & MEMORY_VMF_RW ) {
+            p->flags |= MEMORY_PGF_RW;
+        }
         p->next = NULL;
         /* Calculate the order to minimize the number of page_t */
         order = _order(virtual, physical, endplus1 - virtual);
@@ -727,7 +730,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         goto error_entry;
     }
     e->size = nr * MEMORY_PAGESIZE;
-    e->flags = 0;
+    e->flags = MEMORY_VMF_RW;
     e->object = (virt_memory_object_t *)_data_alloc(vmem);
     if ( NULL == e->object ) {
         goto error_obj;
@@ -773,7 +776,10 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         p->index = i;
         p->zone = zone;
         p->numadomain = numadomain;
-        p->flags = MEMORY_PGF_RW;
+        p->flags = 0;
+        if ( e->flags & MEMORY_VMF_RW ) {
+            p->flags |= MEMORY_PGF_RW;
+        }
         p->order = MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT;
         p->next = NULL;
 
@@ -808,7 +814,10 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         p->index = i;
         p->zone = zone;
         p->numadomain = numadomain;
-        p->flags = MEMORY_PGF_RW;
+        p->flags = 0;
+        if ( e->flags & MEMORY_VMF_RW ) {
+            p->flags |= MEMORY_PGF_RW;
+        }
         p->order = 0;
         p->next = NULL;
 
