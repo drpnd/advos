@@ -1263,21 +1263,6 @@ _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
     e->object->refs++;
     e->object = obj;
 
-#if 0
-    /* Map the page table */
-    p = n->object->pages;
-    addr = n->start;
-    while ( NULL != p ) {
-        /* Map */
-        ret = dst->mem->map(dst->arch, addr, p, n->flags);
-        if ( ret < 0 ) {
-            return -1;
-        }
-        addr += MEMORY_PAGESIZE << p->order;
-        p = p->next;
-    }
-#endif
-
     /* Traverse the tree */
     if ( NULL != e->atree.left ) {
         ret = _entry_fork(dst, src, b, e->atree.left);
