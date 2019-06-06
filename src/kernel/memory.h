@@ -245,9 +245,16 @@ typedef struct {
  * Architecture-dependent interfaces
  */
 typedef struct {
+    /* Map a page to the page table */
     int (*map)(void *, uintptr_t, page_t *, int);
+
+    /* Unmap a page from the page table */
     int (*unmap)(void *, uintptr_t, page_t *);
+
+    /* Fork */
     void * (*fork)(void *);
+
+    /* Context switch */
     int (*ctxsw)(void *);
 } memory_arch_interfaces_t;
 
