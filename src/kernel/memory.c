@@ -1076,7 +1076,7 @@ memory_free_pages(memory_t *mem, void *ptr)
  * Initialize virtual memory
  */
 virt_memory_t *
-virt_memory_init(memory_t *mem)
+virt_memory_init(memory_t *mem, virt_memory_allocator_t *alloca)
 {
     virt_memory_t *vm;
 
@@ -1088,6 +1088,11 @@ virt_memory_init(memory_t *mem)
     vm->blocks = NULL;
     vm->lists = NULL;
     vm->arch = mem->fork(mem->kmem.arch);
+
+    /* Setup allocator */
+    vm->allocator.allocator = alloca->allocator;
+    vm->allocator.alloc = alloca->alloc;
+    vm->allocator.free = alloca->free;
 
     return vm;
 }

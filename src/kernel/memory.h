@@ -231,6 +231,16 @@ union virt_memory_data {
 
 typedef struct memory memory_t;
 typedef struct virt_memory virt_memory_t;
+
+/*
+ * Allocator
+ */
+typedef struct {
+    void *allocator;
+    void * (*alloc)(virt_memory_t *);
+    void (*free)(virt_memory_t *, void *);
+} virt_memory_allocator_t;
+
 /*
  * Virtual memory management per process
  */
@@ -245,11 +255,7 @@ struct virt_memory {
     union virt_memory_data *lists;
 
     /* ToDo: Allocator */
-    struct {
-        void *data;
-        void * (*alloc)(virt_memory_t *);
-        void (*free)(virt_memory_t *, void *);
-    } allocator;
+    virt_memory_allocator_t allocator;
 
     /* Architecture-specific data structure */
     void *arch;
