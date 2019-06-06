@@ -230,11 +230,11 @@ union virt_memory_data {
 
 
 typedef struct memory memory_t;
-
+typedef struct virt_memory virt_memory_t;
 /*
  * Virtual memory management per process
  */
-typedef struct {
+struct virt_memory {
     /* Kernel memory management */
     memory_t *mem;
 
@@ -244,9 +244,16 @@ typedef struct {
     /* List of memory management data structure */
     union virt_memory_data *lists;
 
+    /* ToDo: Allocator */
+    struct {
+        void *data;
+        void * (*alloc)(virt_memory_t *);
+        void (*free)(virt_memory_t *, void *);
+    } allocator;
+
     /* Architecture-specific data structure */
     void *arch;
-} virt_memory_t;
+};
 
 /*
  * Memory
