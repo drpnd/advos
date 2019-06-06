@@ -123,19 +123,30 @@ struct page {
     page_t *next;
 };
 
+typedef enum {
+    MEMORY_OBJECT,
+    MEMORY_SHADOW,
+} virt_memory_object_type_t;
+
 /*
  * Object
  */
 typedef struct virt_memory_object virt_memory_object_t;
 struct virt_memory_object {
+    /* Type */
+    virt_memory_object_type_t type;
     /* Pointer to the list of pages */
     page_t *pages;
     /* Size */
     size_t size;
     /* Reference counter */
     int refs;
-    /* Shadow object */
-    virt_memory_object_t *shadow;
+    union {
+        struct {
+            /* Shadow object */
+            virt_memory_object_t *object;
+        } shadow;
+    } u;
 };
 
 /*

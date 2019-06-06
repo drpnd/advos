@@ -398,10 +398,10 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     if ( NULL == e->object ) {
         goto error_obj;
     }
+    e->object->type = MEMORY_OBJECT;
     e->object->size = nr * MEMORY_PAGESIZE;
     e->object->pages = NULL;
     e->object->refs = 1;
-    e->object->shadow = NULL;
 
     /* Prepare for free spaces */
     f0 = (virt_memory_free_t *)_data_alloc(&mem->kmem);
@@ -735,10 +735,10 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
     if ( NULL == e->object ) {
         goto error_obj;
     }
+    e->object->type = MEMORY_OBJECT;
     e->object->size = nr * MEMORY_PAGESIZE;
     e->object->pages = NULL;
     e->object->refs = 1;
-    e->object->shadow = NULL;
 
     /* Prepare for free spaces */
     f0 = (virt_memory_free_t *)_data_alloc(vmem);
@@ -1205,14 +1205,16 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
  * Copy entries
  */
 static int
-_entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
+_entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
+            virt_memory_entry_t *e)
 {
     virt_memory_entry_t *n;
     int ret;
     page_t *p;
     uintptr_t addr;
+    virt_memory_object_t *obj;
 
-    n = (virt_memory_entry_t *)_data_alloc(vmem);
+    n = (virt_memory_entry_t *)_data_alloc(dst);
     if ( NULL == n ) {
         return -1;
     }
@@ -1228,44 +1230,63 @@ _entry_fork(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
     ret = _entry_add(&b->entries, n);
     if ( ret < 0 ) {
         /* Failed to add the entry */
-        _data_free(vmem, (union virt_memory_data *)n);
+        _data_free(dst, (union virt_memory_data *)n);
         return -1;
     }
 
-    /* Shadow object for copy on write */
-    n->object = (virt_memory_object_t *)_data_alloc(vmem);
+    /* Shadow object for the source entry */
+    obj = (virt_memory_object_t *)_data_alloc(src);
+    if ( NULL == obj ) {
+        _data_free(dst, (union virt_memory_data *)n);
+        return -1;
+    }
+    obj->type = MEMORY_SHADOW;
+    obj->pages = NULL;
+    obj->size = e->object->size;
+    obj->refs = 1;
+    obj->u.shadow.object = e->object;
+
+    /* Shadow object for the destination entry */
+    n->object = (virt_memory_object_t *)_data_alloc(dst);
     if ( NULL == n->object ) {
-        _data_free(vmem, (union virt_memory_data *)n);
+        _data_free(src, (union virt_memory_data *)obj);
+        _data_free(dst, (union virt_memory_data *)n);
         return -1;
     }
-
-    /* Reference the same object */
-    n->object->shadow = e->object;
-    e->object->refs++;
+    n->object->type = MEMORY_SHADOW;
+    n->object->pages = NULL;
+    n->object->size = e->object->size;
     n->object->refs = 1;
+    n->object->u.shadow.object = e->object;
 
+    /* Replace the reference from the source entry  */
+    e->object->refs++;
+    e->object = obj;
+
+#if 0
     /* Map the page table */
     p = n->object->pages;
     addr = n->start;
     while ( NULL != p ) {
         /* Map */
-        ret = vmem->mem->map(vmem->arch, addr, p, n->flags);
+        ret = dst->mem->map(dst->arch, addr, p, n->flags);
         if ( ret < 0 ) {
             return -1;
         }
         addr += MEMORY_PAGESIZE << p->order;
         p = p->next;
     }
+#endif
 
     /* Traverse the tree */
     if ( NULL != e->atree.left ) {
-        ret = _entry_fork(vmem, b, e->atree.left);
+        ret = _entry_fork(dst, src, b, e->atree.left);
         if ( ret < 0 ) {
             return -1;
         }
     }
     if ( NULL != e->atree.right ) {
-        ret = _entry_fork(vmem, b, e->atree.right);
+        ret = _entry_fork(dst, src, b, e->atree.right);
         if ( ret < -1 ) {
             return -1;
         }
@@ -1293,29 +1314,29 @@ _entry_free_all(virt_memory_t *vmem, virt_memory_entry_t *e)
  * Copy a block
  */
 static int
-_block_fork(virt_memory_t *vmem, virt_memory_block_t *src)
+_block_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *sb)
 {
     int ret;
     virt_memory_block_t *n;
 
     /* Allocate data and initialize the block */
-    n = (virt_memory_block_t *)_data_alloc(vmem);
+    n = (virt_memory_block_t *)_data_alloc(dst);
     if ( NULL == n ) {
         return -1;
     }
-    n->start = src->start;
-    n->end = src->end;
+    n->start = sb->start;
+    n->end = sb->end;
     n->next = NULL;
     n->entries = NULL;
     n->frees.atree = NULL;
     n->frees.stree = NULL;
 
     /* Copy entries */
-    ret = _entry_fork(vmem, n, src->entries);
+    ret = _entry_fork(dst, src, n, sb->entries);
     if ( ret < 0 ) {
         /* Free all entries */
-        _entry_free_all(vmem, n->entries);
-        _data_free(vmem, (union virt_memory_data *)n);
+        _entry_free_all(dst, n->entries);
+        _data_free(dst, (union virt_memory_data *)n);
         return -1;
     }
 
@@ -1334,7 +1355,7 @@ virt_memory_fork(virt_memory_t *dst, virt_memory_t *src)
     /* Copy blocks */
     b = src->blocks;
     while ( NULL != b ) {
-        ret = _block_fork(dst, b);
+        ret = _block_fork(dst, src, b);
         if ( ret < 0 ) {
             /* dst may change since the function call. */
             return -1;
