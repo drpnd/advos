@@ -48,6 +48,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
             int (*map)(void *, uintptr_t, page_t *, int),
             int (*unmap)(void *, uintptr_t, page_t *), int (*ctxsw)(void *))
 {
+    virt_memory_allocator_t allocator;
     union virt_memory_data *data;
     size_t nr;
     size_t i;
@@ -69,6 +70,11 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
         data[i - 1].next = &data[i];
     }
     data[nr - 1].next = NULL;
+#if 0
+    allocator.allocator = data;
+    allocator.alloc = _data_alloc;
+    allocator.free = _data_free;
+#endif
     mem->kmem.lists = data;
 
     /* Architecture specific data structure */

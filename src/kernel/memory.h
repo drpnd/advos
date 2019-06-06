@@ -242,6 +242,16 @@ typedef struct {
 } virt_memory_allocator_t;
 
 /*
+ * Architecture-dependent interfaces
+ */
+typedef struct {
+    int (*map)(void *, uintptr_t, page_t *, int);
+    int (*unmap)(void *, uintptr_t, page_t *);
+    void * (*fork)(void *);
+    int (*ctxsw)(void *);
+} memory_arch_interfaces_t;
+
+/*
  * Virtual memory management per process
  */
 struct virt_memory {
