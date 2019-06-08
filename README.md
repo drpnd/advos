@@ -14,7 +14,7 @@ $ docker-compose run qemu
 
 ## Memory Management
 
-### Virtual memory
+### Virtual memory blocks
 
 * `00000000 00000000` -- `00000000 bfffffff` : User process
 * `00000000 c0000000` -- `00000000 ffffffff` : Kernel
