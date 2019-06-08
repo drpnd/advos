@@ -219,15 +219,14 @@ struct virt_memory_block {
 /*
  * Data structure used for virtual memory management
  */
-union virt_memory_data {
+typedef union virt_memory_data {
     page_t page;
     virt_memory_object_t object;
     virt_memory_entry_t entry;
     virt_memory_free_t free;
     virt_memory_block_t block;
     union virt_memory_data *next;
-};
-
+} virt_memory_data_t;
 
 typedef struct memory memory_t;
 typedef struct virt_memory virt_memory_t;
@@ -237,8 +236,8 @@ typedef struct virt_memory virt_memory_t;
  */
 typedef struct {
     void *allocator;
-    void * (*alloc)(virt_memory_t *);
-    void (*free)(virt_memory_t *, void *);
+    virt_memory_data_t * (*alloc)(virt_memory_t *);
+    void (*free)(virt_memory_t *, virt_memory_data_t *);
 } virt_memory_allocator_t;
 
 /*
