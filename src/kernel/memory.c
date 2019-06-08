@@ -44,8 +44,7 @@ int kmem_init(virt_memory_t *, phys_memory_t *, uintptr_t);
  */
 int
 memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
-            int (*map)(void *, uintptr_t, page_t *, int),
-            int (*unmap)(void *, uintptr_t, page_t *), int (*ctxsw)(void *))
+            memory_arch_interfaces_t *ifs)
 {
     virt_memory_allocator_t allocator;
     union virt_memory_data *data;
@@ -65,9 +64,10 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
 
     /* Architecture specific data structure */
     mem->kmem.arch = arch;
-    mem->map = map;
-    mem->unmap = unmap;
-    mem->ctxsw = ctxsw;
+    mem->ifs.map = ifs->map;
+    mem->ifs.unmap = ifs->unmap;
+    mem->ifs.fork = ifs->fork;
+    mem->ifs.ctxsw = ifs->ctxsw;
 
     return 0;
 }
@@ -395,7 +395,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
         /* Calculate the order to minimize the number of page_t */
         order = _order(virtual, physical, endplus1 - virtual);
         p->order = order;
-        ret = mem->map(mem->kmem.arch, virtual, p, 0);
+        ret = mem->ifs.map(mem->kmem.arch, virtual, p, 0);
         if ( ret < 0 ) {
             mem->kmem.allocator.free(&mem->kmem, (void *)p);
             goto error_page;
@@ -467,7 +467,7 @@ error_page:
     p = e->object->pages;
     virtual = e->start;
     while ( NULL != p ) {
-        ret = mem->unmap(mem->kmem.arch, virtual, p);
+        ret = mem->ifs.unmap(mem->kmem.arch, virtual, p);
         kassert(ret == 0);
         virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
         mem->kmem.allocator.free(&mem->kmem, (void *)p);
@@ -754,7 +754,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         p->physical = (uintptr_t)r;
 
         /* Map */
-        ret = vmem->mem->map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
+        ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
                              p, 0);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
@@ -792,7 +792,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         p->physical = (uintptr_t)r;
 
         /* Map */
-        ret = vmem->mem->map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
+        ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
                              p, 0);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
@@ -863,7 +863,7 @@ error_page:
     p = e->object->pages;
     virtual = e->start;
     while ( NULL != p ) {
-        ret = vmem->mem->unmap(vmem->arch, virtual, p);
+        ret = vmem->mem->ifs.unmap(vmem->arch, virtual, p);
         kassert(ret == 0);
         phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order, p->zone,
                       p->numadomain);
@@ -1048,7 +1048,7 @@ virt_memory_init(memory_t *mem, virt_memory_allocator_t *alloca)
     }
     vm->mem = mem;
     vm->blocks = NULL;
-    vm->arch = mem->fork(mem->kmem.arch);
+    vm->arch = mem->ifs.fork(mem->kmem.arch);
 
     /* Setup allocator */
     vm->allocator.spec = alloca->spec;

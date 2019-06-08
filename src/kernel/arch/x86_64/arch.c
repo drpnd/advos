@@ -318,6 +318,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     void *pages;
     int ret;
     pgt_t *pgt;
+    memory_arch_interfaces_t ifs;
 
     /* Get the maximum address of the system memory */
     maxaddr = 0;
@@ -342,8 +343,11 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
 
     /* Initialize the virtual memory management */
-    ret = memory_init(&kvar->mm, &kvar->phys, pgt, KERNEL_LMAP,
-                      arch_memory_map, arch_memory_unmap, arch_memory_ctxsw);
+    ifs.map = arch_memory_map;
+    ifs.unmap = arch_memory_unmap;
+    ifs.fork = NULL;
+    ifs.ctxsw = arch_memory_ctxsw;
+    ret = memory_init(&kvar->mm, &kvar->phys, pgt, KERNEL_LMAP, &ifs);
     if ( ret < 0 ) {
         panic("Failed to initialize the memory manager.");
     }
