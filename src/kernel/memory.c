@@ -27,8 +27,6 @@
 /*
  * Prototype declarations
  */
-static union virt_memory_data * _data_alloc(virt_memory_t *);
-static void _data_free(virt_memory_t *, union virt_memory_data *);
 static virt_memory_block_t * _find_block(virt_memory_t *, uintptr_t);
 static int _free_add(virt_memory_block_t *, virt_memory_free_t *);
 static virt_memory_free_t *
@@ -39,6 +37,7 @@ static virt_memory_free_t *
 _search_fit_size(virt_memory_block_t *, virt_memory_free_t *, size_t);
 static void *
 _alloc_pages_block(virt_memory_t *, virt_memory_block_t *, size_t, int, int);
+int kmem_init(virt_memory_t *, phys_memory_t *, uintptr_t);
 
 /*
  * Initialize virtual memory
@@ -52,30 +51,17 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     union virt_memory_data *data;
     size_t nr;
     size_t i;
+    int ret;
+
+    /* Initialize the kernel memory */
+    ret = kmem_init(&mem->kmem, phys, p2v);
+    if ( ret < 0 ) {
+        return -1;
+    }
 
     mem->phys = phys;
     mem->kmem.blocks = NULL;
-    mem->kmem.lists = NULL;
     mem->kmem.mem = mem;
-
-    /* Allocate 8 MiB for page management */
-    data = phys_mem_alloc(phys, 11, MEMORY_ZONE_KERNEL, 0);
-    if ( NULL == data ) {
-        return -1;
-    }
-    /* P2V */
-    data = (void *)data + p2v;
-    nr = (MEMORY_PAGESIZE << 9) / sizeof(union virt_memory_data);
-    for ( i = 1; i < nr; i++ ){
-        data[i - 1].next = &data[i];
-    }
-    data[nr - 1].next = NULL;
-#if 0
-    allocator.spec = data;
-    allocator.alloc = _data_alloc;
-    allocator.free = _data_free;
-#endif
-    mem->kmem.lists = data;
 
     /* Architecture specific data structure */
     mem->kmem.arch = arch;
@@ -84,36 +70,6 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     mem->ctxsw = ctxsw;
 
     return 0;
-}
-
-/*
- * Allocate virtual memory data
- */
-static union virt_memory_data *
-_data_alloc(virt_memory_t *vmem)
-{
-    union virt_memory_data *data;
-
-    if ( NULL == vmem->lists ) {
-        return NULL;
-    }
-    data = vmem->lists;
-    vmem->lists = data->next;
-
-    /* Zeros */
-    kmemset(data, 0, sizeof(union virt_memory_data));
-
-    return data;
-}
-
-/*
- * Free virtual memory data
- */
-static void
-_data_free(virt_memory_t *vmem, union virt_memory_data *data)
-{
-    data->next = vmem->lists;
-    vmem->lists = data;
 }
 
 /*
@@ -154,7 +110,7 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
     int ret;
 
     /* Allocate data and initialize the block */
-    n = (virt_memory_block_t *)_data_alloc(&mem->kmem);
+    n = (virt_memory_block_t *)mem->kmem.allocator.alloc(&mem->kmem);
     if ( NULL == n ) {
         return -1;
     }
@@ -166,9 +122,9 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
     n->frees.stree = NULL;
 
     /* Add a free entry aligned to the block and the page size */
-    fr = (virt_memory_free_t *)_data_alloc(&mem->kmem);
+    fr = (virt_memory_free_t *)mem->kmem.allocator.alloc(&mem->kmem);
     if ( NULL == fr ) {
-        _data_free(&mem->kmem, (union virt_memory_data *)n);
+        mem->kmem.allocator.free(&mem->kmem, (void *)n);
         return -1;
     }
     fr->start = (start + MEMORY_PAGESIZE - 1)
@@ -180,8 +136,8 @@ memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
     /* Insert the block to the sorted list */
     ret = _block_insert(&mem->kmem, n);
     if ( ret < 0 ) {
-        _data_free(&mem->kmem, (union virt_memory_data *)fr);
-        _data_free(&mem->kmem, (union virt_memory_data *)n);
+        mem->kmem.allocator.free(&mem->kmem, (void *)fr);
+        mem->kmem.allocator.free(&mem->kmem, (void *)n);
         return -1;
     }
 
@@ -392,7 +348,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     }
 
     /* Prepare an entry and an object */
-    e = (virt_memory_entry_t *)_data_alloc(&mem->kmem);
+    e = (virt_memory_entry_t *)mem->kmem.allocator.alloc(&mem->kmem);
     if ( NULL == e ) {
         goto error_entry;
     }
@@ -400,7 +356,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     e->size = nr * MEMORY_PAGESIZE;
     e->offset = 0;
     e->flags = MEMORY_VMF_RW;
-    e->object = (virt_memory_object_t *)_data_alloc(&mem->kmem);
+    e->object = (virt_memory_object_t *)mem->kmem.allocator.alloc(&mem->kmem);
     if ( NULL == e->object ) {
         goto error_obj;
     }
@@ -410,11 +366,11 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     e->object->refs = 1;
 
     /* Prepare for free spaces */
-    f0 = (virt_memory_free_t *)_data_alloc(&mem->kmem);
+    f0 = (virt_memory_free_t *)mem->kmem.allocator.alloc(&mem->kmem);
     if ( NULL == f0 ) {
         goto error_f0;
     }
-    f1 = (virt_memory_free_t *)_data_alloc(&mem->kmem);
+    f1 = (virt_memory_free_t *)mem->kmem.allocator.alloc(&mem->kmem);
     if ( NULL == f1 ) {
         goto error_f1;
     }
@@ -425,7 +381,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     idx = 0;
     while ( virtual < endplus1 ) {
         /* Allocate a page data structure */
-        p = (page_t *)_data_alloc(&mem->kmem);
+        p = (page_t *)mem->kmem.allocator.alloc(&mem->kmem);
         if ( NULL == p ) {
             goto error_page;
         }
@@ -441,7 +397,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
         p->order = order;
         ret = mem->map(mem->kmem.arch, virtual, p, 0);
         if ( ret < 0 ) {
-            _data_free(&mem->kmem, (union virt_memory_data *)p);
+            mem->kmem.allocator.free(&mem->kmem, (void *)p);
             goto error_page;
         }
         virtual += 1ULL << (order + MEMORY_PAGESIZE_SHIFT);
@@ -463,8 +419,8 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
     kassert( f != NULL );
     if ( f->start == e->start && f->size == e->size  ) {
         /* Remove the entire entry */
-        _data_free(&mem->kmem, (union virt_memory_data *)f0);
-        _data_free(&mem->kmem, (union virt_memory_data *)f1);
+        mem->kmem.allocator.free(&mem->kmem, (void *)f0);
+        mem->kmem.allocator.free(&mem->kmem, (void *)f1);
     } else if ( f->start == e->start ) {
         /* The start address is same, then add the rest to the free entry */
         f0->start = f->start + e->size;
@@ -473,7 +429,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
         if ( ret < 0 ) {
             goto error_post;
         }
-        _data_free(&mem->kmem, (union virt_memory_data *)f1);
+        mem->kmem.allocator.free(&mem->kmem, (void *)f1);
     } else if ( f->start + f->size == e->start + e->size ) {
         /* The end address is same, then add the rest to the free entry */
         f0->start = f->start;
@@ -482,7 +438,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
         if ( ret < 0 ) {
             goto error_post;
         }
-        _data_free(&mem->kmem, (union virt_memory_data *)f1);
+        mem->kmem.allocator.free(&mem->kmem, (void *)f1);
     } else {
         f0->start = f->start;
         f0->size = e->start + e->size - f->start;
@@ -497,7 +453,7 @@ memory_wire(memory_t *mem, uintptr_t virtual, size_t nr, uintptr_t physical)
             goto error_free;
         }
     }
-    _data_free(&mem->kmem, (union virt_memory_data *)f);
+    mem->kmem.allocator.free(&mem->kmem, (void *)f);
 
     return 0;
 
@@ -514,16 +470,16 @@ error_page:
         ret = mem->unmap(mem->kmem.arch, virtual, p);
         kassert(ret == 0);
         virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
-        _data_free(&mem->kmem, (union virt_memory_data *)p);
+        mem->kmem.allocator.free(&mem->kmem, (void *)p);
         p = p->next;
     }
-    _data_free(&mem->kmem, (union virt_memory_data *)f1);
+    mem->kmem.allocator.free(&mem->kmem, (void *)f1);
 error_f1:
-    _data_free(&mem->kmem, (union virt_memory_data *)f0);
+    mem->kmem.allocator.free(&mem->kmem, (void *)f0);
 error_f0:
-    _data_free(&mem->kmem, (union virt_memory_data *)e->object);
+    mem->kmem.allocator.free(&mem->kmem, (void *)e->object);
 error_obj:
-    _data_free(&mem->kmem, (union virt_memory_data *)e);
+    mem->kmem.allocator.free(&mem->kmem, (void *)e);
 error_entry:
     return -1;
 }
@@ -731,13 +687,13 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
     }
 
     /* Allocate an entry and an object */
-    e = (virt_memory_entry_t *)_data_alloc(vmem);
+    e = (virt_memory_entry_t *)vmem->allocator.alloc(vmem);
     if ( NULL == e ) {
         goto error_entry;
     }
     e->size = nr * MEMORY_PAGESIZE;
     e->flags = MEMORY_VMF_RW;
-    e->object = (virt_memory_object_t *)_data_alloc(vmem);
+    e->object = (virt_memory_object_t *)vmem->allocator.alloc(vmem);
     if ( NULL == e->object ) {
         goto error_obj;
     }
@@ -747,11 +703,11 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
     e->object->refs = 1;
 
     /* Prepare for free spaces */
-    f0 = (virt_memory_free_t *)_data_alloc(vmem);
+    f0 = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
     if ( NULL == f0 ) {
         goto error_f0;
     }
-    f1 = (virt_memory_free_t *)_data_alloc(vmem);
+    f1 = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
     if ( NULL == f1 ) {
         goto error_f1;
     }
@@ -775,7 +731,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
     for ( i = 0;
           i + (1 << (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT)) <= nr;
           i += (1 << (MEMORY_SUPERPAGESIZE_SHIFT - MEMORY_PAGESIZE_SHIFT)) ) {
-        p = (page_t *)_data_alloc(vmem);
+        p = (page_t *)vmem->allocator.alloc(vmem);
         if ( NULL == p ) {
             goto error_page;
         }
@@ -792,7 +748,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         /* Allocate a physical superpage */
         r = phys_mem_alloc(vmem->mem->phys, p->order, p->zone, p->numadomain);
         if ( NULL == r ) {
-            _data_free(vmem, (union virt_memory_data *)p);
+            vmem->allocator.free(vmem, (void *)p);
             goto error_page;
         }
         p->physical = (uintptr_t)r;
@@ -801,7 +757,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         ret = vmem->mem->map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
                              p, 0);
         if ( ret < 0 ) {
-            _data_free(vmem, (union virt_memory_data *)p);
+            vmem->allocator.free(vmem, (void *)p);
             phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
                           p->zone, p->numadomain);
             goto error_page;
@@ -813,7 +769,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
 
     /* Allocate and map pages */
     for ( ; i < nr; i++ ) {
-        p = (page_t *)_data_alloc(vmem);
+        p = (page_t *)vmem->allocator.alloc(vmem);
         if ( NULL == p ) {
             goto error_page;
         }
@@ -830,7 +786,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         /* Allocate a physical page */
         r = phys_mem_alloc(vmem->mem->phys, p->order, p->zone, p->numadomain);
         if ( NULL == r ) {
-            _data_free(vmem, (union virt_memory_data *)p);
+            vmem->allocator.free(vmem, (void *)p);
             goto error_page;
         }
         p->physical = (uintptr_t)r;
@@ -839,7 +795,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         ret = vmem->mem->map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
                              p, 0);
         if ( ret < 0 ) {
-            _data_free(vmem, (union virt_memory_data *)p);
+            vmem->allocator.free(vmem, (void *)p);
             phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
                           p->zone, p->numadomain);
             goto error_page;
@@ -860,8 +816,8 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
     kassert( f != NULL );
     if ( f->start == e->start && f->size == e->size  ) {
         /* Remove the entire entry */
-        _data_free(vmem, (union virt_memory_data *)f0);
-        _data_free(vmem, (union virt_memory_data *)f1);
+        vmem->allocator.free(vmem, (void *)f0);
+        vmem->allocator.free(vmem, (void *)f1);
     } else if ( f->start == e->start ) {
         /* The start address is same, then add the rest to the free entry */
         f0->start = f->start + e->size;
@@ -878,7 +834,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         if ( ret < 0 ) {
             goto error_post;
         }
-        _data_free(vmem, (union virt_memory_data *)f1);
+        vmem->allocator.free(vmem, (void *)f1);
     } else {
         f0->start = f->start;
         f0->size = e->start + e->size - f->start;
@@ -893,7 +849,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
             goto error_free;
         }
     }
-    _data_free(vmem, (union virt_memory_data *)f);
+    vmem->allocator.free(vmem, (void *)f);
 
     return (void *)e->start;
 
@@ -912,16 +868,16 @@ error_page:
         phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order, p->zone,
                       p->numadomain);
         virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
-        _data_free(vmem, (union virt_memory_data *)p);
+        vmem->allocator.free(vmem, (void *)p);
         p = p->next;
     }
-    _data_free(vmem, (union virt_memory_data *)f1);
+    vmem->allocator.free(vmem, (void *)f1);
 error_f1:
-    _data_free(vmem, (union virt_memory_data *)f0);
+    vmem->allocator.free(vmem, (void *)f0);
 error_f0:
-    _data_free(vmem, (union virt_memory_data *)e->object);
+    vmem->allocator.free(vmem, (void *)e->object);
 error_obj:
-    _data_free(vmem, (union virt_memory_data *)e);
+    vmem->allocator.free(vmem, (void *)e);
 error_entry:
     return NULL;
 }
@@ -979,7 +935,7 @@ _pages_free(virt_memory_t *vmem, page_t *p)
                       p->numadomain);
 
         /* Free this page */
-        _data_free(vmem, (union virt_memory_data *)p);
+        vmem->allocator.free(vmem, (void *)p);
 
         p = p->next;
     }
@@ -1023,7 +979,7 @@ _entry_free(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
         } else {
             f->size = f->size + e->size;
         }
-        _data_free(vmem, (union virt_memory_data*)e);
+        vmem->allocator.free(vmem, (void *)e);
 
         /* Rebalance the size-based tree */
         ret = _free_add(b, f);
@@ -1071,7 +1027,7 @@ memory_free_pages(memory_t *mem, void *ptr)
     /* Free the corersponding pages */
     _pages_free(&mem->kmem, page);
     /* Free the object */
-    _data_free(&mem->kmem, (union virt_memory_data *)e->object);
+    mem->kmem.allocator.free(&mem->kmem, (void *)e->object);
     /* Retuurn to the free entry */
     r = _entry_delete(&b->entries, e);
     kassert( r == e );
@@ -1092,7 +1048,6 @@ virt_memory_init(memory_t *mem, virt_memory_allocator_t *alloca)
     }
     vm->mem = mem;
     vm->blocks = NULL;
-    vm->lists = NULL;
     vm->arch = mem->fork(mem->kmem.arch);
 
     /* Setup allocator */
@@ -1160,7 +1115,7 @@ virt_memory_free_pages(virt_memory_t *vmem, void *ptr)
     /* Free the corersponding pages */
     _pages_free(vmem, page);
     /* Free the object */
-    _data_free(vmem, (union virt_memory_data *)e->object);
+    vmem->allocator.free(vmem, (void *)e->object);
     /* Retuurn to the free entry */
     r = _entry_delete(&b->entries, e);
     kassert( r == e );
@@ -1178,7 +1133,7 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     int ret;
 
     /* Allocate data and initialize the block */
-    n = (virt_memory_block_t *)_data_alloc(vmem);
+    n = (virt_memory_block_t *)vmem->allocator.alloc(vmem);
     if ( NULL == n ) {
         return -1;
     }
@@ -1190,9 +1145,9 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     n->frees.stree = NULL;
 
     /* Add a free entry aligned to the block and the page size */
-    fr = (virt_memory_free_t *)_data_alloc(vmem);
+    fr = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
     if ( NULL == fr ) {
-        _data_free(vmem, (union virt_memory_data *)n);
+        vmem->allocator.free(vmem, (void *)n);
         return -1;
     }
     fr->start = (start + MEMORY_PAGESIZE - 1)
@@ -1204,8 +1159,8 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     /* Insert the block to the sorted list */
     ret = _block_insert(vmem, n);
     if ( ret < 0 ) {
-        _data_free(vmem, (union virt_memory_data *)fr);
-        _data_free(vmem, (union virt_memory_data *)n);
+        vmem->allocator.free(vmem, (void *)fr);
+        vmem->allocator.free(vmem, (void *)n);
         return -1;
     }
 
@@ -1225,7 +1180,7 @@ _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
     uintptr_t addr;
     virt_memory_object_t *obj;
 
-    n = (virt_memory_entry_t *)_data_alloc(dst);
+    n = (virt_memory_entry_t *)dst->allocator.alloc(dst);
     if ( NULL == n ) {
         return -1;
     }
@@ -1241,14 +1196,14 @@ _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
     ret = _entry_add(&b->entries, n);
     if ( ret < 0 ) {
         /* Failed to add the entry */
-        _data_free(dst, (union virt_memory_data *)n);
+        dst->allocator.free(dst, (void *)n);
         return -1;
     }
 
     /* Shadow object for the source entry */
-    obj = (virt_memory_object_t *)_data_alloc(src);
+    obj = (virt_memory_object_t *)src->allocator.alloc(src);
     if ( NULL == obj ) {
-        _data_free(dst, (union virt_memory_data *)n);
+        dst->allocator.free(dst, (void *)n);
         return -1;
     }
     obj->type = MEMORY_SHADOW;
@@ -1258,10 +1213,10 @@ _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
     obj->u.shadow.object = e->object;
 
     /* Shadow object for the destination entry */
-    n->object = (virt_memory_object_t *)_data_alloc(dst);
+    n->object = (virt_memory_object_t *)dst->allocator.alloc(dst);
     if ( NULL == n->object ) {
-        _data_free(src, (union virt_memory_data *)obj);
-        _data_free(dst, (union virt_memory_data *)n);
+        src->allocator.free(src, (void *)obj);
+        dst->allocator.free(dst, (void *)n);
         return -1;
     }
     n->object->type = MEMORY_SHADOW;
@@ -1303,7 +1258,7 @@ _entry_free_all(virt_memory_t *vmem, virt_memory_entry_t *e)
     if ( NULL != e->atree.right ) {
         _entry_free_all(vmem, e->atree.right);
     }
-    _data_free(vmem, (union virt_memory_data *)e);
+    vmem->allocator.free(vmem, (void *)e);
 }
 
 /*
@@ -1316,7 +1271,7 @@ _block_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *sb)
     virt_memory_block_t *n;
 
     /* Allocate data and initialize the block */
-    n = (virt_memory_block_t *)_data_alloc(dst);
+    n = (virt_memory_block_t *)dst->allocator.alloc(dst);
     if ( NULL == n ) {
         return -1;
     }
@@ -1332,7 +1287,7 @@ _block_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *sb)
     if ( ret < 0 ) {
         /* Free all entries */
         _entry_free_all(dst, n->entries);
-        _data_free(dst, (union virt_memory_data *)n);
+        dst->allocator.free(dst, (void *)n);
         return -1;
     }
 

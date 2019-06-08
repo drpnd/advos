@@ -225,7 +225,6 @@ typedef union virt_memory_data {
     virt_memory_entry_t entry;
     virt_memory_free_t free;
     virt_memory_block_t block;
-    union virt_memory_data *next;
 } virt_memory_data_t;
 
 typedef struct memory memory_t;
@@ -267,10 +266,7 @@ struct virt_memory {
     /* List of blocks */
     virt_memory_block_t *blocks;
 
-    /* List of memory management data structure */
-    union virt_memory_data *lists;
-
-    /* ToDo: Allocator */
+    /* Allocator for this virtual memory manager */
     virt_memory_allocator_t allocator;
 
     /* Architecture-specific data structure */

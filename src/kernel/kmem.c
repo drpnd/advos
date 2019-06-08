@@ -40,7 +40,7 @@ kmem_data_alloc(virt_memory_t *vmem)
 {
     union kmem_data *data;
 
-    if ( NULL == vmem->lists ) {
+    if ( NULL == vmem->allocator.spec ) {
         return NULL;
     }
     data = (union kmem_data *)vmem->allocator.spec;
@@ -69,9 +69,8 @@ kmem_data_free(virt_memory_t *vmem, void *data)
  * Initialize kernel memory
  */
 int
-kmem_init(phys_memory_t *phys, uintptr_t p2v)
+kmem_init(virt_memory_t *kmem, phys_memory_t *phys, uintptr_t p2v)
 {
-    virt_memory_allocator_t allocator;
     union kmem_data *data;
     size_t nr;
     size_t i;
@@ -88,9 +87,10 @@ kmem_init(phys_memory_t *phys, uintptr_t p2v)
         data[i - 1].next = &data[i];
     }
     data[nr - 1].next = NULL;
-    allocator.spec = data;
-    allocator.alloc = kmem_data_alloc;
-    allocator.free = kmem_data_free;
+
+    kmem->allocator.spec = data;
+    kmem->allocator.alloc = kmem_data_alloc;
+    kmem->allocator.free = kmem_data_free;
 
     return 0;
 }
