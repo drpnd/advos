@@ -71,7 +71,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     }
     data[nr - 1].next = NULL;
 #if 0
-    allocator.allocator = data;
+    allocator.spec = data;
     allocator.alloc = _data_alloc;
     allocator.free = _data_free;
 #endif
@@ -1096,7 +1096,7 @@ virt_memory_init(memory_t *mem, virt_memory_allocator_t *alloca)
     vm->arch = mem->fork(mem->kmem.arch);
 
     /* Setup allocator */
-    vm->allocator.allocator = alloca->allocator;
+    vm->allocator.spec = alloca->spec;
     vm->allocator.alloc = alloca->alloc;
     vm->allocator.free = alloca->free;
 

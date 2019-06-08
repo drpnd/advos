@@ -29,37 +29,40 @@ union kmem_data {
     union kmem_data *next;
 };
 
-virt_memory_data_t * kmem_data_alloc(virt_memory_t *);
-void kmem_data_free(virt_memory_t *, virt_memory_data_t *);
+void * kmem_data_alloc(virt_memory_t *);
+void kmem_data_free(virt_memory_t *, void *);
 
 /*
  * Allocate virtual memory data
  */
-union virt_memory_data *
+void *
 kmem_data_alloc(virt_memory_t *vmem)
 {
-    union virt_memory_data *data;
+    union kmem_data *data;
 
     if ( NULL == vmem->lists ) {
         return NULL;
     }
-    data = vmem->lists;
-    vmem->lists = data->next;
+    data = (union kmem_data *)vmem->allocator.spec;
+    vmem->allocator.spec = data->next;
 
     /* Zeros */
-    kmemset(data, 0, sizeof(union virt_memory_data));
+    kmemset(data, 0, sizeof(virt_memory_data_t));
 
-    return data;
+    return (void *)data;
 }
 
 /*
  * Free virtual memory data
  */
 void
-kmem_data_free(virt_memory_t *vmem, union virt_memory_data *data)
+kmem_data_free(virt_memory_t *vmem, void *data)
 {
-    data->next = vmem->lists;
-    vmem->lists = data;
+    union kmem_data *kdata;
+
+    kdata = (union kmem_data *)data;
+    kdata->next = (union kmem_data *)vmem->allocator.spec;
+    vmem->allocator.spec = kdata;
 }
 
 /*
@@ -85,7 +88,7 @@ kmem_init(phys_memory_t *phys, uintptr_t p2v)
         data[i - 1].next = &data[i];
     }
     data[nr - 1].next = NULL;
-    allocator.allocator = data;
+    allocator.spec = data;
     allocator.alloc = kmem_data_alloc;
     allocator.free = kmem_data_free;
 

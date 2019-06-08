@@ -235,9 +235,9 @@ typedef struct virt_memory virt_memory_t;
  * Allocator
  */
 typedef struct {
-    void *allocator;
-    virt_memory_data_t * (*alloc)(virt_memory_t *);
-    void (*free)(virt_memory_t *, virt_memory_data_t *);
+    void *spec;
+    void * (*alloc)(virt_memory_t *);
+    void (*free)(virt_memory_t *, void *);
 } virt_memory_allocator_t;
 
 /*
