@@ -351,7 +351,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     if ( ret < 0 ) {
         panic("Failed to initialize the memory manager.");
     }
-    ret = memory_block_add(&kvar->mm, 0xc0000000ULL, 0xffffffffULL);
+    ret = virt_memory_block_add(&kvar->mm.kmem, 0xc0000000ULL, 0xffffffffULL);
     if ( ret < 0 ) {
         panic("Failed to add kernel memory block.");
     }
@@ -368,9 +368,9 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     }
 
     /* Linear mapping */
-    ret = memory_block_add(&kvar->mm, (uintptr_t)KERNEL_LMAP,
-                           (uintptr_t)KERNEL_LMAP
-                           + npg * MEMORY_SUPERPAGESIZE - 1);
+    ret = virt_memory_block_add(&kvar->mm.kmem, (uintptr_t)KERNEL_LMAP,
+                                (uintptr_t)KERNEL_LMAP
+                                + npg * MEMORY_SUPERPAGESIZE - 1);
     if ( ret < 0 ) {
         panic("Failed to add linear mapping memory block.");
     }
