@@ -1172,8 +1172,6 @@ _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
 {
     virt_memory_entry_t *n;
     int ret;
-    page_t *p;
-    uintptr_t addr;
     virt_memory_object_t *obj;
 
     n = (virt_memory_entry_t *)dst->allocator.alloc(dst);
