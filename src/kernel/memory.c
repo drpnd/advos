@@ -46,10 +46,6 @@ int
 memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
             memory_arch_interfaces_t *ifs)
 {
-    virt_memory_allocator_t allocator;
-    union virt_memory_data *data;
-    size_t nr;
-    size_t i;
     int ret;
 
     /* Initialize the kernel memory */
