@@ -96,51 +96,6 @@ _block_insert(virt_memory_t *vmem, virt_memory_block_t *n)
 }
 
 /*
- * Add a new memory block
- */
-int
-memory_block_add(memory_t *mem, uintptr_t start, uintptr_t end)
-{
-    virt_memory_free_t *fr;
-    virt_memory_block_t *n;
-    int ret;
-
-    /* Allocate data and initialize the block */
-    n = (virt_memory_block_t *)mem->kmem.allocator.alloc(&mem->kmem);
-    if ( NULL == n ) {
-        return -1;
-    }
-    n->start = start;
-    n->end = end;
-    n->next = NULL;
-    n->entries = NULL;
-    n->frees.atree = NULL;
-    n->frees.stree = NULL;
-
-    /* Add a free entry aligned to the block and the page size */
-    fr = (virt_memory_free_t *)mem->kmem.allocator.alloc(&mem->kmem);
-    if ( NULL == fr ) {
-        mem->kmem.allocator.free(&mem->kmem, (void *)n);
-        return -1;
-    }
-    fr->start = (start + MEMORY_PAGESIZE - 1)
-        & ~(uintptr_t)(MEMORY_PAGESIZE - 1);
-    fr->size = ((end + 1) & ~(uintptr_t)(MEMORY_PAGESIZE - 1)) - fr->start;
-    n->frees.atree = fr;
-    n->frees.stree = fr;
-
-    /* Insert the block to the sorted list */
-    ret = _block_insert(&mem->kmem, n);
-    if ( ret < 0 ) {
-        mem->kmem.allocator.free(&mem->kmem, (void *)fr);
-        mem->kmem.allocator.free(&mem->kmem, (void *)n);
-        return -1;
-    }
-
-    return 0;
-}
-
-/*
  * Find a memory block including the specified address
  */
 static virt_memory_block_t *
