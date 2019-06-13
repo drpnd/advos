@@ -357,12 +357,12 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     }
 
     /* Map the first 2 MiB */
-    ret = memory_wire(&kvar->mm, 0xc0000000ULL, 512, 0x00000000ULL);
+    ret = virt_memory_wire(&kvar->mm.kmem, 0xc0000000ULL, 512, 0x00000000ULL);
     if ( ret < 0 ) {
         panic("Failed to wire kernel memory (lower).");
     }
     /* Map the APIC region */
-    ret = memory_wire(&kvar->mm, 0xfec00000ULL, 5120, 0xfec00000ULL);
+    ret = virt_memory_wire(&kvar->mm.kmem, 0xfec00000ULL, 5120, 0xfec00000ULL);
     if ( ret < 0 ) {
         panic("Failed to wire kernel memory (upper).");
     }
@@ -374,10 +374,10 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     if ( ret < 0 ) {
         panic("Failed to add linear mapping memory block.");
     }
-    ret = memory_wire(&kvar->mm, (uintptr_t)KERNEL_LMAP,
-                      npg << (MEMORY_SUPERPAGESIZE_SHIFT
-                              - MEMORY_PAGESIZE_SHIFT),
-                      0x00000000ULL);
+    ret = virt_memory_wire(&kvar->mm.kmem, (uintptr_t)KERNEL_LMAP,
+                           npg << (MEMORY_SUPERPAGESIZE_SHIFT
+                                   - MEMORY_PAGESIZE_SHIFT),
+                           0x00000000ULL);
     if ( ret < 0 ) {
         panic("Failed to wire linear mapping region.");
     }
