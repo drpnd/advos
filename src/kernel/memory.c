@@ -37,7 +37,6 @@ static virt_memory_free_t *
 _search_fit_size(virt_memory_block_t *, virt_memory_free_t *, size_t);
 static void *
 _alloc_pages_block(virt_memory_t *, virt_memory_block_t *, size_t, int, int);
-int kmem_init(virt_memory_t *, phys_memory_t *, uintptr_t);
 
 /*
  * Initialize virtual memory
