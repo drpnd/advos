@@ -376,8 +376,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
         panic("Failed to add linear mapping memory block.");
     }
     ret = virt_memory_wire(&kvar->mm.kmem, (uintptr_t)KERNEL_LMAP,
-                           npg << (30 - MEMORY_PAGESIZE_SHIFT),
-                           0x00000000ULL);
+                           npg << (30 - MEMORY_PAGESIZE_SHIFT), 0x00000000ULL);
     if ( ret < 0 ) {
         panic("Failed to wire linear mapping region.");
     }
