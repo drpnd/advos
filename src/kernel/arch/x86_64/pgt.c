@@ -579,7 +579,7 @@ pgt_unmap(pgt_t *pgt, uintptr_t virtual, int superpage)
  * Reference the virtual address to the specified physical address
  */
 int
-pgt_ref(pgt_t *pgt, pgt_t *tgt, uintptr_t virtual)
+pgt_refer(pgt_t *pgt, pgt_t *tgt, uintptr_t virtual)
 {
     uintptr_t p;
     uintptr_t sp;
