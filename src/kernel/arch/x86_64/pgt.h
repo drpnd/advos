@@ -54,6 +54,7 @@ void pgt_push(pgt_t *, pgt_entry_t *);
 void * pgt_v2p(pgt_t *, uintptr_t);
 int pgt_map(pgt_t *, uintptr_t, uintptr_t, int, int, int, int);
 int pgt_unmap(pgt_t *, uintptr_t, int);
+int pgt_refer(pgt_t *, pgt_t *, uintptr_t);
 void pgt_set_cr3(pgt_t *);
 
 #endif
