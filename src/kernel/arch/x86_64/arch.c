@@ -329,8 +329,8 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
             maxaddr = addr;
         }
     }
-    /* # of superpages */
-    npg = ((maxaddr + 0x1fffff) >> 21);
+    /* # of PDPT */
+    npg = ((maxaddr + 0x3fffffff) >> 30);
 
     /* Allocate 512 pages for page tables */
     pages = phys_mem_buddy_alloc(kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
@@ -371,13 +371,12 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     /* Linear mapping */
     ret = virt_memory_block_add(&kvar->mm.kmem, (uintptr_t)KERNEL_LMAP,
                                 (uintptr_t)KERNEL_LMAP
-                                + npg * MEMORY_SUPERPAGESIZE - 1);
+                                + npg * 0x40000000 - 1);
     if ( ret < 0 ) {
         panic("Failed to add linear mapping memory block.");
     }
     ret = virt_memory_wire(&kvar->mm.kmem, (uintptr_t)KERNEL_LMAP,
-                           npg << (MEMORY_SUPERPAGESIZE_SHIFT
-                                   - MEMORY_PAGESIZE_SHIFT),
+                           npg << (30 - MEMORY_PAGESIZE_SHIFT),
                            0x00000000ULL);
     if ( ret < 0 ) {
         panic("Failed to wire linear mapping region.");
@@ -598,7 +597,6 @@ arch_memory_refer(void *arch, void *tgtarch, uintptr_t virtual, size_t size)
     if ( size & ((1ULL << 30) - 1) ) {
         return -1;
     }
-
 
     for ( i = 0; i < (int)(size >> 30); i++ ) {
         ret = pgt_refer(pgt, tgt, virtual);
