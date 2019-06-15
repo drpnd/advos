@@ -346,6 +346,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     /* Initialize the virtual memory management */
     ifs.map = arch_memory_map;
     ifs.unmap = arch_memory_unmap;
+    ifs.refer = arch_memory_refer;
     ifs.fork = NULL;
     ifs.ctxsw = arch_memory_ctxsw;
     ret = memory_init(&kvar->mm, &kvar->phys, pgt, KERNEL_LMAP, &ifs);

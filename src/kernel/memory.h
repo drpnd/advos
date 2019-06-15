@@ -249,6 +249,9 @@ typedef struct {
     /* Unmap a page from the page table */
     int (*unmap)(void *, uintptr_t, page_t *);
 
+    /* Refer pages from the page table */
+    int (*refer)(void *, void *, uintptr_t, size_t);
+
     /* Fork */
     void * (*fork)(void *);
 
