@@ -576,6 +576,75 @@ pgt_unmap(pgt_t *pgt, uintptr_t virtual, int superpage)
 }
 
 /*
+ * Reference the virtual address to the specified physical address
+ */
+int
+pgt_ref(pgt_t *pgt, pgt_t *tgt, uintptr_t virtual)
+{
+    uintptr_t p;
+    uintptr_t sp;
+    union pgt_pml4_entry *pml4;
+    union pgt_pdpt_entry *pdpt;
+    union pgt_pd_entry *pd;
+    int idx;
+
+    /* Align to 1 GiB */
+    virtual = virtual & ~((1ULL << 30) - 1);
+
+    /* Look up the original page table */
+    p = MASK_PAGE(tgt->cr3);
+    idx = (virtual >> 39) & 0x1ff;
+    pml4 = (void *)_p2v(tgt, p);
+    if ( !pml4[idx].ptr.present ) {
+        /* Not present */
+        return -1;
+    }
+    p = MASK_PAGE(pml4[idx].v);
+    pdpt = (void *)_p2v(tgt, p);
+
+    /* PDPT */
+    idx = (virtual >> 30) & 0x1ff;
+    if ( pdpt[idx].ptr.present ) {
+        /* Not present */
+        return -1;
+    }
+    sp = MASK_PAGE(pdpt[idx].v);
+
+    /* PML4 */
+    p = MASK_PAGE(pgt->cr3);
+    idx = (virtual >> 39) & 0x1ff;
+    pml4 = (void *)_p2v(pgt, p);
+    if ( !pml4[idx].ptr.present ) {
+        /* Not present, then add a page here */
+        pdpt = pgt_pop(pgt);
+        if ( NULL == pdpt ) {
+            return -1;
+        }
+        kmemset(pdpt, 0, 4096);
+        pml4[idx].ptr.present = 1;
+        pml4[idx].ptr.rw = 1;
+        pml4[idx].ptr.us = 1;
+        pml4[idx].v |= _v2p(pgt, (uint64_t)pdpt);
+    } else {
+        p = MASK_PAGE(pml4[idx].v);
+        pdpt = (void *)_p2v(pgt, p);
+    }
+
+    /* PDPT */
+    idx = (virtual >> 30) & 0x1ff;
+    if ( pdpt[idx].ptr.present ) {
+        /* Already mapped */
+        return -1;
+    }
+    pdpt[idx].ptr.present = 1;
+    pdpt[idx].ptr.rw = 1;
+    pdpt[idx].ptr.us = 1;
+    pdpt[idx].v |= sp;
+
+    return 0;
+}
+
+/*
  * Invalidate page table
  */
 void
