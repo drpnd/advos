@@ -585,7 +585,6 @@ pgt_ref(pgt_t *pgt, pgt_t *tgt, uintptr_t virtual)
     uintptr_t sp;
     union pgt_pml4_entry *pml4;
     union pgt_pdpt_entry *pdpt;
-    union pgt_pd_entry *pd;
     int idx;
 
     /* Align to 1 GiB */
