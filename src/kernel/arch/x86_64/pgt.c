@@ -552,6 +552,7 @@ pgt_unmap(pgt_t *pgt, uintptr_t virtual, int superpage)
         pd[idx].v = 0;
     }
 
+#if 0 /* DO NOT RELEASE PDPT/PD entries */
     /* Check all entries of PD */
     for ( i = 0; i < 512; i++ ) {
         if ( pd[i].ptr.present ) {
@@ -562,7 +563,6 @@ pgt_unmap(pgt_t *pgt, uintptr_t virtual, int superpage)
     idx = (virtual >> 30) & 0x1ff;
     pdpt[idx].v = 0;
 
-#if 0 /* DO NOT RELEASE PDPT entries */
     /* Check all entries of PDPT */
     for ( i = 0; i < 512; i++ ) {
         if ( pdpt[i].ptr.present ) {
@@ -576,6 +576,7 @@ pgt_unmap(pgt_t *pgt, uintptr_t virtual, int superpage)
 
     return 0;
 }
+
 /*
  * Reference the virtual address to the specified physical address
  */
@@ -585,6 +586,7 @@ pgt_prepare(pgt_t *pgt, uintptr_t virtual)
     uintptr_t p;
     union pgt_pml4_entry *pml4;
     union pgt_pdpt_entry *pdpt;
+    union pgt_pd_entry *pd;
     int idx;
 
     /* Align */
@@ -605,6 +607,24 @@ pgt_prepare(pgt_t *pgt, uintptr_t virtual)
         pml4[idx].ptr.rw = 1;
         pml4[idx].ptr.us = 1;
         pml4[idx].v |= _v2p(pgt, (uint64_t)pdpt);
+    } else {
+        p = MASK_PAGE(pml4[idx].v);
+        pdpt = (void *)_p2v(pgt, p);
+    }
+
+    /* PDPT */
+    idx = (virtual >> 30) & 0x1ff;
+    if ( !pdpt[idx].ptr.present ) {
+        /* Not present, then add a page here */
+        pd = pgt_pop(pgt);
+        if ( NULL == pd ) {
+            return -1;
+        }
+        kmemset(pd, 0, 4096);
+        pdpt[idx].ptr.present = 1;
+        pdpt[idx].ptr.rw = 1;
+        pdpt[idx].ptr.us = 1;
+        pdpt[idx].v |= _v2p(pgt, (uint64_t)pd);
     }
 
     return 0;
