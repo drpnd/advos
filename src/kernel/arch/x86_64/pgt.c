@@ -234,40 +234,6 @@ pgt_init(pgt_t *pgt, void *buf, size_t nr, uintptr_t p2v)
 }
 
 /*
- * Initialize the process page table
- */
-void
-pgt_process_init(pgt_t *kpgt, pgt_t *upgt, void *pml4, size_t nr, uintptr_t p2v)
-{
-    union pgt_pml4_entry *kpml4;
-    union pgt_pml4_entry *upml4;
-    union pgt_pdpt_entry *kpdpt;
-    union pgt_pdpt_entry *updpt;
-
-    kassert( nr >= 3 );
-
-    upgt->p2v = p2v;
-    upgt->free = NULL;
-    kmemset(pml4, 0, 8192);
-    upgt->cr3 = _v2p(upgt, (uintptr_t)pml4);
-
-    /* Kernel PDPT */
-    kpml4 = (union pgt_pml4_entry *)_p2v(kpgt, MASK_PAGE(kpgt->cr3));
-    kpdpt = (union pgt_pdpt_entry *)_p2v(kpgt, kpml4[0].v);
-
-    /* User PDPT */
-    updpt = (union pgt_pdpt_entry *)(pml4 + 4096);
-    upml4 = (union pgt_pml4_entry *)pml4;
-    upml4[0].ptr.present = 1;
-    upml4[0].ptr.rw = 1;
-    upml4[0].ptr.us = 1;
-    upml4[0].v |= _v2p(upgt, (uint64_t)updpt);
-
-    /* Point to the shared kernel region (3-4 GiiB region) */
-    updpt[3].v = kpdpt[3].v;
-}
-
-/*
  * Resolve the physical address from a virtual address
  */
 void *

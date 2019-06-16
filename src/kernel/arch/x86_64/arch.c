@@ -647,36 +647,6 @@ arch_memory_ctxsw(void *arch)
 }
 
 /*
- * Clone the architecture-specific page management data structure
- */
-void *
-arch_memory_fork(void *arch)
-{
-    pgt_t *pgt;
-    pgt_t *orig;
-    void *pages;
-
-    orig = (pgt_t *)arch;
-    pgt = kmalloc(sizeof(pgt_t));
-    if ( NULL == pgt ) {
-        return NULL;
-    }
-    pages = phys_mem_buddy_alloc(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
-                                 9);
-    if ( NULL == pages ) {
-        kfree(pgt);
-        return NULL;
-    }
-
-    /* Initialize the kernel page table */
-    pgt_process_init(orig, pgt, pages, 1 << 9, KERNEL_LMAP);
-
-    /* ToDo: Implement the fork (e.g., copy-on-write) mechnism */
-
-    return pgt;
-}
-
-/*
  * Local APIC timer handler
  */
 struct arch_task *taska;
