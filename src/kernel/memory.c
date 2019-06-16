@@ -522,7 +522,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
 
         /* Map */
         ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
-                             p, 0);
+                                 p, 0);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
             phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
