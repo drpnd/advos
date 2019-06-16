@@ -61,6 +61,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     mem->kmem.arch = arch;
     mem->ifs.map = ifs->map;
     mem->ifs.unmap = ifs->unmap;
+    mem->ifs.refer = ifs->refer;
     mem->ifs.fork = ifs->fork;
     mem->ifs.ctxsw = ifs->ctxsw;
 
