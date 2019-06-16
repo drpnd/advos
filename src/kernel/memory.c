@@ -62,7 +62,6 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     mem->ifs.map = ifs->map;
     mem->ifs.unmap = ifs->unmap;
     mem->ifs.refer = ifs->refer;
-    mem->ifs.fork = ifs->fork;
     mem->ifs.ctxsw = ifs->ctxsw;
 
     return 0;
@@ -815,7 +814,6 @@ virt_memory_init(memory_t *mem, virt_memory_allocator_t *alloca)
     }
     vm->mem = mem;
     vm->blocks = NULL;
-    vm->arch = mem->ifs.fork(mem->kmem.arch);
 
     /* Setup allocator */
     vm->allocator.spec = alloca->spec;

@@ -43,6 +43,7 @@ void trampoline_end(void);
 /* Prototype declarations */
 int arch_memory_map(void *, uintptr_t, page_t *, int);
 int arch_memory_unmap(void *, uintptr_t, page_t *);
+int arch_memory_prepare(void *, uintptr_t, size_t);
 int arch_memory_refer(void *, void *, uintptr_t, size_t);
 int arch_memory_ctxsw(void *);
 void * arch_memory_fork(void *);
@@ -346,8 +347,8 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     /* Initialize the virtual memory management */
     ifs.map = arch_memory_map;
     ifs.unmap = arch_memory_unmap;
+    ifs.prepare = arch_memory_prepare;
     ifs.refer = arch_memory_refer;
-    ifs.fork = NULL;
     ifs.ctxsw = arch_memory_ctxsw;
     ret = memory_init(&kvar->mm, &kvar->phys, pgt, KERNEL_LMAP, &ifs);
     if ( ret < 0 ) {
@@ -574,6 +575,32 @@ arch_memory_unmap(void *arch, uintptr_t virtual, page_t *page)
 
     for ( i = 0; i < (1LL << nr); i++ ) {
         pgt_unmap(pgt, virtual + pagesize * i, superpage);
+    }
+
+    return 0;
+}
+
+/*
+ * Prepare memory block (page table directory table)
+ */
+int
+arch_memory_prepare(void *arch, uintptr_t virtual, size_t size)
+{
+    pgt_t *pgt;
+    int ret;
+    int i;
+
+    pgt = (pgt_t *)arch;
+
+    /* Only available for 1 GiB mapping  */
+    if ( size & ((1ULL << 30) - 1) ) {
+        return -1;
+    }
+    for ( i = 0; i < (int)(size >> 30); i++ ) {
+        ret = pgt_prepare(pgt, virtual);
+        if ( ret < 0 ) {
+            return -1;
+        }
     }
 
     return 0;
