@@ -61,6 +61,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     mem->kmem.arch = arch;
     mem->ifs.map = ifs->map;
     mem->ifs.unmap = ifs->unmap;
+    mem->ifs.prepare = ifs->prepare;
     mem->ifs.refer = ifs->refer;
     mem->ifs.ctxsw = ifs->ctxsw;
 
@@ -920,6 +921,14 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     fr->size = ((end + 1) & ~(uintptr_t)(MEMORY_PAGESIZE - 1)) - fr->start;
     n->frees.atree = fr;
     n->frees.stree = fr;
+
+    /* Prepare the page table */
+    ret = vmem->mem->ifs.prepare(vmem->arch, n->start, n->end - n->start + 1);
+    if ( ret < 0 ) {
+        vmem->allocator.free(vmem, (void *)fr);
+        vmem->allocator.free(vmem, (void *)n);
+        return -1;
+    }
 
     /* Insert the block to the sorted list */
     ret = _block_insert(vmem, n);
