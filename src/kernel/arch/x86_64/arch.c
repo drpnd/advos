@@ -1112,10 +1112,13 @@ _prepare_idle_task(int lapic_id)
     }
     idle->kstack = kmalloc(4096);
     if ( NULL == idle->kstack ) {
+        kfree(idle);
         return -1;
     }
     idle->ustack = kmalloc(4096);
     if ( NULL == idle->ustack ) {
+        kfree(idle->kstack);
+        kfree(idle);
         return -1;
     }
     idle->rp = idle->kstack + 4096 - 16 - sizeof(struct stackframe64);
