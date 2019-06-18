@@ -372,8 +372,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
 
     /* Linear mapping */
     ret = virt_memory_block_add(&kvar->mm.kmem, (uintptr_t)KERNEL_LMAP,
-                                (uintptr_t)KERNEL_LMAP
-                                + npg * 0x40000000 - 1);
+                                (uintptr_t)KERNEL_LMAP + npg * 0x40000000 - 1);
     if ( ret < 0 ) {
         panic("Failed to add linear mapping memory block.");
     }
