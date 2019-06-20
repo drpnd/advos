@@ -69,6 +69,50 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
 }
 
 /*
+ * Compare the start addrsss
+ */
+int
+virt_memory_comp_addr(void *a, void *b)
+{
+    virt_memory_free_t *va;
+    virt_memory_free_t *vb;
+
+    /* Cast */
+    va = (virt_memory_free_t *)a;
+    vb = (virt_memory_free_t *)b;
+
+    if ( va->start == vb->start ) {
+        return 0;
+    } else if ( va->start > vb->start ) {
+        return 1;
+    } else {
+        return -1;
+    }
+}
+
+/*
+ * Compare the size
+ */
+int
+virt_memory_comp_size(void *a, void *b)
+{
+    virt_memory_free_t *va;
+    virt_memory_free_t *vb;
+
+    /* Cast */
+    va = (virt_memory_free_t *)a;
+    vb = (virt_memory_free_t *)b;
+
+    if ( va->size == vb->size ) {
+        return 0;
+    } else if ( va->size > vb->size ) {
+        return 1;
+    } else {
+        return -1;
+    }
+}
+
+/*
  * Insert a memory block to the specified virtual memory
  */
 static int
@@ -299,7 +343,7 @@ static int
 _free_add(virt_memory_block_t *b, virt_memory_free_t *n)
 {
     int ret;
-    virt_memory_free_t *p;
+    void *p;
 
     ret = _free_atree_add(&b->frees.atree, n);
     if ( ret < 0 ) {

@@ -25,6 +25,7 @@
 #define _ADVOS_KERNEL_MEMORY_H
 
 #include <stdint.h>
+#include "tree.h"
 
 #define MEMORY_ZONE_UNKNOWN             -1
 #define MEMORY_ZONE_DMA                 0
@@ -170,6 +171,7 @@ struct virt_memory_entry {
         virt_memory_entry_t *left;
         virt_memory_entry_t *right;
     } atree;
+    btree_node_t atree2;
 };
 
 /*
@@ -187,11 +189,13 @@ struct virt_memory_free {
         virt_memory_free_t *left;
         virt_memory_free_t *right;
     } atree;
+    btree_node_t atree2;
     /* Binary tree for size ordering */
     struct {
         virt_memory_free_t *left;
         virt_memory_free_t *right;
     } stree;
+    btree_node_t stree2;
 };
 
 /*
@@ -213,6 +217,8 @@ struct virt_memory_block {
     struct {
         virt_memory_free_t *atree;
         virt_memory_free_t *stree;
+        btree_node_t *atree2;
+        btree_node_t *stree2;
     } frees;
 };
 
