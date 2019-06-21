@@ -89,6 +89,24 @@ btree_delete(btree_node_t **t, btree_node_t *n, int (*comp)(void *, void *))
 }
 
 /*
+ * Search
+ */
+btree_node_t *
+btree_search(btree_node_t *n, int (*comp)(void *))
+{
+    int ret;
+
+    ret = comp(n);
+    if ( 0 == ret ) {
+        return n->data;
+    } else if ( ret > 0 ) {
+        return btree_search(n->right, comp);
+    } else {
+        return btree_search(n->left, comp);
+    }
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4

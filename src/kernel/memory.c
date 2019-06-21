@@ -345,12 +345,18 @@ _free_add(virt_memory_block_t *b, virt_memory_free_t *n)
     int ret;
     void *p;
 
+    n->atree2.data = n;
+    n->stree2.data = n;
+
+    ret = btree_add(&b->frees.atree2, &n->atree2, virt_memory_comp_addr, 0);
     ret = _free_atree_add(&b->frees.atree, n);
     if ( ret < 0 ) {
         return -1;
     }
+    ret = btree_add(&b->frees.stree2, &n->stree2, virt_memory_comp_size, 1);
     ret = _free_stree_add(&b->frees.stree, n);
     if ( ret < 0 ) {
+        p = btree_delete(&b->frees.atree2, &n->atree2, virt_memory_comp_addr);
         p = _free_atree_delete(&b->frees.atree, n);
         kassert( p != NULL );
         return -1;
