@@ -24,6 +24,11 @@
 #include "memory.h"
 #include "kernel.h"
 
+struct virt_memory_start_end {
+    uintptr_t start;
+    uintptr_t end;
+};
+
 /*
  * Prototype declarations
  */
@@ -109,6 +114,63 @@ virt_memory_comp_size(void *a, void *b)
         return 1;
     } else {
         return -1;
+    }
+}
+
+/*
+ * Search condition for a fitting entry
+ */
+int
+virt_memory_cond_fit(void *a, void *data)
+{
+    virt_memory_free_t *va;
+    uintptr_t addr;
+
+    /* Cast */
+    va = (virt_memory_free_t *)a;
+    addr = (uintptr_t)data;
+
+    if ( addr >= va->start && addr < va->start + va->size ) {
+        /* Found */
+        return 0;
+    }
+
+    if ( addr < va->start ) {
+        /* Search left */
+        return -1;
+    } else {
+        /* Search right */
+        return 1;
+    }
+}
+
+/*
+ * Search condition for a neighboring entry
+ */
+int
+virt_memory_cond_neighbor(void *a, void *data)
+{
+    virt_memory_free_t *va;
+    uintptr_t start;
+    uintptr_t end;
+    struct virt_memory_start_end *se;
+
+    /* Cast */
+    va = (virt_memory_free_t *)a;
+    se = (struct virt_memory_start_end *)data;
+    start = se->start;
+    end = se->end;
+
+    if ( end == va->start || start == va->start + va->size ) {
+        /* Found */
+        return 0;
+    }
+    if ( start < va->start ) {
+        /* Search the left */
+        return -1;
+    } else {
+        /* Search the right */
+        return 1;
     }
 }
 
