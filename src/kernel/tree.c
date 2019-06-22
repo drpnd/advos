@@ -55,7 +55,7 @@ btree_add(btree_node_t **t, btree_node_t *n, int (*comp)(void *, void *),
 /*
  * Remove a node from the binary tree
  */
-void *
+btree_node_t *
 btree_delete(btree_node_t **t, btree_node_t *n, int (*comp)(void *, void *))
 {
     btree_node_t **x;

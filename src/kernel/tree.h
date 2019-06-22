@@ -32,7 +32,8 @@ struct btree_node {
 };
 
 int btree_add(btree_node_t **, btree_node_t *, int (*)(void *, void *), int);
-void * btree_delete(btree_node_t **, btree_node_t *, int (*)(void *, void *));
+btree_node_t *
+btree_delete(btree_node_t **, btree_node_t *, int (*)(void *, void *));
 btree_node_t * btree_search(btree_node_t *, void *, int (*)(void *, void *));
 
 #endif
