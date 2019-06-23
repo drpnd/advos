@@ -276,7 +276,7 @@ _find_block(virt_memory_t *vmem, uintptr_t addr)
  * Find a free entry including to the start
  */
 static virt_memory_free_t *
-_find_free_entry2(virt_memory_block_t *b, uintptr_t addr)
+_find_free_entry(virt_memory_block_t *b, uintptr_t addr)
 {
     btree_node_t *n;
 
@@ -292,8 +292,8 @@ _find_free_entry2(virt_memory_block_t *b, uintptr_t addr)
  * Find a free entry neighboring to the start and the end
  */
 static virt_memory_free_t *
-_find_neighbor_free_entry2(virt_memory_block_t *b, uintptr_t start,
-                           uintptr_t end)
+_find_neighbor_free_entry(virt_memory_block_t *b, uintptr_t start,
+                          uintptr_t end)
 {
     btree_node_t *n;
     struct virt_memory_start_end sn;
@@ -313,7 +313,7 @@ _find_neighbor_free_entry2(virt_memory_block_t *b, uintptr_t start,
  * Add an entry
  */
 static int
-_entry_add2(virt_memory_block_t *b, virt_memory_entry_t *n)
+_entry_add(virt_memory_block_t *b, virt_memory_entry_t *n)
 {
     btree_node_t *bn;
 
@@ -327,7 +327,7 @@ _entry_add2(virt_memory_block_t *b, virt_memory_entry_t *n)
  * Delete an entry
  */
 static virt_memory_entry_t *
-_entry_delete2(virt_memory_block_t *b, virt_memory_entry_t *n)
+_entry_delete(virt_memory_block_t *b, virt_memory_entry_t *n)
 {
     btree_node_t *r;
 
@@ -416,7 +416,7 @@ _free_delete(virt_memory_block_t *b, virt_memory_free_t *n)
  * Search the tree by size
  */
 static virt_memory_free_t *
-_search_fit_size2(virt_memory_block_t *block, size_t sz)
+_search_fit_size(virt_memory_block_t *block, size_t sz)
 {
     struct virt_memory_size r;
 
@@ -459,7 +459,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         size += MEMORY_SUPERPAGESIZE;
         superpage = 1;
     }
-    f = _search_fit_size2(block, size);
+    f = _search_fit_size(block, size);
     if ( NULL == f ) {
         /* No available space */
         return NULL;
@@ -585,7 +585,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
     }
 
     /* Add this entry */
-    ret = _entry_add2(block, e);
+    ret = _entry_add(block, e);
     if ( ret < 0 ) {
         goto error_page;
     }
@@ -635,7 +635,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
 error_free:
     _free_delete(block, f0);
 error_post:
-    _entry_delete2(block, e);
+    _entry_delete(block, e);
     /* Add it back */
     _free_add(block, f);
 error_page:
@@ -684,7 +684,7 @@ memory_alloc_pages(memory_t *mem, size_t nr, int zone, int domain)
  * Find the entry corresponding to the specified address
  */
 static virt_memory_entry_t *
-_find_entry2(virt_memory_block_t *b, uintptr_t addr)
+_find_entry(virt_memory_block_t *b, uintptr_t addr)
 {
     btree_node_t *n;
 
@@ -725,7 +725,7 @@ _entry_free(virt_memory_t *vmem, virt_memory_block_t *b, virt_memory_entry_t *e)
     int ret;
 
     /* Find a neighboring free entry by address */
-    f = _find_neighbor_free_entry2(b, e->start, e->start + e->size);
+    f = _find_neighbor_free_entry(b, e->start, e->start + e->size);
     if ( NULL == f ) {
         /* Not found, then convert the data structure to free entry */
         kmemset(&free, 0, sizeof(virt_memory_free_t));
@@ -784,7 +784,7 @@ memory_free_pages(memory_t *mem, void *ptr)
     }
 
     /* Find an entry corresponding to the virtual address */
-    e = _find_entry2(b, addr);
+    e = _find_entry(b, addr);
     if ( NULL == e ) {
         /* Not found */
         return;
@@ -801,7 +801,7 @@ memory_free_pages(memory_t *mem, void *ptr)
     /* Free the object */
     mem->kmem.allocator.free(&mem->kmem, (void *)e->object);
     /* Retuurn to the free entry */
-    r = _entry_delete2(b, e);
+    r = _entry_delete(b, e);
     kassert( r == e );
     _entry_free(&mem->kmem, b, e);
 }
@@ -871,7 +871,7 @@ virt_memory_free_pages(virt_memory_t *vmem, void *ptr)
     }
 
     /* Find an entry corresponding to the virtual address */
-    e = _find_entry2(b, addr);
+    e = _find_entry(b, addr);
     if ( NULL == e ) {
         /* Not found */
         return;
@@ -888,7 +888,7 @@ virt_memory_free_pages(virt_memory_t *vmem, void *ptr)
     /* Free the object */
     vmem->allocator.free(vmem, (void *)e->object);
     /* Retuurn to the free entry */
-    r = _entry_delete2(b, e);
+    r = _entry_delete(b, e);
     kassert( r == e );
     _entry_free(vmem, b, e);
 }
@@ -987,7 +987,7 @@ virt_memory_wire(virt_memory_t *vmem, uintptr_t virtual, size_t nr,
     }
 
     /* Find a free space corresponding to the virtual address */
-    f = _find_free_entry2(b, virtual);
+    f = _find_free_entry(b, virtual);
     if ( NULL == f ) {
         /* Not found */
         return -1;
@@ -1061,7 +1061,7 @@ virt_memory_wire(virt_memory_t *vmem, uintptr_t virtual, size_t nr,
     }
 
     /* Add this entry */
-    ret = _entry_add2(b, e);
+    ret = _entry_add(b, e);
     if ( ret < 0 ) {
         goto error_page;
     }
@@ -1112,7 +1112,7 @@ virt_memory_wire(virt_memory_t *vmem, uintptr_t virtual, size_t nr,
 error_free:
     _free_delete(b, f0);
 error_post:
-    _entry_delete2(b, e);
+    _entry_delete(b, e);
     /* Add it back */
     _free_add(b, f);
 error_page:
@@ -1160,7 +1160,7 @@ _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
     n->atree2.right = NULL;
 
     /* Add this entry to the entry tree */
-    ret = _entry_add2(b, n);
+    ret = _entry_add(b, n);
     if ( ret < 0 ) {
         /* Failed to add the entry */
         dst->allocator.free(dst, (void *)n);
