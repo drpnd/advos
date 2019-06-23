@@ -242,6 +242,18 @@ _find_free_entry(virt_memory_free_t *e, uintptr_t addr)
         return _find_free_entry(e->atree.right, addr);
     }
 }
+static virt_memory_free_t *
+_find_free_entry2(virt_memory_block_t *b, uintptr_t addr)
+{
+    btree_node_t *n;
+
+    n = btree_search(b->frees.atree2, (void *)addr, virt_memory_cond_fit);
+    if ( NULL == n ) {
+        return NULL;
+    }
+
+    return n->data;
+}
 
 /*
  * Find a free entry neighboring to the start and the end
@@ -267,6 +279,23 @@ _find_neighbor_free_entry(virt_memory_free_t *e, uintptr_t start, uintptr_t end)
         return _find_neighbor_free_entry(e->atree.right, start, end);
     }
 }
+static virt_memory_free_t *
+_find_neighbor_free_entry2(virt_memory_block_t *b, uintptr_t start,
+                           uintptr_t end)
+{
+    btree_node_t *n;
+    struct virt_memory_start_end sn;
+
+    sn.start = start;
+    sn.end = end;
+    n = btree_search(b->frees.atree2, (void *)&sn, virt_memory_cond_neighbor);
+    if ( NULL == n ) {
+        return NULL;
+    }
+
+    return n->data;
+
+}
 
 /*
  * Add an entry
@@ -289,6 +318,16 @@ _entry_add(virt_memory_entry_t **t, virt_memory_entry_t *n)
     } else {
         return _entry_add(&(*t)->atree.left, n);
     }
+}
+static int
+_entry_add2(virt_memory_block_t *b, virt_memory_entry_t *n)
+{
+    btree_node_t *bn;
+
+    bn = &n->atree2;
+    bn->data = n;
+
+    return btree_add(&b->entries2, bn, virt_memory_comp_addr, 0);
 }
 
 /*
@@ -325,6 +364,18 @@ _entry_delete(virt_memory_entry_t **t, virt_memory_entry_t *n)
     } else {
         return _entry_delete(&(*t)->atree.left, n);
     }
+}
+static virt_memory_entry_t *
+_entry_delete2(virt_memory_block_t *b, virt_memory_entry_t *n)
+{
+    btree_node_t *r;
+
+    r = btree_delete(&b->entries2, &n->atree2, virt_memory_comp_addr);
+    if ( NULL == r ) {
+        return NULL;
+    }
+
+    return r->data;
 }
 
 /*
@@ -504,6 +555,16 @@ _free_delete(virt_memory_block_t *b, virt_memory_free_t *n)
     kassert( fa == fs );
 
     return fa;
+#if 0
+    btree_node_t *fa;
+    btree_node_t *fs;
+    fa = btree_delete(&b->frees.atree2, &n->atree2, virt_memory_comp_addr);
+    fs = btree_delete(&b->frees.stree2, &n->stree2, virt_memory_comp_size);
+    kassert( fa != NULL );
+    kassert( fa == fs );
+
+    return fa->data;
+#endif
 }
 
 /*
@@ -1019,8 +1080,11 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     n->end = end;
     n->next = NULL;
     n->entries = NULL;
+    n->entries2 = NULL;
     n->frees.atree = NULL;
     n->frees.stree = NULL;
+    n->frees.atree2 = NULL;
+    n->frees.stree2 = NULL;
 
     /* Add a free entry aligned to the block and the page size */
     fr = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
