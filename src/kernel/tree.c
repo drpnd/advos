@@ -111,6 +111,32 @@ btree_search(btree_node_t *n, void *data, int (*cond)(void *, void *))
 }
 
 /*
+ * Traverse
+ */
+int
+btree_traverse(btree_node_t *n, void *data, int (*func)(void *, void *))
+{
+    int ret;
+
+    if ( NULL == n ) {
+        return 0;
+    }
+    ret = btree_traverse(n->left, data, func);
+    if ( 0 != ret ) {
+        return ret;
+    }
+    ret = func(n->data, data);
+    if ( 0 != ret ) {
+        return ret;
+    }
+    ret = btree_traverse(n->right, data, func);
+    if ( 0 != ret ) {
+        return ret;
+    }
+    return 0;
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4
