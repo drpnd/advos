@@ -24,6 +24,9 @@
 #include "memory.h"
 #include "kernel.h"
 
+/*
+ * Structures for btree search conditions
+ */
 struct virt_memory_start_end {
     uintptr_t start;
     uintptr_t end;
@@ -429,7 +432,6 @@ _search_fit_size(virt_memory_block_t *block, size_t sz)
 
     return r.ret;
 }
-
 
 /*
  * Allocate pages from the block
