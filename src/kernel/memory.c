@@ -911,10 +911,7 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     n->start = start;
     n->end = end;
     n->next = NULL;
-    n->entries = NULL;
     n->entries2 = NULL;
-    n->frees.atree = NULL;
-    n->frees.stree = NULL;
     n->frees.atree2 = NULL;
     n->frees.stree2 = NULL;
 
@@ -1136,6 +1133,7 @@ error_entry:
     return -1;
 }
 
+#if 0
 /*
  * Copy entries
  */
@@ -1294,6 +1292,7 @@ virt_memory_fork(virt_memory_t *dst, virt_memory_t *src)
 
     return 0;
 }
+#endif
 
 /*
  * New process memory
