@@ -102,7 +102,7 @@ btree_search(btree_node_t *n, void *data, int (*cond)(void *, void *))
 
     ret = cond(n, data);
     if ( 0 == ret ) {
-        return n->data;
+        return n;
     } else if ( ret > 0 ) {
         return btree_search(n->right, data, cond);
     } else {
