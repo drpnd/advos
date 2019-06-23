@@ -40,7 +40,7 @@ btree_add(btree_node_t **t, btree_node_t *n, int (*comp)(void *, void *),
         n->right = NULL;
         return 0;
     }
-    ret = comp(n, *t);
+    ret = comp(n->data, *t);
     if ( !allowdup && 0 == ret ) {
         return -1;
     }
@@ -81,7 +81,7 @@ btree_delete(btree_node_t **t, btree_node_t *n, int (*comp)(void *, void *))
         }
         return n;
     }
-    if ( comp(n, (*t)) > 0 ) {
+    if ( comp(n->data, (*t)) > 0 ) {
         return btree_delete(&(*t)->right, n, comp);
     } else {
         return btree_delete(&(*t)->left, n, comp);
@@ -100,7 +100,7 @@ btree_search(btree_node_t *n, void *data, int (*cond)(void *, void *))
         return NULL;
     }
 
-    ret = cond(n, data);
+    ret = cond(n->data, data);
     if ( 0 == ret ) {
         return n;
     } else if ( ret > 0 ) {
