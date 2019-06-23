@@ -199,7 +199,6 @@ struct virt_memory_block {
     virt_memory_block_t *next;
 
     /* Allocated entries */
-    virt_memory_entry_t *entries;
     btree_node_t *entries2;
 
     /* Free space list */
