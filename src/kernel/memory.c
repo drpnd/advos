@@ -280,7 +280,7 @@ _find_free_entry(virt_memory_block_t *b, uintptr_t addr)
 {
     btree_node_t *n;
 
-    n = btree_search(b->frees.atree2, (void *)addr, virt_memory_cond_fit_free);
+    n = btree_search(b->frees.atree, (void *)addr, virt_memory_cond_fit_free);
     if ( NULL == n ) {
         return NULL;
     }
@@ -300,7 +300,7 @@ _find_neighbor_free_entry(virt_memory_block_t *b, uintptr_t start,
 
     sn.start = start;
     sn.end = end;
-    n = btree_search(b->frees.atree2, (void *)&sn, virt_memory_cond_neigh_free);
+    n = btree_search(b->frees.atree, (void *)&sn, virt_memory_cond_neigh_free);
     if ( NULL == n ) {
         return NULL;
     }
@@ -317,10 +317,10 @@ _entry_add(virt_memory_block_t *b, virt_memory_entry_t *n)
 {
     btree_node_t *bn;
 
-    bn = &n->atree2;
+    bn = &n->atree;
     bn->data = n;
 
-    return btree_add(&b->entries2, bn, virt_memory_comp_addr, 0);
+    return btree_add(&b->entries, bn, virt_memory_comp_addr, 0);
 }
 
 /*
@@ -331,7 +331,7 @@ _entry_delete(virt_memory_block_t *b, virt_memory_entry_t *n)
 {
     btree_node_t *r;
 
-    r = btree_delete(&b->entries2, &n->atree2, virt_memory_comp_addr);
+    r = btree_delete(&b->entries, &n->atree, virt_memory_comp_addr);
     if ( NULL == r ) {
         return NULL;
     }
@@ -378,16 +378,16 @@ _free_add(virt_memory_block_t *b, virt_memory_free_t *n)
     int ret;
     void *p;
 
-    n->atree2.data = n;
-    n->stree2.data = n;
+    n->atree.data = n;
+    n->stree.data = n;
 
-    ret = btree_add(&b->frees.atree2, &n->atree2, virt_memory_comp_addr, 0);
+    ret = btree_add(&b->frees.atree, &n->atree, virt_memory_comp_addr, 0);
     if ( ret < 0 ) {
         return -1;
     }
-    ret = btree_add(&b->frees.stree2, &n->stree2, virt_memory_comp_size, 1);
+    ret = btree_add(&b->frees.stree, &n->stree, virt_memory_comp_size, 1);
     if ( ret < 0 ) {
-        p = btree_delete(&b->frees.atree2, &n->atree2, virt_memory_comp_addr);
+        p = btree_delete(&b->frees.atree, &n->atree, virt_memory_comp_addr);
         kassert( p != NULL );
         return -1;
     }
@@ -404,8 +404,8 @@ _free_delete(virt_memory_block_t *b, virt_memory_free_t *n)
     btree_node_t *fa;
     btree_node_t *fs;
 
-    fa = btree_delete(&b->frees.atree2, &n->atree2, virt_memory_comp_addr);
-    fs = btree_delete(&b->frees.stree2, &n->stree2, virt_memory_comp_size);
+    fa = btree_delete(&b->frees.atree, &n->atree, virt_memory_comp_addr);
+    fs = btree_delete(&b->frees.stree, &n->stree, virt_memory_comp_size);
     kassert( fa != NULL && fs != NULL );
     kassert( fa->data == fs->data );
 
@@ -422,7 +422,7 @@ _search_fit_size(virt_memory_block_t *block, size_t sz)
 
     r.size = sz;
     r.ret = NULL;
-    btree_search(block->frees.stree2, &r, virt_memory_cond_fit_free_size);
+    btree_search(block->frees.stree, &r, virt_memory_cond_fit_free_size);
     if ( NULL == r.ret ) {
         return NULL;
     }
@@ -688,7 +688,7 @@ _find_entry(virt_memory_block_t *b, uintptr_t addr)
 {
     btree_node_t *n;
 
-    n = btree_search(b->entries2, (void *)addr, virt_memory_cond_fit);
+    n = btree_search(b->entries, (void *)addr, virt_memory_cond_fit);
     if ( NULL == n ) {
         return NULL;
     }
@@ -911,9 +911,9 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     n->start = start;
     n->end = end;
     n->next = NULL;
-    n->entries2 = NULL;
-    n->frees.atree2 = NULL;
-    n->frees.stree2 = NULL;
+    n->entries = NULL;
+    n->frees.atree = NULL;
+    n->frees.stree = NULL;
 
     /* Add a free entry aligned to the block and the page size */
     fr = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
@@ -924,10 +924,10 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     fr->start = (start + MEMORY_PAGESIZE - 1)
         & ~(uintptr_t)(MEMORY_PAGESIZE - 1);
     fr->size = ((end + 1) & ~(uintptr_t)(MEMORY_PAGESIZE - 1)) - fr->start;
-    fr->atree2.data = fr;
-    fr->stree2.data = fr;
-    n->frees.atree2 = &fr->atree2;
-    n->frees.stree2 = &fr->stree2;
+    fr->atree.data = fr;
+    fr->stree.data = fr;
+    n->frees.atree = &fr->atree;
+    n->frees.stree = &fr->stree;
 
     /* Prepare the page table */
     ret = vmem->mem->ifs.prepare(vmem->arch, n->start, n->end - n->start + 1);

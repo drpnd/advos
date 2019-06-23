@@ -167,7 +167,7 @@ struct virt_memory_entry {
     int flags;
 
     /* Binary tree for start address ordering */
-    btree_node_t atree2;
+    btree_node_t atree;
 };
 
 /*
@@ -181,9 +181,9 @@ struct virt_memory_free {
     size_t size;
 
     /* Binary tree for start address ordering */
-    btree_node_t atree2;
+    btree_node_t atree;
     /* Binary tree for size ordering */
-    btree_node_t stree2;
+    btree_node_t stree;
 };
 
 /*
@@ -199,12 +199,12 @@ struct virt_memory_block {
     virt_memory_block_t *next;
 
     /* Allocated entries */
-    btree_node_t *entries2;
+    btree_node_t *entries;
 
     /* Free space list */
     struct {
-        btree_node_t *atree2;
-        btree_node_t *stree2;
+        btree_node_t *atree;
+        btree_node_t *stree;
     } frees;
 };
 
