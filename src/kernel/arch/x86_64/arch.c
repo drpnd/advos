@@ -811,6 +811,14 @@ _prepare_multitasking(void)
     cpu->next_task = taska;
     cpu->idle_task = taski;
 
+    /* Prepare virt_memory_t */
+    int ret;
+    ret = memory_slab_create_cache(&g_kvar->slab, "virt_memory",
+                                   sizeof(virt_memory_t));
+    if ( ret < 0 ) {
+        panic("Cannot create slab for virt_memory_t.");
+    }
+
     return 0;
 }
 
