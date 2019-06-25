@@ -1300,15 +1300,24 @@ virt_memory_fork(virt_memory_t *dst, virt_memory_t *src)
  * New process memory
  */
 int
-virt_memory_new(virt_memory_t *dst, virt_memory_t *src)
+virt_memory_new(virt_memory_t *dst, memory_t *mem, virt_memory_allocator_t *a)
 {
     virt_memory_block_t *b;
     int ret;
 
+    dst->mem = mem;
+    dst->blocks = NULL;
+
+    /* Setup allocator */
+    dst->allocator.spec = a->spec;
+    dst->allocator.alloc = a->alloc;
+    dst->allocator.free = a->free;
+
+
     /* Copy the kernel memory blocks */
-    b = src->mem->kmem.blocks;
+    b = mem->kmem.blocks;
     while ( NULL != b ) {
-        ret = dst->mem->ifs.refer(dst->arch, src->arch, b->start,
+        ret = dst->mem->ifs.refer(dst->arch, mem->kmem.arch, b->start,
                                   b->end - b->start + 1);
         if ( ret < 0 ) {
             return -1;

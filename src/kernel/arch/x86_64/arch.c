@@ -813,10 +813,15 @@ _prepare_multitasking(void)
 
     /* Prepare virt_memory_t */
     int ret;
+    virt_memory_t *vmem;
     ret = memory_slab_create_cache(&g_kvar->slab, "virt_memory",
                                    sizeof(virt_memory_t));
     if ( ret < 0 ) {
         panic("Cannot create slab for virt_memory_t.");
+    }
+    vmem = memory_slab_alloc(&g_kvar->slab, "virt_memory");
+    if ( NULL == vmem ) {
+        return -1;
     }
 
     return 0;
