@@ -814,6 +814,7 @@ _prepare_multitasking(void)
     /* Prepare virt_memory_t */
     int ret;
     virt_memory_t *vmem;
+    virt_memory_allocator_t a;
     ret = memory_slab_create_cache(&g_kvar->slab, "virt_memory",
                                    sizeof(virt_memory_t));
     if ( ret < 0 ) {
@@ -823,6 +824,10 @@ _prepare_multitasking(void)
     if ( NULL == vmem ) {
         return -1;
     }
+    a.spec = NULL;
+    a.alloc = NULL;
+    a.free = NULL;
+    virt_memory_new(vmem, &g_kvar->mm, &a);
 
     return 0;
 }
