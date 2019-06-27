@@ -625,7 +625,7 @@ arch_memory_refer(void *arch, void *tgtarch, uintptr_t virtual, size_t size)
     }
 
     for ( i = 0; i < (int)(size >> 30); i++ ) {
-        ret = pgt_refer(pgt, tgt, virtual);
+        ret = pgt_refer(pgt, tgt, virtual + ((uintptr_t)i << 30));
         if ( ret < 0 ) {
             return -1;
         }
@@ -726,6 +726,32 @@ task_b(void)
     }
 }
 
+void *
+vmem_data_alloc(virt_memory_t *vmem)
+{
+    void *data;
+
+    (void)vmem;
+    data = memory_slab_alloc(&g_kvar->slab, "virt_memory_data");
+    if ( NULL == data ) {
+        return NULL;
+    }
+
+    /* Zeros */
+    kmemset(data, 0, sizeof(virt_memory_data_t));
+
+    return data;
+}
+void
+vmem_data_free(virt_memory_t *vmem, void *data)
+{
+    int ret;
+
+    (void)vmem;
+    ret = memory_slab_free(&g_kvar->slab, "virt_memory_data", data);
+    kassert( ret == 0 );
+}
+
 /*
  * Create tasks
  */
@@ -824,10 +850,37 @@ _prepare_multitasking(void)
     if ( NULL == vmem ) {
         return -1;
     }
+    ret = memory_slab_create_cache(&g_kvar->slab, "virt_memory_data",
+                                   sizeof(virt_memory_data_t));
+    if ( ret < 0 ) {
+        panic("Cannot create slab for virt_memory_data_t.");
+    }
+    /* Prepare pgt_t */
+    void *pages;
+    pgt_t *pgt;
+    pages = phys_mem_buddy_alloc(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
+                                 9);
+    if ( NULL == pages ) {
+        panic("Cannot allocate pages for page tables.");
+    }
+    pgt = kmalloc(sizeof(pgt_t));
+    if ( NULL == pgt ) {
+        panic("Could not allocate pgt_t.");
+    }
+    pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
+    vmem->arch = pgt;
+
     a.spec = NULL;
-    a.alloc = NULL;
-    a.free = NULL;
-    virt_memory_new(vmem, &g_kvar->mm, &a);
+    a.alloc = vmem_data_alloc;
+    a.free = vmem_data_free;
+    ret = virt_memory_new(vmem, &g_kvar->mm, &a);
+    if ( ret < 0 ) {
+        panic("Cannot create a new virtual memory.");
+    }
+    virt_memory_block_add(vmem, 0, 0x3fffffffULL);
+    if ( ret < 0 ) {
+        panic("Failed to add a memory block.");
+    }
 
     return 0;
 }

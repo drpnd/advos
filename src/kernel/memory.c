@@ -1313,7 +1313,6 @@ virt_memory_new(virt_memory_t *dst, memory_t *mem, virt_memory_allocator_t *a)
     dst->allocator.alloc = a->alloc;
     dst->allocator.free = a->free;
 
-
     /* Copy the kernel memory blocks */
     b = mem->kmem.blocks;
     while ( NULL != b ) {
