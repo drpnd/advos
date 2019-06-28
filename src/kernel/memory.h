@@ -247,6 +247,9 @@ typedef struct {
     /* Refer pages from the page table */
     int (*refer)(void *, void *, uintptr_t, size_t);
 
+    /* Create a new virtual memory */
+    virt_memory_t * (*new)(void);
+
     /* Context switch */
     int (*ctxsw)(void *);
 } memory_arch_interfaces_t;

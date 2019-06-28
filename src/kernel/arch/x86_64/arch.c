@@ -36,6 +36,10 @@
 #include <stdint.h>
 #include <sys/syscall.h>
 
+#define VIRT_MEMORY_SLAB_NAME       "virt_memory"
+#define VIRT_MEMORY_SLAB_DATA_NAME  "virt_memory_data"
+#define PGT_SLAB_NAME               "pgt"
+
 /* For trampoline code */
 void trampoline(void);
 void trampoline_end(void);
@@ -750,6 +754,49 @@ vmem_data_free(virt_memory_t *vmem, void *data)
     (void)vmem;
     ret = memory_slab_free(&g_kvar->slab, "virt_memory_data", data);
     kassert( ret == 0 );
+}
+
+virt_memory_t *
+vmem_new(void)
+{
+    int ret;
+    virt_memory_t *vmem;
+    virt_memory_allocator_t a;
+    void *pages;
+    pgt_t *pgt;
+
+    vmem = memory_slab_alloc(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME);
+    if ( NULL == vmem ) {
+        return NULL;
+    }
+
+    /* Prepare pgt_t */
+    pages = phys_mem_buddy_alloc(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
+                                 9);
+    if ( NULL == pages ) {
+        panic("Cannot allocate pages for page tables.");
+    }
+    pgt = memory_slab_alloc(&g_kvar->slab, PGT_SLAB_NAME);
+    if ( NULL == pgt ) {
+        memory_slab_free(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME, vmem);
+        return NULL;
+    }
+    pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
+    vmem->arch = pgt;
+
+    a.spec = NULL;
+    a.alloc = vmem_data_alloc;
+    a.free = vmem_data_free;
+    ret = virt_memory_new(vmem, &g_kvar->mm, &a);
+    if ( ret < 0 ) {
+        phys_mem_buddy_free(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
+                            pages, 9);
+        memory_slab_free(&g_kvar->slab, PGT_SLAB_NAME, pgt);
+        memory_slab_free(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME, vmem);
+        return NULL;
+    }
+
+    return vmem;
 }
 
 /*
