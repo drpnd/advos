@@ -756,6 +756,32 @@ vmem_data_free(virt_memory_t *vmem, void *data)
     kassert( ret == 0 );
 }
 
+/*
+ * Callback function after kernel memory initialization
+ */
+int
+vmem_callback_init(void)
+{
+    int ret;
+
+    ret = memory_slab_create_cache(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME,
+                                   sizeof(virt_memory_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+    ret = memory_slab_create_cache(&g_kvar->slab, VIRT_MEMORY_SLAB_DATA_NAME,
+                                   sizeof(virt_memory_data_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+    ret = memory_slab_create_cache(&g_kvar->slab, PGT_SLAB_NAME, sizeof(pgt_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    return 0;
+}
+
 virt_memory_t *
 vmem_new(void)
 {
@@ -888,19 +914,9 @@ _prepare_multitasking(void)
     int ret;
     virt_memory_t *vmem;
     virt_memory_allocator_t a;
-    ret = memory_slab_create_cache(&g_kvar->slab, "virt_memory",
-                                   sizeof(virt_memory_t));
-    if ( ret < 0 ) {
-        panic("Cannot create slab for virt_memory_t.");
-    }
     vmem = memory_slab_alloc(&g_kvar->slab, "virt_memory");
     if ( NULL == vmem ) {
         return -1;
-    }
-    ret = memory_slab_create_cache(&g_kvar->slab, "virt_memory_data",
-                                   sizeof(virt_memory_data_t));
-    if ( ret < 0 ) {
-        panic("Cannot create slab for virt_memory_data_t.");
     }
     /* Prepare pgt_t */
     void *pages;
@@ -1066,6 +1082,12 @@ bsp_start(void)
     ret = kmalloc_init(&kvar->slab);
     if ( ret < 0 ) {
         panic("Failed to initialize the kmalloc slab.");
+    }
+
+    /* Initialize virtual memory */
+    ret = vmem_callback_init();
+    if ( ret < 0 ) {
+        panic("Failed to initialize the virtual memory");
     }
 
     /* Initialize the console */
