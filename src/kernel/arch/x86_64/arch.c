@@ -736,7 +736,7 @@ vmem_data_alloc(virt_memory_t *vmem)
     void *data;
 
     (void)vmem;
-    data = memory_slab_alloc(&g_kvar->slab, "virt_memory_data");
+    data = memory_slab_alloc(&g_kvar->slab, VIRT_MEMORY_SLAB_DATA_NAME);
     if ( NULL == data ) {
         return NULL;
     }
@@ -752,7 +752,7 @@ vmem_data_free(virt_memory_t *vmem, void *data)
     int ret;
 
     (void)vmem;
-    ret = memory_slab_free(&g_kvar->slab, "virt_memory_data", data);
+    ret = memory_slab_free(&g_kvar->slab, VIRT_MEMORY_SLAB_DATA_NAME, data);
     kassert( ret == 0 );
 }
 
@@ -914,7 +914,7 @@ _prepare_multitasking(void)
     int ret;
     virt_memory_t *vmem;
     virt_memory_allocator_t a;
-    vmem = memory_slab_alloc(&g_kvar->slab, "virt_memory");
+    vmem = memory_slab_alloc(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME);
     if ( NULL == vmem ) {
         return -1;
     }
