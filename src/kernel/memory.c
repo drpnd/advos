@@ -927,7 +927,11 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
         & ~(uintptr_t)(MEMORY_PAGESIZE - 1);
     fr->size = ((end + 1) & ~(uintptr_t)(MEMORY_PAGESIZE - 1)) - fr->start;
     fr->atree.data = fr;
+    fr->atree.left = NULL;
+    fr->atree.right = NULL;
     fr->stree.data = fr;
+    fr->stree.left = NULL;
+    fr->stree.right = NULL;
     n->frees.atree = &fr->atree;
     n->frees.stree = &fr->stree;
 

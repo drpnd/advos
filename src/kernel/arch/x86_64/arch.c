@@ -940,10 +940,13 @@ _prepare_multitasking(void)
     if ( ret < 0 ) {
         panic("Cannot create a new virtual memory.");
     }
-    virt_memory_block_add(vmem, 0, 0x3fffffffULL);
+    ret = virt_memory_block_add(vmem, 0x40000000ULL, 0xbfffffffULL);
     if ( ret < 0 ) {
         panic("Failed to add a memory block.");
     }
+    void *tmp;
+    tmp = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
+    kprintf("xxx %llx\n", tmp);
 
     return 0;
 }
