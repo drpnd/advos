@@ -946,7 +946,6 @@ _prepare_multitasking(void)
     }
     void *tmp;
     tmp = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
-    kprintf("xxx %llx\n", tmp);
 
     return 0;
 }
