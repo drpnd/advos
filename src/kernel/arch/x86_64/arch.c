@@ -527,8 +527,14 @@ arch_memory_map(void *arch, uintptr_t virtual, page_t *page, int flags)
     } else {
         rw = 0;
     }
-    /* User allowed (temporary) */
-    user = 1;
+
+    /* User allowed */
+    if ( MEMORY_MAP_USER & flags ) {
+        user = 1;
+    } else {
+        /* User allowed (temporary) */
+        user = 1;
+    }
 
     pgt = (pgt_t *)arch;
     for ( i = 0; i < (1LL << nr); i++ ) {
@@ -831,7 +837,7 @@ vmem_new(void)
         memory_slab_free(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME, vmem);
         return NULL;
     }
-    vmem->flags = MEMORY_USER;
+    vmem->flags = MEMORY_MAP_USER;
 
     return vmem;
 }

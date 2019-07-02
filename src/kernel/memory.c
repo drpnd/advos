@@ -452,7 +452,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
     size_t i;
     int ret;
     uintptr_t virtual;
-    int user;
+    int flags;
 
     /* Search from the binary tree */
     size = nr * MEMORY_PAGESIZE;
@@ -536,9 +536,9 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         p->physical = (uintptr_t)r;
 
         /* Map */
-        user = (vmem->flags & MEMORY_USER) ? 1 : 0;
+        flags = vmem->flags;
         ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
-                                 p, user);
+                                 p, flags);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
             phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
@@ -575,9 +575,9 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         p->physical = (uintptr_t)r;
 
         /* Map */
-        user = (vmem->flags & MEMORY_USER) ? 1 : 0;
+        flags = vmem->flags;
         ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
-                                 p, user);
+                                 p, flags);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
             phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
@@ -976,7 +976,7 @@ virt_memory_wire(virt_memory_t *vmem, uintptr_t virtual, size_t nr,
     uintptr_t idx;
     int ret;
     int order;
-    int user;
+    int flags;
 
     /* Page alignment check */
     if ( virtual & (MEMORY_PAGESIZE - 1) ) {
@@ -1054,8 +1054,8 @@ virt_memory_wire(virt_memory_t *vmem, uintptr_t virtual, size_t nr,
         /* Calculate the order to minimize the number of page_t */
         order = _order(virtual, physical, endplus1 - virtual);
         p->order = order;
-        user = (vmem->flags & MEMORY_USER) ? 1 : 0;
-        ret = vmem->mem->ifs.map(vmem->arch, virtual, p, user);
+        flags = vmem->flags;
+        ret = vmem->mem->ifs.map(vmem->arch, virtual, p, flags);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
             goto error_page;

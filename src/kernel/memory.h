@@ -53,7 +53,7 @@
 #define MEMORY_VMF_GLOBAL               (1 << 6)
 #define MEMORY_VMF_COW                  (1 << 7)
 /* Virtual memory flags */
-#define MEMORY_USER                     (1 << 0)
+#define MEMORY_MAP_USER                 (1 << 3)
 
 #define MEMORY_SLAB_NUM_PAGES           8
 #define MEMORY_SLAB_CACHE_NAME_MAX      64
