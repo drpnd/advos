@@ -667,7 +667,7 @@ ksignal_clock(void)
         print_hex(base, cnt / 100, 8);
         cnt++;
 
-        /* Schedule next task */
+        /* Schedule next task (and context switch) */
         struct arch_cpu_data *cpu;
         cpu = (struct arch_cpu_data *)CPU_TASK(0);
         if ( cpu->cur_task == taska ) {
@@ -841,6 +841,44 @@ vmem_new(void)
 static int
 _prepare_multitasking(void)
 {
+    /* Prepare virt_memory_t */
+    int ret;
+    virt_memory_t *vmem;
+    virt_memory_allocator_t a;
+    vmem = memory_slab_alloc(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME);
+    if ( NULL == vmem ) {
+        return -1;
+    }
+    /* Prepare pgt_t */
+    void *pages;
+    pgt_t *pgt;
+    pages = phys_mem_buddy_alloc(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
+                                 9);
+    if ( NULL == pages ) {
+        panic("Cannot allocate pages for page tables.");
+    }
+    pgt = kmalloc(sizeof(pgt_t));
+    if ( NULL == pgt ) {
+        panic("Could not allocate pgt_t.");
+    }
+    pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
+    vmem->arch = pgt;
+
+    a.spec = NULL;
+    a.alloc = vmem_data_alloc;
+    a.free = vmem_data_free;
+    ret = virt_memory_new(vmem, &g_kvar->mm, &a);
+    if ( ret < 0 ) {
+        panic("Cannot create a new virtual memory.");
+    }
+    ret = virt_memory_block_add(vmem, 0x40000000ULL, 0xbfffffffULL);
+    if ( ret < 0 ) {
+        panic("Failed to add a memory block.");
+    }
+    void *tmp;
+    tmp = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
+    g_kvar->mm.ifs.ctxsw(vmem->arch);
+
     struct arch_cpu_data *cpu;
 
     /* Task A */
@@ -852,7 +890,7 @@ _prepare_multitasking(void)
     if ( NULL == taska->kstack ) {
         return -1;
     }
-    taska->ustack = kmalloc(4096);
+    taska->ustack = tmp;
     if ( NULL == taska->ustack ) {
         return -1;
     }
@@ -919,43 +957,6 @@ _prepare_multitasking(void)
     cpu->cur_task = NULL;
     cpu->next_task = taska;
     cpu->idle_task = taski;
-
-    /* Prepare virt_memory_t */
-    int ret;
-    virt_memory_t *vmem;
-    virt_memory_allocator_t a;
-    vmem = memory_slab_alloc(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME);
-    if ( NULL == vmem ) {
-        return -1;
-    }
-    /* Prepare pgt_t */
-    void *pages;
-    pgt_t *pgt;
-    pages = phys_mem_buddy_alloc(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
-                                 9);
-    if ( NULL == pages ) {
-        panic("Cannot allocate pages for page tables.");
-    }
-    pgt = kmalloc(sizeof(pgt_t));
-    if ( NULL == pgt ) {
-        panic("Could not allocate pgt_t.");
-    }
-    pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
-    vmem->arch = pgt;
-
-    a.spec = NULL;
-    a.alloc = vmem_data_alloc;
-    a.free = vmem_data_free;
-    ret = virt_memory_new(vmem, &g_kvar->mm, &a);
-    if ( ret < 0 ) {
-        panic("Cannot create a new virtual memory.");
-    }
-    ret = virt_memory_block_add(vmem, 0x40000000ULL, 0xbfffffffULL);
-    if ( ret < 0 ) {
-        panic("Failed to add a memory block.");
-    }
-    void *tmp;
-    tmp = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
 
     return 0;
 }
