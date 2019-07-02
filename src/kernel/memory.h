@@ -47,11 +47,13 @@
 #define MEMORY_PGF_WIRED                (1 << 0)
 #define MEMORY_PGF_RW                   (1 << 1)
 #define MEMORY_PGF_EXEC                 (1 << 2)
-/* Virtual memory entry Flags */
+/* Virtual memory entry flags */
 #define MEMORY_VMF_RW                   (1 << 1)
 #define MEMORY_VMF_EXEC                 (1 << 2)
 #define MEMORY_VMF_GLOBAL               (1 << 6)
 #define MEMORY_VMF_COW                  (1 << 7)
+/* Virtual memory flags */
+#define MEMORY_USER                     (1 << 0)
 
 #define MEMORY_SLAB_NUM_PAGES           8
 #define MEMORY_SLAB_CACHE_NAME_MAX      64
@@ -266,6 +268,9 @@ struct virt_memory {
 
     /* Allocator for this virtual memory manager */
     virt_memory_allocator_t allocator;
+
+    /* Flags */
+    int flags;
 
     /* Architecture-specific data structure */
     void *arch;

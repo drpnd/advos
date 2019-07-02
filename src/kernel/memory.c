@@ -452,6 +452,7 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
     size_t i;
     int ret;
     uintptr_t virtual;
+    int user;
 
     /* Search from the binary tree */
     size = nr * MEMORY_PAGESIZE;
@@ -535,8 +536,9 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         p->physical = (uintptr_t)r;
 
         /* Map */
+        user = (vmem->flags & MEMORY_USER) ? 1 : 0;
         ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
-                                 p, 0);
+                                 p, user);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
             phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
@@ -573,8 +575,9 @@ _alloc_pages_block(virt_memory_t *vmem, virt_memory_block_t *block, size_t nr,
         p->physical = (uintptr_t)r;
 
         /* Map */
+        user = (vmem->flags & MEMORY_USER) ? 1 : 0;
         ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
-                             p, 0);
+                                 p, user);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
             phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
@@ -973,6 +976,7 @@ virt_memory_wire(virt_memory_t *vmem, uintptr_t virtual, size_t nr,
     uintptr_t idx;
     int ret;
     int order;
+    int user;
 
     /* Page alignment check */
     if ( virtual & (MEMORY_PAGESIZE - 1) ) {
@@ -1050,7 +1054,8 @@ virt_memory_wire(virt_memory_t *vmem, uintptr_t virtual, size_t nr,
         /* Calculate the order to minimize the number of page_t */
         order = _order(virtual, physical, endplus1 - virtual);
         p->order = order;
-        ret = vmem->mem->ifs.map(vmem->arch, virtual, p, 0);
+        user = (vmem->flags & MEMORY_USER) ? 1 : 0;
+        ret = vmem->mem->ifs.map(vmem->arch, virtual, p, user);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
             goto error_page;

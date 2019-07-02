@@ -831,6 +831,7 @@ vmem_new(void)
         memory_slab_free(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME, vmem);
         return NULL;
     }
+    vmem->flags = MEMORY_USER;
 
     return vmem;
 }

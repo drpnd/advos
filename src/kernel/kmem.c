@@ -92,6 +92,8 @@ kmem_init(virt_memory_t *kmem, phys_memory_t *phys, uintptr_t p2v)
     kmem->allocator.alloc = kmem_data_alloc;
     kmem->allocator.free = kmem_data_free;
 
+    kmem->flags = 0;
+
     return 0;
 }
 
