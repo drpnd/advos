@@ -730,6 +730,9 @@ task_b(void)
     }
 }
 
+/*
+ * Allocate a virt_memory_data_t data structure
+ */
 void *
 vmem_data_alloc(virt_memory_t *vmem)
 {
@@ -746,6 +749,10 @@ vmem_data_alloc(virt_memory_t *vmem)
 
     return data;
 }
+
+/*
+ * Release a virt_memory_data_t data structure
+ */
 void
 vmem_data_free(virt_memory_t *vmem, void *data)
 {
@@ -782,6 +789,9 @@ vmem_callback_init(void)
     return 0;
 }
 
+/*
+ * Allocate and initialize a new virtual memory data structure
+ */
 virt_memory_t *
 vmem_new(void)
 {
