@@ -39,6 +39,7 @@
 #define VIRT_MEMORY_SLAB_NAME       "virt_memory"
 #define VIRT_MEMORY_SLAB_DATA_NAME  "virt_memory_data"
 #define PGT_SLAB_NAME               "pgt"
+#define ARCH_TASK_NAME              "arch_task"
 
 /* For trampoline code */
 void trampoline(void);
@@ -532,8 +533,7 @@ arch_memory_map(void *arch, uintptr_t virtual, page_t *page, int flags)
     if ( MEMORY_MAP_USER & flags ) {
         user = 1;
     } else {
-        /* User allowed (temporary) */
-        user = 1;
+        user = 0;
     }
 
     pgt = (pgt_t *)arch;
@@ -708,16 +708,31 @@ task_idle(void)
     }
 }
 
+unsigned long long syscall(int, ...);
 /*
  * Task A
  */
 void
 task_a(void)
 {
-    uint64_t cnt = 0;
+    volatile uint64_t cnt = 0;
 
     while ( 1 ) {
+#if 1
+        __asm__ __volatile__ ("pushq %%rbp;"
+                              "movq %%rdi,%%rax;"
+                              "movq %%rsi,%%rdi;"
+                              "movq %%rdx,%%rsi;"
+                              "movq %%rcx,%%rdx;"
+                              "movq %%r8,%%r10;"
+                              "movq %%r9,%%r8;"
+                              "syscall;"
+                              "popq %%rbp;"
+                              : : "D"(766), "S"(22), "d"(cnt));
+
+#else
         syscall(766, 22, cnt);
+#endif
         cnt++;
     }
 }
@@ -728,11 +743,26 @@ task_a(void)
 void
 task_b(void)
 {
-    uint64_t cnt = 0;
+    volatile uint64_t cnt = 0;
 
     while ( 1 ) {
-        syscall(766, 23, cnt);
+#if 0
+        __asm__ __volatile__ ("pushq %%rbp;"
+                              "syscall;"
+                              "popq %%rbp;"
+                              : : "a"(766), "D"(23), "S"(cnt + 1)
+                              : "cc", "rdx", "rcx", "r8", "r9", "r10", "r11");
+#endif
+        __asm__ __volatile__ ("syscall" :: "a"(766), "D"(23), "S"(cnt));
+        //syscall(766, 23, cnt);
         cnt++;
+#if 0
+        __asm__ __volatile__ ("pushq %%rbp;"
+                              "syscall;"
+                              "popq %%rbp;"
+                              : : "a"(766), "D"(21), "S"(cnt + 3)
+                              : "cc", "rdx", "rcx", "r8", "r9", "r10", "r11");
+#endif
     }
 }
 
@@ -843,97 +873,90 @@ vmem_new(void)
 }
 
 /*
+ * Create a new task
+ */
+struct arch_task *
+arch_create_new_task(void *f)
+{
+    /* Prepare virt_memory_t */
+    int ret;
+    virt_memory_t *vmem;
+    void *pages;
+    struct arch_task *t;
+    void *prog;
+
+    vmem = vmem_new();
+    if ( NULL == vmem ) {
+        return NULL;
+    }
+    ret = virt_memory_block_add(vmem, 0x40000000ULL, 0xbfffffffULL);
+    if ( ret < 0 ) {
+        return NULL;
+    }
+
+    /* Switch the memory context */
+    g_kvar->mm.ifs.ctxsw(vmem->arch);
+
+    t = memory_slab_alloc(&g_kvar->slab, ARCH_TASK_NAME);
+    if ( NULL == t ) {
+        return NULL;
+    }
+
+    pages = virt_memory_alloc_pages(&g_kvar->mm.kmem, 1, MEMORY_ZONE_NUMA_AWARE,
+                                   0);
+    if ( NULL == pages ) {
+        return NULL;
+    }
+    t->kstack = pages;
+
+    pages = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
+    if ( NULL == pages ) {
+        return NULL;
+    }
+    t->ustack = pages;
+
+    /* Program */
+    prog = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
+    kmemcpy(prog, f, MEMORY_PAGESIZE);
+
+    t->rp = t->kstack + 4096 - 16 - sizeof(struct stackframe64);
+    kmemset(t->rp, 0, sizeof(struct stackframe64));
+    t->sp0 = (uint64_t)t->kstack + 4096 - 16;
+    t->rp->sp = (uint64_t)t->ustack + 4096 - 16;
+    t->rp->ip = (uint64_t)prog;
+    t->rp->cs = GDT_RING3_CODE64_SEL + 3;
+    t->rp->ss = GDT_RING3_DATA64_SEL + 3;
+    t->rp->fs = GDT_RING3_DATA64_SEL + 3;
+    t->rp->gs = GDT_RING3_DATA64_SEL + 3;
+    t->rp->flags = 0x202;
+
+    t->cr3 = ((pgt_t *)vmem->arch)->cr3;
+
+    return t;
+}
+
+/*
  * Create tasks
  */
 static int
 _prepare_multitasking(void)
 {
-    /* Prepare virt_memory_t */
     int ret;
-    virt_memory_t *vmem;
-    virt_memory_allocator_t a;
-    vmem = memory_slab_alloc(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME);
-    if ( NULL == vmem ) {
-        return -1;
-    }
-    /* Prepare pgt_t */
-    void *pages;
-    pgt_t *pgt;
-    pages = phys_mem_buddy_alloc(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
-                                 9);
-    if ( NULL == pages ) {
-        panic("Cannot allocate pages for page tables.");
-    }
-    pgt = kmalloc(sizeof(pgt_t));
-    if ( NULL == pgt ) {
-        panic("Could not allocate pgt_t.");
-    }
-    pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
-    vmem->arch = pgt;
-
-    a.spec = NULL;
-    a.alloc = vmem_data_alloc;
-    a.free = vmem_data_free;
-    ret = virt_memory_new(vmem, &g_kvar->mm, &a);
-    if ( ret < 0 ) {
-        panic("Cannot create a new virtual memory.");
-    }
-    ret = virt_memory_block_add(vmem, 0x40000000ULL, 0xbfffffffULL);
-    if ( ret < 0 ) {
-        panic("Failed to add a memory block.");
-    }
-    void *tmp;
-    tmp = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
-    g_kvar->mm.ifs.ctxsw(vmem->arch);
-
     struct arch_cpu_data *cpu;
 
-    /* Task A */
-    taska = kmalloc(sizeof(struct arch_task));
+    ret = memory_slab_create_cache(&g_kvar->slab, ARCH_TASK_NAME,
+                                   sizeof(struct arch_task));
+    if ( ret < 0 ) {
+        panic("Cannot create a slab for arch_task.");
+    }
+    taska = arch_create_new_task(task_a);
     if ( NULL == taska ) {
         return -1;
     }
-    taska->kstack = kmalloc(4096);
-    if ( NULL == taska->kstack ) {
+    taskb = arch_create_new_task(task_b);
+    if ( NULL == taska ) {
         return -1;
     }
-    taska->ustack = tmp;
-    if ( NULL == taska->ustack ) {
-        return -1;
-    }
-    taska->rp = taska->kstack + 4096 - 16 - sizeof(struct stackframe64);
-    kmemset(taska->rp, 0, sizeof(struct stackframe64));
-    taska->sp0 = (uint64_t)taska->kstack + 4096 - 16;
-    taska->rp->sp = (uint64_t)taska->ustack + 4096 - 16;
-    taska->rp->ip = (uint64_t)task_a;
-    taska->rp->cs = GDT_RING3_CODE64_SEL + 3;
-    taska->rp->ss = GDT_RING3_DATA64_SEL + 3;
-    taska->rp->fs = GDT_RING3_DATA64_SEL + 3;
-    taska->rp->gs = GDT_RING3_DATA64_SEL + 3;
-    taska->rp->flags = 0x202;
-    /* Task B */
-    taskb = kmalloc(sizeof(struct arch_task));
-    if ( NULL == taskb ) {
-        return -1;
-    }
-    taskb->kstack = kmalloc(4096);
-    if ( NULL == taskb->kstack ) {
-        return -1;
-    }
-    taskb->ustack = kmalloc(4096);
-    if ( NULL == taskb->ustack ) {
-        return -1;
-    }
-    taskb->rp = taskb->kstack + 4096 - 16 - sizeof(struct stackframe64);
-    kmemset(taskb->rp, 0, sizeof(struct stackframe64));
-    taskb->sp0 = (uint64_t)taskb->kstack + 4096 - 16;
-    taskb->rp->sp = (uint64_t)taskb->ustack + 4096 - 16;
-    taskb->rp->ip = (uint64_t)task_b;
-    taskb->rp->cs = GDT_RING3_CODE64_SEL + 3;
-    taskb->rp->ss = GDT_RING3_DATA64_SEL + 3;
-    taskb->rp->fs = GDT_RING3_DATA64_SEL + 3;
-    taskb->rp->gs = GDT_RING3_DATA64_SEL + 3;
-    taskb->rp->flags = 0x202;
 
     /* Idle task */
     taski = kmalloc(sizeof(struct arch_task));
@@ -958,6 +981,7 @@ _prepare_multitasking(void)
     taski->rp->fs = GDT_RING0_DATA_SEL;
     taski->rp->gs = GDT_RING0_DATA_SEL;
     taski->rp->flags = 0x202;
+    taski->cr3 = ((pgt_t *)g_kvar->mm.kmem.arch)->cr3;
 
     /* Set the task A as the initial task */
     cpu = (struct arch_cpu_data *)CPU_TASK(0);
@@ -1290,6 +1314,7 @@ _prepare_idle_task(int lapic_id)
     idle->rp->fs = GDT_RING0_DATA_SEL;
     idle->rp->gs = GDT_RING0_DATA_SEL;
     idle->rp->flags = 0x202;
+    idle->cr3 = ((pgt_t *)g_kvar->mm.kmem.arch)->cr3;
 
     /* Set the task A as the initial task */
     cpu = (struct arch_cpu_data *)(uintptr_t)CPU_TASK(lapic_id);

@@ -103,14 +103,24 @@ struct stackframe64 {
  * Task
  */
 struct arch_task {
-    /* Restart point (stackframe) */
+    /* Do not change the first three variables.  These must be on the top.  See
+       asm.S and const.h. */
+
+    /* Restart point (stackframe, part of kstack) */
     struct stackframe64 *rp;
-    /* SP0 for TSS */
+
+    /* SP0 for TSS (TSS_SP0) */
     uint64_t sp0;
+
+    /* CR3 (TASK_CR3) */
+    uint64_t cr3;
+
     /* User stack */
     void *ustack;
+
     /* Kernel stack */
     void *kstack;
+
     /* Kernel task (architecture-independent data structure) */
     task_t *task;
 } __attribute__ ((packed));
@@ -182,8 +192,6 @@ void intr_crash(void);
 /* Entry point to the syscall */
 void syscall_entry(void);
 void syscall_setup(uint64_t, uint64_t);
-
-unsigned long long syscall(int, ...);
 
 void spin_lock(void *);
 void spin_unlock(void *);

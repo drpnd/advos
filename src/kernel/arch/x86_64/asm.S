@@ -58,7 +58,6 @@
 	.globl	_asm_ioapic_map_intr
 	.globl	_syscall_entry
 	.globl	_syscall_setup
-	.globl	_syscall
 
 	/* Code segment */
 	.text
@@ -300,19 +299,23 @@ _task_restart:
 	jz	1f
 	/* Save the stack pointer (restart point) */
 	movq	TASK_CUR(%rbp),%rax
-	movq	%rsp,0(%rax)		/* cur_task->rp */
+	movq	%rsp,TASK_RP(%rax)	/* cur_task->rp */
 1:
 	/* Notify that the current task is switched (to the kernel) */
 	movq	TASK_CUR(%rbp),%rdi
 	movq	TASK_NEXT(%rbp),%rsi
+	/* to implement */
 	/* Task switch (set the stack frame of the new task) */
 	movq	TASK_NEXT(%rbp),%rax	/* next_task */
 	movq	%rax,TASK_CUR(%rbp)	/* cur_task */
-	movq	0(%rax),%rsp		/* next_task->rp */
+	movq	TASK_RP(%rax),%rsp	/* next_task->rp */
 	movq	$0,TASK_NEXT(%rbp)	/* next_task */
+	/* Change page table */
+	movq	TASK_CR3(%rax),%rdx
+	movq	%rdx,%cr3
 	/* Setup sp0 in TSS */
 	movq	TASK_CUR(%rbp),%rax	/* cur_task */
-	movq	8(%rax),%rdx		/* cur_task->sp0 */
+	movq	TASK_SP0(%rax),%rdx	/* cur_task->sp0 */
 	movq	$CPU_TSS_BASE,%rax	/* TSS */
 	addq	%rcx,%rax
 	movq	%rdx,TSS_SP0(%rax)
@@ -617,20 +620,6 @@ _syscall_setup:
 	movabs	$syscall_nr,%rbx
 	movq	%rsi,(%rbx)
 	popq	%rbx
-	ret
-
-/* int syscall(arg0, ..., arg5) */
-_syscall:
-	pushq	%rbp
-	movq	%rdi,%rax
-	movq	%rsi,%rdi
-	movq	%rdx,%rsi
-	movq	%rcx,%rdx
-	movq	%r8,%r10
-	movq	%r9,%r8
-	movq	-8(%rsp),%r9
-	syscall
-	popq    %rbp
 	ret
 
 /* void spin_lock(void *) */

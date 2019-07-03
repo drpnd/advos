@@ -83,9 +83,9 @@ print_hex(volatile uint16_t *vbase, uint64_t val, int w)
 void
 sys_print_counter(int ln, uint64_t cnt)
 {
-    uint16_t *base;
+    volatile uint16_t *base;
 
-    base = (uint16_t *)0xc00b8000;
+    base = (volatile uint16_t *)0xc00b8000;
     base += 80 * ln;
     print_hex(base, cnt, 8);
 }

@@ -57,6 +57,11 @@
 #define CPU_TASK_BASE           (CPU_DATA_BASE + 104)
 #define CPU_TASK(i)             (CPU_TASK_BASE + ((i) << 7))
 
+/* struct arch_task */
+#define TASK_RP                 0
+#define TASK_SP0                8
+#define TASK_CR3                16
+
 /* Task */
 #define TASK_CUR                0
 #define TASK_NEXT               8
