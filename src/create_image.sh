@@ -3,8 +3,8 @@
 #      Hirochika Asai  <asai@jar.jp>
 #
 
-## This script takes two arguments.  The options are described below in the error
-## message
+## This script takes four arguments.  The options are described below in the error
+## message.
 if [ -z "$1" -o -z "$2" -o -z "$3" -o -z "$4" ];
 then
     echo "Usage: $0 <output> <mbr> <boot-monitor> <kernel>" >& 2
