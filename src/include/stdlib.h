@@ -21,13 +21,19 @@
  * SOFTWARE.
  */
 
-#ifndef _SYS_SYSCALL_H
-#define _SYS_SYSCALL_H
+#ifndef _STDLIB_H
+#define _STDLIB_H
 
-#define SYS_exit        1
-#define SYS_MAXSYSCALL  768
+#ifndef NULL
+#define NULL    ((void *)0)
+#endif
 
-#endif /* _SYS_SYSCALL_H */
+#define EXIT_SUCCESS    0
+#define EXIT_FAILURE    -1
+
+void exit(int) __attribute__ ((__noreturn__));
+
+#endif
 
 /*
  * Local variables:

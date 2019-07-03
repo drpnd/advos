@@ -21,19 +21,20 @@
  * SOFTWARE.
  */
 
-#ifndef _SYS_SYSCALL_H
-#define _SYS_SYSCALL_H
+	.text
+	.code64
+	.globl	_syscall
 
-#define SYS_exit        1
-#define SYS_MAXSYSCALL  768
-
-#endif /* _SYS_SYSCALL_H */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */
+/* int syscall(arg0, ..., arg5) */
+_syscall:
+	pushq	%rbp
+	movq	%rdi,%rax
+	movq	%rsi,%rdi
+	movq	%rdx,%rsi
+	movq	%rcx,%rdx
+	movq 	%r8,%r10
+	movq	%r9,%r8
+	movq	-8(%rsp),%r9
+	syscall
+	popq	%rbp
+	ret

@@ -8,7 +8,7 @@ argc=$#
 
 if [ -z "$1" ];
 then
-    echo "Usage: $0 <output> [list of files]" >& 2
+    echo "Usage: $0 <output> [list of <path:filename>]" >& 2
 fi
 
 ## Output file
