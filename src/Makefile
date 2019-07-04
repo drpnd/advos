@@ -21,7 +21,7 @@ libc.a: $(LIBCOBJS)
 
 initrd: libc.a lib/crt0.o
 	$(MAKE) -C servers/init
-	./create_initrd.sh initrd servers/init/init:init
+	./create_initrd.sh initrd servers/init/init:/init
 
 clean:
 	$(MAKE) -C boot clean
