@@ -90,6 +90,7 @@
 #define IDT_NR                  256
 
 #define KERNEL_RELOCBASE        0xc0000000
+#define INITRD_BASE             0xc0030000
 
 /* Machine-specific registers (MSRs) */
 #define MSR_APIC_BASE           0x1b

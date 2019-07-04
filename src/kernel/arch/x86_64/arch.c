@@ -935,6 +935,12 @@ arch_create_new_task(void *f)
     return t;
 }
 
+struct initrd_entry {
+    char name[16];
+    uint64_t offset;
+    uint64_t size;
+};
+
 /*
  * Create tasks
  */
@@ -943,6 +949,17 @@ _prepare_multitasking(void)
 {
     int ret;
     struct arch_cpu_data *cpu;
+
+    /* Testing initrd */
+    struct initrd_entry *e;
+    e = (void *)INITRD_BASE;
+    int i;
+    for ( i = 0; i < 128; i++ ) {
+        if ( 0 == kstrcmp("/init", e->name) ) {
+            kprintf("Found: %s %lld %lld\n", e->name, e->offset, e->size);
+        }
+        e++;
+    }
 
     ret = memory_slab_create_cache(&g_kvar->slab, ARCH_TASK_NAME,
                                    sizeof(struct arch_task));
