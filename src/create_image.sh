@@ -40,7 +40,7 @@ then
     echo "Error: $kernel is too large (must be <= 131072 bytes)" >& 2
     exit 1
 fi
-if [ $initrd -ge 131072 ];
+if [ $initrd_size -ge 131072 ];
 then
     echo "Error: $initrd is too large (must be <= 131072 bytes)" >& 2
     exit 1
