@@ -40,7 +40,8 @@ $ docker-compose run qemu
 | `00009000` | `0000cfff` | Boot monitor (16 KiB) |
 | `0000d000` | `0000ffff` | Reserved for boot monitor |
 | `00010000` | `0002ffff` | Kernel (up to 128 KiB) |
-| `00030000` | `0005ffff` | Reserved |
+| `00030000` | `0004ffff` | initrd (up to 128 KiB) |
+| `00050000` | `0005ffff` | Reserved |
 | `00060000` | `00067fff` | Per-core data (128-byte * 256) |
 | `00068000` | `00068e00` | Global variables |
 | `00068f00` | `00068fff` | Global variables for assembly |

@@ -9,7 +9,7 @@ all: initrd
 	$(MAKE) -C boot mbr
 	$(MAKE) -C boot bootmon
 	$(MAKE) -C kernel kernel
-	./create_image.sh advos.img boot/mbr boot/bootmon kernel/kernel
+	./create_image.sh advos.img boot/mbr boot/bootmon kernel/kernel initrd
 	$(MAKE) -C boot pxeboot
 
 # libc
