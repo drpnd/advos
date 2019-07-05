@@ -876,7 +876,7 @@ vmem_new(void)
  * Create a new task
  */
 struct arch_task *
-arch_create_new_task(void *f)
+arch_create_new_task(void *f, size_t size)
 {
     /* Prepare virt_memory_t */
     int ret;
@@ -884,6 +884,10 @@ arch_create_new_task(void *f)
     void *pages;
     struct arch_task *t;
     void *prog;
+    size_t nr;
+
+    /* Calculate the number of pages required for the program */
+    nr = (size + MEMORY_PAGESIZE -1) / MEMORY_PAGESIZE;
 
     vmem = vmem_new();
     if ( NULL == vmem ) {
@@ -896,6 +900,14 @@ arch_create_new_task(void *f)
 
     /* Switch the memory context */
     g_kvar->mm.ifs.ctxsw(vmem->arch);
+
+    /* Program */
+    prog = virt_memory_alloc_pages_addr(vmem, 0x40000000ULL, nr,
+                                        MEMORY_ZONE_NUMA_AWARE, 0);
+    if ( NULL == prog ) {
+        return NULL;
+    }
+    kmemcpy(prog, f, size);
 
     t = memory_slab_alloc(&g_kvar->slab, ARCH_TASK_NAME);
     if ( NULL == t ) {
@@ -915,10 +927,6 @@ arch_create_new_task(void *f)
     }
     t->ustack = pages;
 
-    /* Program */
-    prog = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
-    kmemcpy(prog, f, MEMORY_PAGESIZE);
-
     t->rp = t->kstack + 4096 - 16 - sizeof(struct stackframe64);
     kmemset(t->rp, 0, sizeof(struct stackframe64));
     t->sp0 = (uint64_t)t->kstack + 4096 - 16;
@@ -935,11 +943,38 @@ arch_create_new_task(void *f)
     return t;
 }
 
+/*
+ * initrd
+ */
 struct initrd_entry {
     char name[16];
     uint64_t offset;
     uint64_t size;
 };
+
+/*
+ * Search a file in initrd
+ */
+static int
+_initrd_find_file(const char *fname, void **start, size_t *size)
+{
+    struct initrd_entry *e;
+
+    e = (void *)INITRD_BASE;
+    int i;
+    for ( i = 0; i < 128; i++ ) {
+        if ( 0 == kstrcmp(fname, e->name) ) {
+            /* Found */
+            *start = (void *)INITRD_BASE + e->offset;
+            *size = e->size;
+            return 0;
+        }
+        e++;
+    }
+
+    /* Not found */
+    return -1;
+}
 
 /*
  * Create tasks
@@ -949,29 +984,27 @@ _prepare_multitasking(void)
 {
     int ret;
     struct arch_cpu_data *cpu;
+    void *start;
+    size_t size;
 
-    /* Testing initrd */
-    struct initrd_entry *e;
-    e = (void *)INITRD_BASE;
-    int i;
-    for ( i = 0; i < 128; i++ ) {
-        if ( 0 == kstrcmp("/init", e->name) ) {
-            kprintf("Found: %s %lld %lld\n", e->name, e->offset, e->size);
-        }
-        e++;
+    /* Find /init from initrd */
+    ret = _initrd_find_file("/init", &start, &size);
+    if ( ret < 0 ) {
+        panic("Could not find /init.");
     }
+    kprintf("Found /init: %llx %lld\n", start, size);
 
     ret = memory_slab_create_cache(&g_kvar->slab, ARCH_TASK_NAME,
                                    sizeof(struct arch_task));
     if ( ret < 0 ) {
         panic("Cannot create a slab for arch_task.");
     }
-    taska = arch_create_new_task(task_a);
+    taska = arch_create_new_task(task_a, 4096);
     if ( NULL == taska ) {
         return -1;
     }
-    taskb = arch_create_new_task(task_b);
-    if ( NULL == taska ) {
+    taskb = arch_create_new_task(start, size);
+    if ( NULL == taskb ) {
         return -1;
     }
 

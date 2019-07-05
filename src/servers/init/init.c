@@ -21,12 +21,20 @@
  * SOFTWARE.
  */
 
+unsigned long long syscall(int, ...);
+
 /*
  * Entry point for the init program
  */
 int
 main(int argc, char *argv[])
 {
+    unsigned long long cnt = 0;
+    for ( ;; ) {
+        syscall(766, 23, cnt);
+        cnt++;
+    }
+
     return 0;
 }
 

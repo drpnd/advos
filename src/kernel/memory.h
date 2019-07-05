@@ -369,6 +369,7 @@ int virt_memory_block_add(virt_memory_t *, uintptr_t, uintptr_t);
 int virt_memory_wire(virt_memory_t *, uintptr_t, size_t, uintptr_t);
 void * virt_memory_alloc_pages(virt_memory_t *, size_t, int, int);
 void virt_memory_free_pages(virt_memory_t *, void *);
+void * virt_memory_alloc_pages_addr(virt_memory_t *, uintptr_t, size_t, int, int);
 
 int virt_memory_new(virt_memory_t *, memory_t *, virt_memory_allocator_t *);
 

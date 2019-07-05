@@ -1144,6 +1144,195 @@ error_entry:
     return -1;
 }
 
+/*
+ * Allocate pages with specified address
+ */
+void *
+virt_memory_alloc_pages_addr(virt_memory_t *vmem, uintptr_t virtual, size_t nr,
+                             int zone, int numadomain)
+{
+    virt_memory_block_t *b;
+    virt_memory_free_t *f;
+    virt_memory_free_t *f0;
+    virt_memory_free_t *f1;
+    virt_memory_entry_t *e;
+    size_t size;
+    page_t *p;
+    page_t **pp;
+    int ret;
+    int flags;
+    size_t i;
+    void *r;
+
+    /* Page alignment check */
+    if ( virtual & (MEMORY_PAGESIZE - 1) ) {
+        return NULL;
+    }
+
+    /* Find a block including the virtual address */
+    b = _find_block(vmem, virtual);
+    if ( NULL == b ) {
+        /* Not found */
+        return NULL;
+    }
+
+    /* Find a free space corresponding to the virtual address */
+    f = _find_free_entry(b, virtual);
+    if ( NULL == f ) {
+        /* Not found */
+        return NULL;
+    }
+
+    /* Check if the whole size is within this space */
+    size = MEMORY_PAGESIZE * nr;
+    if ( virtual + size > f->start + f->size ) {
+        return NULL;
+    }
+
+    /* Prepare an entry and an object */
+    e = (virt_memory_entry_t *)vmem->allocator.alloc(vmem);
+    if ( NULL == e ) {
+        goto error_entry;
+    }
+    e->start = virtual;
+    e->size = nr * MEMORY_PAGESIZE;
+    e->offset = 0;
+    e->flags = MEMORY_VMF_RW;
+    e->object = (virt_memory_object_t *)vmem->allocator.alloc(vmem);
+    if ( NULL == e->object ) {
+        goto error_obj;
+    }
+    e->object->type = MEMORY_OBJECT;
+    e->object->size = nr * MEMORY_PAGESIZE;
+    e->object->pages = NULL;
+    e->object->refs = 1;
+
+    /* Prepare for free spaces */
+    f0 = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
+    if ( NULL == f0 ) {
+        goto error_f0;
+    }
+    f1 = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
+    if ( NULL == f1 ) {
+        goto error_f1;
+    }
+
+    /* Allocate and map pages */
+    pp = &e->object->pages;
+    for ( i = 0; i < nr; i++ ) {
+        p = (page_t *)vmem->allocator.alloc(vmem);
+        if ( NULL == p ) {
+            goto error_page;
+        }
+        p->index = i;
+        p->zone = zone;
+        p->numadomain = numadomain;
+        p->flags = 0;
+        if ( e->flags & MEMORY_VMF_RW ) {
+            p->flags |= MEMORY_PGF_RW;
+        }
+        p->order = 0;
+        p->next = NULL;
+
+        /* Allocate a physical page */
+        r = phys_mem_alloc(vmem->mem->phys, p->order, p->zone, p->numadomain);
+        if ( NULL == r ) {
+            vmem->allocator.free(vmem, (void *)p);
+            goto error_page;
+        }
+        p->physical = (uintptr_t)r;
+
+        /* Map */
+        flags = vmem->flags;
+        ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
+                                 p, flags);
+        if ( ret < 0 ) {
+            vmem->allocator.free(vmem, (void *)p);
+            phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
+                          p->zone, p->numadomain);
+            goto error_page;
+        }
+
+        *pp = p;
+        pp = &p->next;
+    }
+
+    /* Add this entry */
+    ret = _entry_add(b, e);
+    if ( ret < 0 ) {
+        goto error_page;
+    }
+
+    /* Remove the free entry */
+    f = _free_delete(b, f);
+    kassert( f != NULL );
+    if ( f->start == e->start && f->size == e->size  ) {
+        /* Remove the entire entry */
+        vmem->allocator.free(vmem, (void *)f0);
+        vmem->allocator.free(vmem, (void *)f1);
+    } else if ( f->start == e->start ) {
+        /* The start address is same, then add the rest to the free entry */
+        f0->start = f->start + e->size;
+        f0->size = f->size - e->size;
+        ret = _free_add(b, f0);
+        if ( ret < 0 ) {
+            goto error_post;
+        }
+        vmem->allocator.free(vmem, (void *)f1);
+    } else if ( f->start + f->size == e->start + e->size ) {
+        /* The end address is same, then add the rest to the free entry */
+        f0->start = f->start;
+        f0->size = f->size - e->size;
+        ret = _free_add(b, f0);
+        if ( ret < 0 ) {
+            goto error_post;
+        }
+        vmem->allocator.free(vmem, (void *)f1);
+    } else {
+        f0->start = f->start;
+        f0->size = e->start + e->size - f->start;
+        f1->start = e->start + e->size;
+        f1->size = f->start + f->size - f1->start;
+        ret = _free_add(b, f0);
+        if ( ret < 0 ) {
+            goto error_post;
+        }
+        ret = _free_add(b, f1);
+        if ( ret < 0 ) {
+            goto error_free;
+        }
+    }
+    vmem->allocator.free(vmem, (void *)f);
+
+    return (void *)virtual;
+
+error_free:
+    _free_delete(b, f0);
+error_post:
+    _entry_delete(b, e);
+    /* Add it back */
+    _free_add(b, f);
+error_page:
+    p = e->object->pages;
+    virtual = e->start;
+    while ( NULL != p ) {
+        ret = vmem->mem->ifs.unmap(vmem->arch, virtual, p);
+        kassert(ret == 0);
+        virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
+        vmem->allocator.free(vmem, (void *)p);
+        p = p->next;
+    }
+    vmem->allocator.free(vmem, (void *)f1);
+error_f1:
+    vmem->allocator.free(vmem, (void *)f0);
+error_f0:
+    vmem->allocator.free(vmem, (void *)e->object);
+error_obj:
+    vmem->allocator.free(vmem, (void *)e);
+error_entry:
+    return NULL;
+}
+
 #if 0
 /*
  * Copy entries
