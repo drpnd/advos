@@ -21,6 +21,25 @@
  * SOFTWARE.
  */
 
+#include <sys/syscall.h>
+#include "kernel.h"
+
+/*
+ * Exit a process
+ */
+void
+sys_exit(int status)
+{
+    /* ToDo: Call atexit() */
+
+    /*  */
+    for ( ;; ) {
+        hlt();
+    }
+}
+
+
+
 /*
  * Local variables:
  * tab-width: 4

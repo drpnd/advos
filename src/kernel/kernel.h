@@ -78,8 +78,9 @@ struct _task {
     int credit;
 };
 
-/* Defined in arch/<architecture>/arch.c */
+/* Defined in arch/<architecture>/{arch.c,asm.S} */
 void panic(const char *, ...);
+void hlt(void);
 
 #define kassert(cond)        do {                                       \
         char buf[4096];                                                 \
