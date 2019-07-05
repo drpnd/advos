@@ -738,35 +738,6 @@ task_a(void)
 }
 
 /*
- * Task B
- */
-void
-task_b(void)
-{
-    volatile uint64_t cnt = 0;
-
-    while ( 1 ) {
-#if 0
-        __asm__ __volatile__ ("pushq %%rbp;"
-                              "syscall;"
-                              "popq %%rbp;"
-                              : : "a"(766), "D"(23), "S"(cnt + 1)
-                              : "cc", "rdx", "rcx", "r8", "r9", "r10", "r11");
-#endif
-        __asm__ __volatile__ ("syscall" :: "a"(766), "D"(23), "S"(cnt));
-        //syscall(766, 23, cnt);
-        cnt++;
-#if 0
-        __asm__ __volatile__ ("pushq %%rbp;"
-                              "syscall;"
-                              "popq %%rbp;"
-                              : : "a"(766), "D"(21), "S"(cnt + 3)
-                              : "cc", "rdx", "rcx", "r8", "r9", "r10", "r11");
-#endif
-    }
-}
-
-/*
  * Allocate a virt_memory_data_t data structure
  */
 void *

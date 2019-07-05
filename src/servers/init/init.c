@@ -30,6 +30,7 @@ int
 main(int argc, char *argv[])
 {
     unsigned long long cnt = 0;
+
     for ( ;; ) {
         syscall(766, 23, cnt);
         cnt++;
