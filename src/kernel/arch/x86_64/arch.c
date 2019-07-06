@@ -859,7 +859,8 @@ arch_create_new_task(void *f, size_t size)
     /* Prepare virt_memory_t */
     int ret;
     virt_memory_t *vmem;
-    void *pages;
+    void *kstack;
+    void *ustack;
     struct arch_task *t;
     void *prog;
     size_t nr;
@@ -892,23 +893,21 @@ arch_create_new_task(void *f, size_t size)
         return NULL;
     }
 
-    pages = virt_memory_alloc_pages(&g_kvar->mm.kmem, 1, MEMORY_ZONE_NUMA_AWARE,
-                                   0);
-    if ( NULL == pages ) {
+    kstack = virt_memory_alloc_pages(&g_kvar->mm.kmem, 1,
+                                     MEMORY_ZONE_NUMA_AWARE, 0);
+    if ( NULL == kstack ) {
         return NULL;
     }
-    t->kstack = pages;
 
-    pages = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
-    if ( NULL == pages ) {
+    ustack = virt_memory_alloc_pages(vmem, 1, MEMORY_ZONE_NUMA_AWARE, 0);
+    if ( NULL == ustack ) {
         return NULL;
     }
-    t->ustack = pages;
 
-    t->rp = t->kstack + 4096 - 16 - sizeof(struct stackframe64);
+    t->rp = kstack + 4096 - 16 - sizeof(struct stackframe64);
     kmemset(t->rp, 0, sizeof(struct stackframe64));
-    t->sp0 = (uint64_t)t->kstack + 4096 - 16;
-    t->rp->sp = (uint64_t)t->ustack + 4096 - 16;
+    t->sp0 = (uint64_t)kstack + 4096 - 16;
+    t->rp->sp = (uint64_t)ustack + 4096 - 16;
     t->rp->ip = (uint64_t)prog;
     t->rp->cs = GDT_RING3_CODE64_SEL + 3;
     t->rp->ss = GDT_RING3_DATA64_SEL + 3;
@@ -1002,7 +1001,6 @@ _init_new(void)
     if ( NULL == ustack ) {
         return NULL;
     }
-    t->ustack = ustack;
 
     ret = arch_task_init(proc->task, prog);
     if ( ret < 0 ) {
@@ -1025,6 +1023,8 @@ _prepare_multitasking(void)
     void *start;
     size_t size;
     proc_t *proc;
+    void *kstack;
+    void *ustack;
 
     proc = _init_new();
     if ( NULL == proc ) {
@@ -1053,18 +1053,18 @@ _prepare_multitasking(void)
     if ( NULL == taski ) {
         return -1;
     }
-    taski->kstack = kmalloc(4096);
-    if ( NULL == taski->kstack ) {
+    kstack = kmalloc(4096);
+    if ( NULL == kstack ) {
         return -1;
     }
-    taski->ustack = kmalloc(4096);
-    if ( NULL == taski->ustack ) {
+    ustack = kmalloc(4096);
+    if ( NULL == ustack ) {
         return -1;
     }
-    taski->rp = taski->kstack + 4096 - 16 - sizeof(struct stackframe64);
+    taski->rp = kstack + 4096 - 16 - sizeof(struct stackframe64);
     kmemset(taski->rp, 0, sizeof(struct stackframe64));
-    taski->sp0 = (uint64_t)taski->kstack + 4096 - 16;
-    taski->rp->sp = (uint64_t)taski->ustack + 4096 - 16;
+    taski->sp0 = (uint64_t)kstack + 4096 - 16;
+    taski->rp->sp = (uint64_t)ustack + 4096 - 16;
     taski->rp->ip = (uint64_t)task_idle;
     taski->rp->cs = GDT_RING0_CODE_SEL;
     taski->rp->ss = GDT_RING0_DATA_SEL;
@@ -1377,27 +1377,29 @@ _prepare_idle_task(int lapic_id)
 {
     struct arch_cpu_data *cpu;
     struct arch_task *idle;
+    void *kstack;
+    void *ustack;
 
     /* Idle task */
     idle = kmalloc(sizeof(struct arch_task));
     if ( NULL == idle ) {
         return -1;
     }
-    idle->kstack = kmalloc(4096);
-    if ( NULL == idle->kstack ) {
+    kstack = kmalloc(4096);
+    if ( NULL == kstack ) {
         kfree(idle);
         return -1;
     }
-    idle->ustack = kmalloc(4096);
-    if ( NULL == idle->ustack ) {
-        kfree(idle->kstack);
+    ustack = kmalloc(4096);
+    if ( NULL == ustack ) {
+        kfree(kstack);
         kfree(idle);
         return -1;
     }
-    idle->rp = idle->kstack + 4096 - 16 - sizeof(struct stackframe64);
+    idle->rp = kstack + 4096 - 16 - sizeof(struct stackframe64);
     kmemset(idle->rp, 0, sizeof(struct stackframe64));
-    idle->sp0 = (uint64_t)idle->kstack + 4096 - 16;
-    idle->rp->sp = (uint64_t)idle->ustack + 4096 - 16;
+    idle->sp0 = (uint64_t)kstack + 4096 - 16;
+    idle->rp->sp = (uint64_t)ustack + 4096 - 16;
     idle->rp->ip = (uint64_t)task_idle;
     idle->rp->cs = GDT_RING0_CODE_SEL;
     idle->rp->ss = GDT_RING0_DATA_SEL;

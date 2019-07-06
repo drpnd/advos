@@ -116,12 +116,6 @@ struct arch_task {
     /* CR3 (TASK_CR3) */
     uint64_t cr3;
 
-    /* User stack */
-    void *ustack;
-
-    /* Kernel stack */
-    void *kstack;
-
     /* Kernel task (architecture-independent data structure) */
     task_t *task;
 } __attribute__ ((packed));
