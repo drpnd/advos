@@ -63,6 +63,7 @@ proc_new(pid_t pid)
         return NULL;
 
     }
+    proc->task->proc =  proc;
 
     proc->pid = pid;
     kmemset(proc->name, 0, PATH_MAX);

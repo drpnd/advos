@@ -23,6 +23,7 @@
 
 #include "../../proc.h"
 #include "arch.h"
+#include "apic.h"
 
 /*
  * Initialize the architecture-specific task data structure
@@ -33,6 +34,7 @@ arch_task_init(task_t *t, void *entry)
     struct arch_task *at;
 
     at = t->arch;
+    at->task = t;
 
     /* Restart point (in the kernel stack) */
     at->rp = t->kstack + KSTACK_SIZE - KSTACK_GUARD
@@ -52,6 +54,21 @@ arch_task_init(task_t *t, void *entry)
     at->rp->flags = 0x202;
 
     return 0;
+}
+
+/*
+ * Get the current task
+ */
+task_t *
+this_task(void)
+{
+    struct arch_cpu_data *cpu;
+    struct arch_task *at;
+
+    cpu = (struct arch_cpu_data *)CPU_TASK(lapic_id());
+    at = cpu->cur_task;
+
+    return at->task;
 }
 
 /*

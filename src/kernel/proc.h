@@ -112,6 +112,9 @@ task_t * task_alloc(void);
 proc_t * proc_new(pid_t);
 void proc_use(proc_t *);
 
+/* Defined in arch/<>architecture/task.c */
+task_t * this_task(void);
+
 #endif
 
 /*
