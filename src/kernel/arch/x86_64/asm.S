@@ -298,7 +298,7 @@ _sys_fork:
 	leaveq
 	ret
 
-/* void sys_fork_restart(void *task, uint64_t ret0, uint64_t ret1) */
+/* void sys_fork_restart(void *task, pid_t ret0, pid_t ret1) */
 sys_fork_restart:
 	movq	%rdx,%rax
 	leaveq			/* Restore the stack */

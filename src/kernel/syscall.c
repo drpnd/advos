@@ -40,11 +40,23 @@ sys_exit(int status)
 
 /*
  * Create a new process (called from the assembly entry code)
+ *
+ * SYNOPSIS
+ *      int
+ *      sys_fork_c(void **task, pid_t *ret0, pd_t *ret1);
+ *
+ * DESCRIPTION
+ *
+ * RETURN VALUES
+ *      Upon successful completion, the sys_fork() function returns a value of 0
+ *      to the child process and returns the process ID of the child process to
+ *      the parent process.  Otherwise, a value of -1 is returned to the parent
+ *      process and no child process is created.
  */
 int
-sys_fork_c(void **task, uintptr_t *ret0, uintptr_t *ret1)
+sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
 {
-    return 0;
+    return -1;
 }
 
 /*
