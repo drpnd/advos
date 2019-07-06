@@ -34,10 +34,15 @@ arch_task_init(task_t *t, void *entry)
 
     at = t->arch;
 
+    /* Restart point (in the kernel stack) */
     at->rp = t->kstack + KSTACK_SIZE - KSTACK_GUARD
         - sizeof(struct stackframe64);
     kmemset(at->rp, 0, sizeof(struct stackframe64));
+
+    /* Kernel stack on interrupts */
     at->sp0 = (uint64_t)t->kstack + KSTACK_SIZE - KSTACK_GUARD;
+
+    /* Set up the stackframe */
     at->rp->sp = (uint64_t)PROC_PROG_ADDR + PROC_PROG_SIZE - 16;
     at->rp->ip = (uint64_t)entry;
     at->rp->cs = GDT_RING3_CODE64_SEL + 3;
