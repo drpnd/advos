@@ -34,7 +34,7 @@ task_mgr_init(size_t atsize)
     int ret;
 
     /* Allocate the kernel stack slab */
-    ret = memory_slab_create_cache(&g_kvar->slab, "kstack", KSTACK_SIZE);
+    ret = memory_slab_create_cache(&g_kvar->slab, SLAB_TASK_STACK, KSTACK_SIZE);
     if ( ret < 0 ) {
         return -1;
     }
@@ -56,17 +56,27 @@ task_t *
 task_alloc(void)
 {
     task_t *t;
-    void *kstack;
 
-    t = memory_slab_alloc(&g_kvar->slab, "task");
+    /* Prepare a task data structure */
+    t = memory_slab_alloc(&g_kvar->slab, SLAB_TASK);
     if ( NULL == t ) {
         return NULL;
     }
-    kstack = memory_slab_alloc(&g_kvar->slab, "kstack");
-    if ( NULL == kstack ) {
-        memory_slab_free(&g_kvar->slab, "task", t);
+    t->arch = (void *)t + sizeof(task_t);
+
+    /* Prepare kernel stack */
+    t->kstack = memory_slab_alloc(&g_kvar->slab, SLAB_TASK_STACK);
+    if ( NULL == t->kstack ) {
+        memory_slab_free(&g_kvar->slab, SLAB_TASK, t);
         return NULL;
     }
+
+    /* Set the initial values */
+    t->proc = NULL;
+    t->id = 0;
+    t->state = TASK_CREATED;
+    t->next = NULL;
+    t->credit = 0;
 
     return t;
 }

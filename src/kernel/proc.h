@@ -31,6 +31,7 @@
 #define SLAB_VIRT_MEMORY_DATA   "virt_memory_data"
 #define SLAB_TASK               "task"
 #define SLAB_PROC               "proc"
+#define SLAB_TASK_STACK         "kstack"
 
 typedef enum {
     TASK_CREATED,
