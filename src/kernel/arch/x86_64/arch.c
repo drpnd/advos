@@ -50,6 +50,7 @@ int arch_memory_map(void *, uintptr_t, page_t *, int);
 int arch_memory_unmap(void *, uintptr_t, page_t *);
 int arch_memory_prepare(void *, uintptr_t, size_t);
 int arch_memory_refer(void *, void *, uintptr_t, size_t);
+virt_memory_t * arch_memory_new(void);
 int arch_memory_ctxsw(void *);
 void * arch_memory_fork(void *);
 
@@ -354,6 +355,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     ifs.unmap = arch_memory_unmap;
     ifs.prepare = arch_memory_prepare;
     ifs.refer = arch_memory_refer;
+    ifs.new = arch_memory_new;
     ifs.ctxsw = arch_memory_ctxsw;
     ret = memory_init(&kvar->mm, &kvar->phys, pgt, KERNEL_LMAP, &ifs);
     if ( ret < 0 ) {
@@ -805,7 +807,7 @@ vmem_callback_init(void)
  * Allocate and initialize a new virtual memory data structure
  */
 virt_memory_t *
-vmem_new(void)
+arch_memory_new(void)
 {
     int ret;
     virt_memory_t *vmem;
@@ -865,7 +867,7 @@ arch_create_new_task(void *f, size_t size)
     /* Calculate the number of pages required for the program */
     nr = (size + MEMORY_PAGESIZE -1) / MEMORY_PAGESIZE;
 
-    vmem = vmem_new();
+    vmem = g_kvar->mm.ifs.new();
     if ( NULL == vmem ) {
         return NULL;
     }

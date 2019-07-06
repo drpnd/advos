@@ -41,7 +41,7 @@ proc_new(pid_t pid)
     kmemset(proc, 0, sizeof(proc_t));
 
     /* Allocate a virtual memory */
-    proc->vmem = vmem_new();
+    proc->vmem = g_kvar->mm.ifs.new();
     if ( NULL == proc->vmem ) {
         memory_slab_free(&g_kvar->slab, SLAB_PROC, proc);
         return NULL;

@@ -72,6 +72,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     mem->ifs.unmap = ifs->unmap;
     mem->ifs.prepare = ifs->prepare;
     mem->ifs.refer = ifs->refer;
+    mem->ifs.new = ifs->new;
     mem->ifs.ctxsw = ifs->ctxsw;
 
     return 0;
