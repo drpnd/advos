@@ -85,18 +85,29 @@ proc_t *
 proc_fork(proc_t *op, pid_t pid)
 {
     proc_t *np;
+    int ret;
 
-    /* Create a new process */
-    np = proc_new(pid);
+    /* Allocate proc_t */
+    np = memory_slab_alloc(&g_kvar->slab, SLAB_PROC);
     if ( NULL == np ) {
+        return NULL;
+    }
+    kmemset(np, 0, sizeof(proc_t));
+
+    /* Allocate a virtual memory */
+    np->vmem = g_kvar->mm.ifs.new();
+    if ( NULL == np->vmem ) {
+        memory_slab_free(&g_kvar->slab, SLAB_PROC, np);
+        return NULL;
+    }
+    ret = virt_memory_fork(np->vmem, op->vmem);
+    if ( ret < 0 ) {
+        memory_slab_free(&g_kvar->slab, SLAB_PROC, np);
         return NULL;
     }
 
     /* Set the original process to the parent of the forked proocess */
     np->parent = op;
-
-    /* Copy memory; ToDo: Copy-on-Write */
-
 
     return np;
 }

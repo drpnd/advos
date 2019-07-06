@@ -1334,17 +1334,19 @@ error_entry:
     return NULL;
 }
 
-#if 0
 /*
  * Copy entries
  */
 static int
 _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
-            virt_memory_entry_t *e)
+            btree_node_t *bn)
 {
     virt_memory_entry_t *n;
     int ret;
     virt_memory_object_t *obj;
+    virt_memory_entry_t *e;
+
+    e = (virt_memory_entry_t *)bn->data;
 
     n = (virt_memory_entry_t *)dst->allocator.alloc(dst);
     if ( NULL == n ) {
@@ -1355,8 +1357,8 @@ _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
     n->offset = e->offset;
     n->flags = e->flags | MEMORY_VMF_COW;
     n->object = NULL;
-    n->atree2.left = NULL;
-    n->atree2.right = NULL;
+    n->atree.left = NULL;
+    n->atree.right = NULL;
 
     /* Add this entry to the entry tree */
     ret = _entry_add(b, n);
@@ -1416,8 +1418,11 @@ _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
  * Free all entries
  */
 static void
-_entry_free_all(virt_memory_t *vmem, virt_memory_entry_t *e)
+_entry_free_all(virt_memory_t *vmem, btree_node_t *n)
 {
+    virt_memory_entry_t *e;
+
+    e = (virt_memory_entry_t *)n->data;
     if ( NULL != e->atree.left ) {
         _entry_free_all(vmem, e->atree.left);
     }
@@ -1469,17 +1474,6 @@ virt_memory_fork(virt_memory_t *dst, virt_memory_t *src)
     virt_memory_block_t *b;
     int ret;
 
-    /* Copy the kernel memory blocks */
-    b = src->mem->kmem.blocks;
-    while ( NULL != b ) {
-        ret = dst->mem->ifs.refer(dst->arch, src->arch, b->start,
-                                  b->end - b->start + 1);
-        if ( ret < 0 ) {
-            return -1;
-        }
-        b = b->next;
-    }
-
     /* Copy blocks */
     b = src->blocks;
     while ( NULL != b ) {
@@ -1493,7 +1487,6 @@ virt_memory_fork(virt_memory_t *dst, virt_memory_t *src)
 
     return 0;
 }
-#endif
 
 /*
  * New process memory
