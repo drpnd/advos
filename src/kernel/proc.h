@@ -27,6 +27,11 @@
 #include "kernel.h"
 #include "memory.h"
 
+#define SLAB_VIRT_MEMORY        "virt_memory"
+#define SLAB_VIRT_MEMORY_DATA   "virt_memory_data"
+#define SLAB_TASK               "task"
+#define SLAB_PROC               "proc"
+
 typedef enum {
     TASK_CREATED,
     TASK_READY,
@@ -34,13 +39,18 @@ typedef enum {
     TASK_TERMINATED,
 } task_state_t;
 
+typedef struct _task task_t;
+typedef struct _proc proc_t;
+
 /*
  * Task
  */
-typedef struct _task task_t;
 struct _task {
     /* Architecture-specific structure; i.e., struct arch_task */
     void *arch;
+
+    /* Process */
+    proc_t *proc;
 
     /* Kernel stack */
     void *kstack;
@@ -61,7 +71,6 @@ struct _task {
 /*
  * Process
  */
-typedef struct _proc proc_t;
 struct _proc {
     /* Process ID */
     pid_t pid;
@@ -79,12 +88,21 @@ struct _proc {
     uid_t uid;
     gid_t gid;
 
-    /* Architecture-specific structure (i.e., struct arch_proc) */
-    void *arch;
-
-    /* Memory */
+    /* Virtual memory */
     virt_memory_t *vmem;
+
+    /* Code */
+    struct {
+        uintptr_t addr;
+        size_t size;
+    } code;
+
+    /* Exit status */
+    int exit_status;
 };
+
+/* Defined in task.c */
+int task_mgr_init(size_t);
 
 #endif
 

@@ -26,50 +26,41 @@
 #include "kvar.h"
 
 /*
- * Initialize the task manager
+ * Create a new process
  */
-int
-task_mgr_init(size_t atsize)
+proc_t *
+proc_new(pid_t pid)
 {
-    int ret;
+    proc_t *proc;
 
-    /* Allocate the kernel stack slab */
-    ret = memory_slab_create_cache(&g_kvar->slab, "kstack", KSTACK_SIZE);
-    if ( ret < 0 ) {
-        return -1;
-    }
-
-    /* Allocate the task */
-    ret = memory_slab_create_cache(&g_kvar->slab, SLAB_TASK,
-                                   sizeof(task_t) + atsize);
-    if ( ret < 0 ) {
-        return -1;
-    }
-
-    return 0;
-}
-
-/*
- * Allocate a task
- */
-task_t *
-task_alloc(void)
-{
-    task_t *t;
-    void *kstack;
-
-    t = memory_slab_alloc(&g_kvar->slab, "task");
-    if ( NULL == t ) {
+    /* Allocate proc_t */
+    proc = memory_slab_alloc(&g_kvar->slab, SLAB_PROC);
+    if ( NULL == proc ) {
         return NULL;
     }
-    kstack = memory_slab_alloc(&g_kvar->slab, "kstack");
-    if ( NULL == kstack ) {
-        memory_slab_free(&g_kvar->slab, "task", t);
+    kmemset(proc, 0, sizeof(proc_t));
+
+    /* Allocate a virtual memory */
+    proc->vmem = vmem_new();
+    if ( NULL == proc->vmem ) {
+        memory_slab_free(&g_kvar->slab, SLAB_PROC, proc);
         return NULL;
     }
 
-    return t;
+    proc->pid = pid;
+    kmemset(proc->name, 0, PATH_MAX);
+    proc->parent = NULL;
+    proc->task = NULL;
+    proc->uid = 0;
+    proc->gid = 0;
+
+    proc->code.addr = 0;
+    proc->code.size = 0;
+    proc->exit_status = 0;
+
+    return proc;
 }
+
 
 /*
  * Local variables:

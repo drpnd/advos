@@ -793,6 +793,11 @@ vmem_callback_init(void)
         return -1;
     }
 
+    ret = task_mgr_init(sizeof(struct arch_task));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
     return 0;
 }
 
