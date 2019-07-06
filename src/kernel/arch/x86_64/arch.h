@@ -201,6 +201,9 @@ void spin_unlock(void *);
 console_dev_t * vconsole_init(void);
 int vconsole_write(console_dev_t *, const void *, size_t);
 
+/* Defined in task.c */
+int arch_task_init(task_t *, void *);
+
 #endif
 
 /*

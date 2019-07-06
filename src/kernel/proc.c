@@ -32,6 +32,7 @@ proc_t *
 proc_new(pid_t pid)
 {
     proc_t *proc;
+    int ret;
 
     /* Allocate proc_t */
     proc = memory_slab_alloc(&g_kvar->slab, SLAB_PROC);
@@ -46,11 +47,26 @@ proc_new(pid_t pid)
         memory_slab_free(&g_kvar->slab, SLAB_PROC, proc);
         return NULL;
     }
+    ret = virt_memory_block_add(proc->vmem, PROC_PROG_ADDR,
+                                PROC_PROG_ADDR + PROC_PROG_SIZE - 1);
+    if ( ret < 0 ) {
+        /* ToDo: Free vmem */
+        memory_slab_free(&g_kvar->slab, SLAB_PROC, proc);
+        return NULL;
+    }
+
+    /* Allocate a task */
+    proc->task = task_alloc();
+    if ( NULL == proc->task ) {
+        /* ToDo: Free vmem */
+        memory_slab_free(&g_kvar->slab, SLAB_PROC, proc);
+        return NULL;
+
+    }
 
     proc->pid = pid;
     kmemset(proc->name, 0, PATH_MAX);
     proc->parent = NULL;
-    proc->task = NULL;
     proc->uid = 0;
     proc->gid = 0;
 

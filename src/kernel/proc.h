@@ -27,11 +27,12 @@
 #include "kernel.h"
 #include "memory.h"
 
-#define SLAB_VIRT_MEMORY        "virt_memory"
-#define SLAB_VIRT_MEMORY_DATA   "virt_memory_data"
 #define SLAB_TASK               "task"
 #define SLAB_PROC               "proc"
 #define SLAB_TASK_STACK         "kstack"
+
+#define PROC_PROG_ADDR          0x80000000ULL
+#define PROC_PROG_SIZE          0x40000000ULL
 
 typedef enum {
     TASK_CREATED,
@@ -104,6 +105,10 @@ struct _proc {
 
 /* Defined in task.c */
 int task_mgr_init(size_t);
+task_t * task_alloc(void);
+
+/* Defined in proc. */
+proc_t * proc_new(pid_t);
 
 #endif
 

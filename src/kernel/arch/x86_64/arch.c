@@ -871,7 +871,7 @@ arch_create_new_task(void *f, size_t size)
     if ( NULL == vmem ) {
         return NULL;
     }
-    ret = virt_memory_block_add(vmem, 0x40000000ULL, 0xbfffffffULL);
+    ret = virt_memory_block_add(vmem, 0x80000000ULL, 0xbfffffffULL);
     if ( ret < 0 ) {
         return NULL;
     }
@@ -880,7 +880,7 @@ arch_create_new_task(void *f, size_t size)
     g_kvar->mm.ifs.ctxsw(vmem->arch);
 
     /* Program */
-    prog = virt_memory_alloc_pages_addr(vmem, 0x40000000ULL, nr,
+    prog = virt_memory_alloc_pages_addr(vmem, 0x80000000ULL, nr,
                                         MEMORY_ZONE_NUMA_AWARE, 0);
     if ( NULL == prog ) {
         return NULL;
@@ -955,6 +955,66 @@ _initrd_find_file(const char *fname, void **start, size_t *size)
 }
 
 /*
+ * Create the init process
+ */
+static proc_t *
+_init_new(void)
+{
+    int ret;
+    void *start;
+    size_t size;
+    proc_t *proc;
+    size_t nr;
+    struct arch_task *t;
+    void *ustack;
+    uintptr_t addr;
+    void *prog;
+
+    /* Find /init from initrd */
+    ret = _initrd_find_file("/init", &start, &size);
+    if ( ret < 0 ) {
+        return NULL;
+    }
+    proc = proc_new(1);
+    if ( NULL == proc ) {
+        return NULL;
+    }
+    t = proc->task->arch;
+
+    /* Switch the memory context */
+    g_kvar->mm.ifs.ctxsw(proc->vmem->arch);
+
+    /* Calculate the number of pages required for the program */
+    nr = (size + MEMORY_PAGESIZE -1) / MEMORY_PAGESIZE;
+
+    /* Program */
+    prog = virt_memory_alloc_pages_addr(proc->vmem, PROC_PROG_ADDR, nr,
+                                        MEMORY_ZONE_NUMA_AWARE, 0);
+    if ( NULL == prog ) {
+        return NULL;
+    }
+    kmemcpy(prog, start, size);
+
+    /* User stack */
+    addr = PROC_PROG_ADDR + PROC_PROG_SIZE - 4096;
+    ustack = virt_memory_alloc_pages_addr(proc->vmem, addr, 1,
+                                          MEMORY_ZONE_NUMA_AWARE, 0);
+    if ( NULL == ustack ) {
+        return NULL;
+    }
+    t->ustack = ustack;
+
+    ret = arch_task_init(proc->task, prog);
+    if ( ret < 0 ) {
+        return NULL;
+    }
+    t->cr3 = ((pgt_t *)proc->vmem->arch)->cr3;
+    taskb = t;
+
+    return proc;
+}
+
+/*
  * Create tasks
  */
 static int
@@ -964,6 +1024,12 @@ _prepare_multitasking(void)
     struct arch_cpu_data *cpu;
     void *start;
     size_t size;
+    proc_t *proc;
+
+    proc = _init_new();
+    if ( NULL == proc ) {
+        panic("Could not initialize the init process.");
+    }
 
     /* Find /init from initrd */
     ret = _initrd_find_file("/init", &start, &size);
@@ -979,10 +1045,6 @@ _prepare_multitasking(void)
     }
     taska = arch_create_new_task(task_a, 4096);
     if ( NULL == taska ) {
-        return -1;
-    }
-    taskb = arch_create_new_task(start, size);
-    if ( NULL == taskb ) {
         return -1;
     }
 

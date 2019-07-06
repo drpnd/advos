@@ -34,6 +34,12 @@ task_mgr_init(size_t atsize)
     int ret;
 
     /* Allocate the kernel stack slab */
+    ret = memory_slab_create_cache(&g_kvar->slab, SLAB_PROC, sizeof(proc_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    /* Allocate the kernel stack slab */
     ret = memory_slab_create_cache(&g_kvar->slab, SLAB_TASK_STACK, KSTACK_SIZE);
     if ( ret < 0 ) {
         return -1;

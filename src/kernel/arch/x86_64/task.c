@@ -21,8 +21,12 @@
  * SOFTWARE.
  */
 
+#include "../../proc.h"
 #include "arch.h"
 
+/*
+ * Initialize the architecture-specific task data structure
+ */
 int
 arch_task_init(task_t *t, void *entry)
 {
@@ -32,8 +36,9 @@ arch_task_init(task_t *t, void *entry)
 
     at->rp = t->kstack + KSTACK_SIZE - KSTACK_GUARD
         - sizeof(struct stackframe64);
+    kmemset(at->rp, 0, sizeof(struct stackframe64));
     at->sp0 = (uint64_t)t->kstack + KSTACK_SIZE - KSTACK_GUARD;
-    //at->rp->sp = (uint64_t)taska->ustack + 4096 - 16;
+    at->rp->sp = (uint64_t)PROC_PROG_ADDR + PROC_PROG_SIZE - 16;
     at->rp->ip = (uint64_t)entry;
     at->rp->cs = GDT_RING3_CODE64_SEL + 3;
     at->rp->ss = GDT_RING3_DATA64_SEL + 3;
