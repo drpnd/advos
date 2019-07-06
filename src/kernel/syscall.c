@@ -38,8 +38,11 @@ sys_exit(int status)
     }
 }
 
+/*
+ * Create a new process (called from the assembly entry code)
+ */
 int
-sys_fork_c(void **task, uint64_t *ret0, uint64_t *ret1)
+sys_fork_c(void **task, uintptr_t *ret0, uintptr_t *ret1)
 {
     return 0;
 }
