@@ -77,6 +77,14 @@ proc_new(pid_t pid)
     return proc;
 }
 
+/*
+ * Change the process memory context
+ */
+void
+proc_use(proc_t *proc)
+{
+    g_kvar->mm.ifs.ctxsw(proc->vmem->arch);
+}
 
 /*
  * Local variables:

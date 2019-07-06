@@ -110,6 +110,7 @@ task_t * task_alloc(void);
 
 /* Defined in proc. */
 proc_t * proc_new(pid_t);
+void proc_use(proc_t *);
 
 #endif
 

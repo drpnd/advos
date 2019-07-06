@@ -683,7 +683,7 @@ ksignal_clock(void)
         } else if ( cpu->cur_task == taskb ) {
             cpu->next_task = taski;
         } else {
-            cpu->next_task = taska;
+            cpu->next_task = taskb;
         }
     }
 }
@@ -707,35 +707,6 @@ task_idle(void)
         }
         cnt++;
         hlt();
-    }
-}
-
-unsigned long long syscall(int, ...);
-/*
- * Task A
- */
-void
-task_a(void)
-{
-    volatile uint64_t cnt = 0;
-
-    while ( 1 ) {
-#if 1
-        __asm__ __volatile__ ("pushq %%rbp;"
-                              "movq %%rdi,%%rax;"
-                              "movq %%rsi,%%rdi;"
-                              "movq %%rdx,%%rsi;"
-                              "movq %%rcx,%%rdx;"
-                              "movq %%r8,%%r10;"
-                              "movq %%r9,%%r8;"
-                              "syscall;"
-                              "popq %%rbp;"
-                              : : "D"(766), "S"(22), "d"(cnt));
-
-#else
-        syscall(766, 22, cnt);
-#endif
-        cnt++;
     }
 }
 
@@ -981,7 +952,7 @@ _init_new(void)
     t = proc->task->arch;
 
     /* Switch the memory context */
-    g_kvar->mm.ifs.ctxsw(proc->vmem->arch);
+    proc_use(proc);
 
     /* Calculate the number of pages required for the program */
     nr = (size + MEMORY_PAGESIZE -1) / MEMORY_PAGESIZE;
@@ -1044,10 +1015,6 @@ _prepare_multitasking(void)
     if ( ret < 0 ) {
         panic("Cannot create a slab for arch_task.");
     }
-    taska = arch_create_new_task(task_a, 4096);
-    if ( NULL == taska ) {
-        return -1;
-    }
 
     /* Idle task */
     taski = kmalloc(sizeof(struct arch_task));
@@ -1077,7 +1044,7 @@ _prepare_multitasking(void)
     /* Set the task A as the initial task */
     cpu = (struct arch_cpu_data *)CPU_TASK(0);
     cpu->cur_task = NULL;
-    cpu->next_task = taska;
+    cpu->next_task = taskb;
     cpu->idle_task = taski;
 
     return 0;
