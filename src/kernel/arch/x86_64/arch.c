@@ -995,8 +995,9 @@ _init_new(void)
     kmemcpy(prog, start, size);
 
     /* User stack */
-    addr = PROC_PROG_ADDR + PROC_PROG_SIZE - 4096;
-    ustack = virt_memory_alloc_pages_addr(proc->vmem, addr, 1,
+    addr = PROC_PROG_ADDR + PROC_PROG_SIZE - PROC_STACK_SIZE;
+    ustack = virt_memory_alloc_pages_addr(proc->vmem, addr,
+                                          PROC_STACK_SIZE / MEMORY_PAGESIZE,
                                           MEMORY_ZONE_NUMA_AWARE, 0);
     if ( NULL == ustack ) {
         return NULL;
