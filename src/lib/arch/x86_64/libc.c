@@ -22,6 +22,7 @@
  */
 
 #include <sys/syscall.h>
+#include <unistd.h>
 
 unsigned long long syscall(int, ...);
 
@@ -35,6 +36,15 @@ exit(int status)
 
     /* Infinite loop to prevent the warning: 'noreturn' function does return */
     while ( 1 ) {}
+}
+
+/*
+ * fork
+ */
+pid_t
+fork(void)
+{
+    return syscall(SYS_fork);
 }
 
 /*

@@ -3,6 +3,7 @@ OUTPUT_ARCH(i386:x86-64);
 ENTRY(_entry)
 SEARCH_DIR(../../)
 STARTUP(lib/crt0.o)
+INPUT(lib/arch/x86_64/libc.o lib/arch/x86_64/libcasm.o)
 
 SECTIONS
 {

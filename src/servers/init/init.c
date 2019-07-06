@@ -21,6 +21,8 @@
  * SOFTWARE.
  */
 
+#include <unistd.h>
+
 unsigned long long syscall(int, ...);
 
 /*
@@ -30,6 +32,9 @@ int
 main(int argc, char *argv[])
 {
     unsigned long long cnt = 0;
+    int pid;
+
+    pid = fork();
 
     for ( ;; ) {
         syscall(766, 23, cnt);

@@ -80,6 +80,10 @@ size_t kstrlcpy(char *, const char *, size_t);
 int kvsnprintf(char *, size_t, const char *, va_list);
 int ksnprintf(char *, size_t, const char *, ...);
 
+/* Defined in syscall.c */
+void sys_exit(int);
+pid_t sys_fork(void);
+
 #endif
 
 /*

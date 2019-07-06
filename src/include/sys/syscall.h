@@ -25,6 +25,7 @@
 #define _SYS_SYSCALL_H
 
 #define SYS_exit        1
+#define SYS_fork        2
 #define SYS_MAXSYSCALL  768
 
 #endif /* _SYS_SYSCALL_H */
