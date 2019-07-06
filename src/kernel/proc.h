@@ -34,6 +34,7 @@
 #define PROC_PROG_ADDR          0x80000000ULL
 #define PROC_PROG_SIZE          0x40000000ULL
 #define PROC_STACK_SIZE         0x10000
+#define PROC_NR                 65536
 
 typedef enum {
     TASK_CREATED,

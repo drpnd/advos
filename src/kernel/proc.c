@@ -79,6 +79,29 @@ proc_new(pid_t pid)
 }
 
 /*
+ * Fork
+ */
+proc_t *
+proc_fork(proc_t *op, pid_t pid)
+{
+    proc_t *np;
+
+    /* Create a new process */
+    np = proc_new(pid);
+    if ( NULL == np ) {
+        return NULL;
+    }
+
+    /* Set the original process to the parent of the forked proocess */
+    np->parent = op;
+
+    /* Copy memory; ToDo: Copy-on-Write */
+
+
+    return np;
+}
+
+/*
  * Change the process memory context
  */
 void

@@ -27,6 +27,7 @@
 #include "const.h"
 #include "memory.h"
 #include "console.h"
+#include "proc.h"
 #include <sys/syscall.h>
 
 /*
@@ -38,6 +39,7 @@ typedef struct {
     memory_slab_allocator_t slab;
     void **syscalls;
     console_t console;
+    proc_t **procs;
     /* Architecture specific data */
     void *arch;
 } kvar_t;

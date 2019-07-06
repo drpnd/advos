@@ -23,6 +23,8 @@
 
 #include <sys/syscall.h>
 #include "kernel.h"
+#include "proc.h"
+#include "kvar.h"
 
 /*
  * Exit a process
@@ -56,6 +58,41 @@ sys_exit(int status)
 int
 sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
 {
+    task_t *t;
+    proc_t *proc;
+    pid_t pid;
+    int i;
+
+    /* Get the currently running task, and the corresponding process */
+    t = this_task();
+    if ( NULL == t || NULL == t->proc ) {
+        return -1;
+    }
+
+    /* Search an available pid */
+    pid = -1;
+    for ( i = 0; i < PROC_NR; i++ ) {
+        if ( NULL == g_kvar->procs[i] ) {
+            pid = i;
+            break;
+        }
+    }
+    if ( pid < 0 ) {
+        return -1;
+    }
+
+    /* Create a new process */
+    proc = proc_new(pid);
+
+    /* Set the current process to the parent of the new process */
+    proc->parent = t->proc;
+
+    g_kvar->procs[pid] = proc;
+
+    *task = t->arch;
+    *ret0 = 0;
+    *ret1 = pid;
+
     return -1;
 }
 

@@ -945,10 +945,11 @@ _init_new(void)
     if ( ret < 0 ) {
         return NULL;
     }
-    proc = proc_new(1);
+    proc = proc_new(0);
     if ( NULL == proc ) {
         return NULL;
     }
+    g_kvar->procs[0] = proc;
     t = proc->task->arch;
 
     /* Switch the memory context */

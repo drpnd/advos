@@ -32,6 +32,8 @@ int
 task_mgr_init(size_t atsize)
 {
     int ret;
+    int i;
+    int nr;
 
     /* Allocate the kernel stack slab */
     ret = memory_slab_create_cache(&g_kvar->slab, SLAB_PROC, sizeof(proc_t));
@@ -50,6 +52,16 @@ task_mgr_init(size_t atsize)
                                    sizeof(task_t) + atsize);
     if ( ret < 0 ) {
         return -1;
+    }
+
+    /* Initialize the process table */
+    nr = (sizeof(proc_t *) * PROC_NR + MEMORY_PAGESIZE - 1) / MEMORY_PAGESIZE;
+    g_kvar->procs = memory_alloc_pages(&g_kvar->mm, nr, MEMORY_ZONE_KERNEL, 0);
+    if ( NULL == g_kvar->procs ) {
+        return -1;
+    }
+    for ( i = 0; i < PROC_NR; i++ ) {
+        g_kvar->procs[i] = NULL;
     }
 
     return 0;
