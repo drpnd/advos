@@ -28,6 +28,7 @@
 #include "const.h"
 #include "../../kernel.h"
 #include "../../console.h"
+#include "../../proc.h"
 
 /*
  * TSS (104 bytes)

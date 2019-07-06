@@ -14,62 +14,79 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
 
+#ifndef _ADVOS_PROC_H
+#define _ADVOS_PROC_H
+
 #include "kernel.h"
-#include "proc.h"
-#include "kvar.h"
+#include "memory.h"
+
+typedef enum {
+    TASK_CREATED,
+    TASK_READY,
+    TASK_BLOCKED,
+    TASK_TERMINATED,
+} task_state_t;
 
 /*
- * Initialize the task manager
+ * Task
  */
-int
-task_mgr_init(size_t atsize)
-{
-    int ret;
+typedef struct _task task_t;
+struct _task {
+    /* Architecture-specific structure; i.e., struct arch_task */
+    void *arch;
 
-    /* Allocate the kernel stack slab */
-    ret = memory_slab_create_cache(&g_kvar->slab, "kstack", KSTACK_SIZE);
-    if ( ret < 0 ) {
-        return -1;
-    }
-
-    /* Allocate the task */
-    ret = memory_slab_create_cache(&g_kvar->slab, "task",
-                                   sizeof(task_t) + atsize);
-    if ( ret < 0 ) {
-        return -1;
-    }
-
-    return 0;
-}
-
-/*
- * Allocate a task
- */
-task_t *
-task_alloc(void)
-{
-    task_t *t;
+    /* Kernel stack */
     void *kstack;
 
-    t = memory_slab_alloc(&g_kvar->slab, "task");
-    if ( NULL == t ) {
-        return NULL;
-    }
-    kstack = memory_slab_alloc(&g_kvar->slab, "kstack");
-    if ( NULL == kstack ) {
-        memory_slab_free(&g_kvar->slab, "task", t);
-        return NULL;
-    }
+    /* Task ID */
+    int id;
 
-    return t;
-}
+    /* State */
+    task_state_t state;
+
+    /* Next scheduled task (runqueue) */
+    task_t *next;
+
+    /* Quantum */
+    int credit;
+};
+
+/*
+ * Process
+ */
+typedef struct _proc proc_t;
+struct _proc {
+    /* Process ID */
+    pid_t pid;
+
+    /* Process name */
+    char name[PATH_MAX];
+
+    /* Parent process */
+    proc_t *parent;
+
+    /* Task (currently, supporting single thread processes) */
+    task_t *task;
+
+    /* Process user information */
+    uid_t uid;
+    gid_t gid;
+
+    /* Architecture-specific structure (i.e., struct arch_proc) */
+    void *arch;
+
+    /* Memory */
+    virt_memory_t *vmem;
+};
+
+#endif
 
 /*
  * Local variables:
