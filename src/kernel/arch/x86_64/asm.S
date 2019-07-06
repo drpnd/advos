@@ -50,6 +50,7 @@
 	.globl	_sidt
 	.globl	_lldt
 	.globl	_ltr
+	.globl	_sys_fork
 	.globl	_task_restart
 	.globl	_intr_null
 	.globl	_intr_apic_loc_tmr
@@ -273,6 +274,88 @@ _lldt:
 _ltr:
 	ltr	%di
 	ret
+
+/* pid_t sys_fork(void) */
+_sys_fork:
+	pushq	%rbp
+	movq	%rsp,%rbp
+	subq	$8,%rsp
+	movq	%rsp,%rdi
+	subq	$8,%rsp
+	movq	%rsp,%rsi
+	subq	$8,%rsp
+	movq	%rsp,%rdx
+	call	_sys_fork_c
+	addq	$24,%rsp
+	cmpl	$0,%eax
+	jne	1f
+	movq	-8(%rsp),%rdi
+	movq	-16(%rsp),%rsi
+	movq	-24(%rsp),%rdx
+	call	sys_fork_restart
+1:
+	/* Return on error */
+	leaveq
+	ret
+
+/* void sys_fork_restart(void *task, uint64_t ret0, uint64_t ret1) */
+sys_fork_restart:
+	movq	%rdx,%rax
+	leaveq			/* Restore the stack */
+	addq	$8,%rsp		/* Pop the return point (before _sys_fork) */
+	pushq	%rdi
+	pushq	%rsi
+	/* Setup the stackframe for the forked task; N.B., preserved registers:
+	   rbx, rsp, rbp, r12, r13, r14, r15  */
+	movq	TASK_RP(%rdi),%rdx
+	addq	$164,%rdx	/* Size of stackframe */
+	movq	$GDT_RING0_DATA_SEL,%rcx
+	movq	%rcx,-8(%rdx)	/* %ss */
+	movq	%rbp,-16(%rdx)	/* %rsp */
+	pushfq
+	popq	%rcx
+	movq	%rcx,-24(%rdx)	/* %rflags */
+	movq	$GDT_RING0_CODE_SEL,%rcx
+	movq	%rcx,-32(%rdx)	/* %cs */
+	movabs	$1f,%rcx
+	movq	%rcx,-40(%rdx)	/* %rip */
+	movq	%rsi,-48(%rdx)	/* %rax (return value) */
+	movq	-24(%rbp),%rcx
+	movq	%rcx,-56(%rdx)	/* %rbx */
+	movq	-8(%rbp),%rcx
+	movq	%rcx,-64(%rdx)	/* %rcx */
+	xorq	%rcx,%rcx
+	movq	%rcx,-72(%rdx)	/* %rdx */
+	movq	%rcx,-80(%rdx)	/* %r8 */
+	movq	%rcx,-88(%rdx)	/* %r9 */
+	movq	%rcx,-96(%rdx)	/* %r10 */
+	movq	-16(%rbp),%rcx
+	movq	%rcx,-104(%rdx)	/* %r11 */
+	movq	%r12,-112(%rdx)	/* %r12 */
+	movq	%r13,-120(%rdx)	/* %r13 */
+	movq	%r14,-128(%rdx)	/* %r14 */
+	movq	%r15,-136(%rdx)	/* %r15 */
+	movq	-40(%rbp),%rcx
+	movq	%rcx,-144(%rdx)	/* %rsi */
+	movq	-32(%rbp),%rcx
+	movq	%rcx,-152(%rdx)	/* %rdi */
+	movq	0(%rbp),%rcx
+	movq	%rcx,-160(%rdx)	/* %rbp */
+	movw	$(GDT_RING3_CODE64_SEL+3),%cx
+	movw	%cx,-162(%rdx)	/* %fs */
+	movw	%cx,-164(%rdx)	/* %gs */
+	/* Restore */
+	popq	%rsi		/* _sys_fork */
+	popq	%rdi		/* _sys_fork */
+	popq	%rbx		/* _syscall_entry */
+	popq	%r11		/* _syscall_entry */
+	popq	%rcx		/* _syscall_entry */
+	movq	%rbp,%rsp
+	popq	%rbp
+	sysretq
+1:
+	popq	%rbp
+	sysretq
 
 /* Restart a task */
 _task_restart:

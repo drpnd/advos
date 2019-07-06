@@ -21,6 +21,15 @@
  * SOFTWARE.
  */
 
+#include <sys/syscall.h>
+#include "kernel.h"
+
+int
+sys_fork_c(void **task, uint64_t *ret0, uint64_t *ret1)
+{
+    return 0;
+}
+
 /*
  * Local variables:
  * tab-width: 4
