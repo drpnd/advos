@@ -470,6 +470,14 @@ _alloc_entry(virt_memory_t *vmem, virt_memory_object_t *obj, uintptr_t addr,
     virt_memory_entry_t *e;
     virt_memory_free_t *f;
     virt_memory_block_t *b;
+    virt_memory_free_t *f0;
+    virt_memory_free_t *f1;
+    int ret;
+
+    /* Page alignment check */
+    if ( addr & (MEMORY_PAGESIZE - 1) ) {
+        return NULL;
+    }
 
     /* Find a block including the virtual address */
     b = _find_block(vmem, addr);
@@ -509,7 +517,81 @@ _alloc_entry(virt_memory_t *vmem, virt_memory_object_t *obj, uintptr_t addr,
     e->object = obj;
     e->flags = flags;
 
+    /* Prepare for free spaces */
+    f0 = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
+    if ( NULL == f0 ) {
+        goto error_f0;
+    }
+    f1 = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
+    if ( NULL == f1 ) {
+        goto error_f1;
+    }
+
+    /* Add this entry */
+    ret = _entry_add(b, e);
+    if ( ret < 0 ) {
+        goto error_entry;
+    }
+
+    /* Remove the free entry */
+    f = _free_delete(b, f);
+    kassert( f != NULL );
+    if ( f->start == e->start && f->size == e->size  ) {
+        /* Remove the entire entry */
+        vmem->allocator.free(vmem, (void *)f0);
+        vmem->allocator.free(vmem, (void *)f1);
+    } else if ( f->start == e->start ) {
+        /* The start address is same, then add the rest to the free entry */
+        f0->start = f->start + e->size;
+        f0->size = f->size - e->size;
+        ret = _free_add(b, f0);
+        if ( ret < 0 ) {
+            goto error_post;
+        }
+        vmem->allocator.free(vmem, (void *)f1);
+    } else if ( f->start + f->size == e->start + e->size ) {
+        /* The end address is same, then add the rest to the free entry */
+        f0->start = f->start;
+        f0->size = f->size - e->size;
+        ret = _free_add(b, f0);
+        if ( ret < 0 ) {
+            goto error_post;
+        }
+        vmem->allocator.free(vmem, (void *)f1);
+    } else {
+        f0->start = f->start;
+        f0->size = e->start + e->size - f->start;
+        f1->start = e->start + e->size;
+        f1->size = f->start + f->size - f1->start;
+        ret = _free_add(b, f0);
+        if ( ret < 0 ) {
+            goto error_post;
+        }
+        ret = _free_add(b, f1);
+        if ( ret < 0 ) {
+            goto error_free;
+        }
+    }
+    vmem->allocator.free(vmem, (void *)f);
+
     return e;
+
+error_free:
+    _free_delete(b, f0);
+error_post:
+    _entry_delete(b, e);
+    /* Add it back */
+    _free_add(b, f);
+error_entry:
+    vmem->allocator.free(vmem, (void *)f1);
+error_f1:
+    vmem->allocator.free(vmem, (void *)f0);
+error_f0:
+    obj->refs--;
+    vmem->allocator.free(vmem, (void *)e);
+
+    return NULL;
+
 }
 
 /*
