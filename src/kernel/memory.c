@@ -478,6 +478,9 @@ _alloc_entry(virt_memory_t *vmem, virt_memory_object_t *obj, uintptr_t addr,
     if ( addr & (MEMORY_PAGESIZE - 1) ) {
         return NULL;
     }
+    if ( size & (MEMORY_PAGESIZE - 1) ) {
+        return NULL;
+    }
 
     /* Find a block including the virtual address */
     b = _find_block(vmem, addr);
@@ -592,6 +595,80 @@ error_f0:
 
     return NULL;
 
+}
+
+/*
+ * Allocate pages for the specified range
+ */
+static int
+_alloc_pages(virt_memory_t *vmem, virt_memory_entry_t *e)
+{
+    page_t *p;
+    page_t **pp;
+    int ret;
+    size_t nr;
+    size_t i;
+    void *r;
+    int flags;
+    uintptr_t virtual;
+
+    /* # of pages */
+    nr = e->size / MEMORY_PAGESIZE;
+
+    /* Allocate and map pages */
+    pp = &e->object->pages;
+    for ( i = 0; i < nr; i++ ) {
+        p = (page_t *)vmem->allocator.alloc(vmem);
+        if ( NULL == p ) {
+            goto error_page;
+        }
+        p->index = i;
+        p->zone = MEMORY_ZONE_NUMA_AWARE;
+        p->numadomain = 0;
+        p->flags = 0;
+        if ( e->flags & MEMORY_VMF_RW ) {
+            p->flags |= MEMORY_PGF_RW;
+        }
+        p->order = 0;
+        p->next = NULL;
+
+        /* Allocate a physical page */
+        r = phys_mem_alloc(vmem->mem->phys, p->order, p->zone, p->numadomain);
+        if ( NULL == r ) {
+            vmem->allocator.free(vmem, (void *)p);
+            goto error_page;
+        }
+        p->physical = (uintptr_t)r;
+
+        /* Map */
+        flags = vmem->flags;
+        ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
+                                 p, flags);
+        if ( ret < 0 ) {
+            vmem->allocator.free(vmem, (void *)p);
+            phys_mem_free(vmem->mem->phys, (void *)p->physical, p->order,
+                          p->zone, p->numadomain);
+            goto error_page;
+        }
+
+        *pp = p;
+        pp = &p->next;
+    }
+
+    return 0;
+
+error_page:
+    p = e->object->pages;
+    virtual = e->start;
+    while ( NULL != p ) {
+        ret = vmem->mem->ifs.unmap(vmem->arch, virtual, p);
+        kassert(ret == 0);
+        virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
+        vmem->allocator.free(vmem, (void *)p);
+        p = p->next;
+    }
+
+    return -1;
 }
 
 /*
