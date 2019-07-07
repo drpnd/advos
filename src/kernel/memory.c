@@ -64,6 +64,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
 
     mem->phys = phys;
     mem->kmem.blocks = NULL;
+    mem->kmem.objects = NULL;
     mem->kmem.mem = mem;
 
     /* Architecture specific data structure */
@@ -432,6 +433,82 @@ _search_fit_size(virt_memory_block_t *block, size_t sz)
     }
 
     return r.ret;
+}
+
+/*
+ * Allocate an oobject
+ */
+static virt_memory_object_t *
+_alloc_object(virt_memory_t *vmem, size_t size)
+{
+    virt_memory_object_t *obj;
+
+    obj = (virt_memory_object_t *)vmem->allocator.alloc(vmem);
+    if ( NULL == obj ) {
+        return NULL;
+    }
+    obj->type = MEMORY_OBJECT;
+    obj->size = size;
+    obj->pages = NULL;
+    obj->refs = 0;
+    obj->next = NULL;
+
+    /* Insert into the linked list of the virtual memory */
+    obj->next = vmem->objects;
+    vmem->objects = obj;
+
+    return obj;
+}
+
+/*
+ * Allocate an entry
+ */
+static virt_memory_entry_t *
+_alloc_entry(virt_memory_t *vmem, virt_memory_object_t *obj, uintptr_t addr,
+             size_t size, off_t offset)
+{
+    virt_memory_entry_t *e;
+    virt_memory_free_t *f;
+    virt_memory_block_t *b;
+
+    /* Find a block including the virtual address */
+    b = _find_block(vmem, addr);
+    if ( NULL == b ) {
+        /* Not found */
+        return NULL;
+    }
+
+    /* Find a free space corresponding to the virtual address */
+    f = _find_free_entry(b, addr);
+    if ( NULL == f ) {
+        /* Not found */
+        return NULL;
+    }
+
+    /* Check the entry size */
+    if ( addr + size > f->start + f->size ) {
+        /* The end address exceeds the range of the found entry */
+        return NULL;
+    }
+
+    /* Check the object size */
+    if ( offset + size > obj->size ) {
+        /* Exceed the range of the object */
+        return NULL;
+    }
+
+    /* Prepare an entry */
+    e = (virt_memory_entry_t *)vmem->allocator.alloc(vmem);
+    if ( NULL == e ) {
+        return NULL;
+    }
+    e->start = addr;
+    e->size = size;
+    e->offset = offset;
+    obj->refs++;
+    e->object = obj;
+
+    return e;
 }
 
 /*
@@ -826,6 +903,7 @@ virt_memory_init(memory_t *mem, virt_memory_allocator_t *alloca)
     }
     vm->mem = mem;
     vm->blocks = NULL;
+    vm->objects = NULL;
 
     /* Setup allocator */
     vm->allocator.spec = alloca->spec;
@@ -1499,6 +1577,7 @@ virt_memory_new(virt_memory_t *dst, memory_t *mem, virt_memory_allocator_t *a)
 
     dst->mem = mem;
     dst->blocks = NULL;
+    dst->objects = NULL;
 
     /* Setup allocator */
     dst->allocator.spec = a->spec;

@@ -150,6 +150,8 @@ struct virt_memory_object {
             virt_memory_object_t *object;
         } shadow;
     } u;
+    /* List */
+    virt_memory_object_t *next;
 };
 
 /*
@@ -265,6 +267,9 @@ struct virt_memory {
 
     /* List of blocks */
     virt_memory_block_t *blocks;
+
+    /* List of allocated objects */
+    virt_memory_object_t *objects;
 
     /* Allocator for this virtual memory manager */
     virt_memory_allocator_t allocator;
