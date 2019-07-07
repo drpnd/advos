@@ -481,6 +481,9 @@ _alloc_entry(virt_memory_t *vmem, virt_memory_object_t *obj, uintptr_t addr,
     if ( size & (MEMORY_PAGESIZE - 1) ) {
         return NULL;
     }
+    if ( offset & (MEMORY_PAGESIZE - 1) ) {
+        return NULL;
+    }
 
     /* Find a block including the virtual address */
     b = _find_block(vmem, addr);
