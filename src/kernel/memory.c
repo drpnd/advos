@@ -465,7 +465,7 @@ _alloc_object(virt_memory_t *vmem, size_t size)
  */
 static virt_memory_entry_t *
 _alloc_entry(virt_memory_t *vmem, virt_memory_object_t *obj, uintptr_t addr,
-             size_t size, off_t offset)
+             size_t size, off_t offset, int flags)
 {
     virt_memory_entry_t *e;
     virt_memory_free_t *f;
@@ -507,6 +507,7 @@ _alloc_entry(virt_memory_t *vmem, virt_memory_object_t *obj, uintptr_t addr,
     e->offset = offset;
     obj->refs++;
     e->object = obj;
+    e->flags = flags;
 
     return e;
 }
