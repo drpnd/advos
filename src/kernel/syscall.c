@@ -82,11 +82,15 @@ sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
     }
 
     /* Create a new process */
-    proc = proc_new(pid);
+    proc = proc_fork(t->proc, pid);
+    if ( NULL == proc ) {
+        return -1;
+    }
 
     /* Set the current process to the parent of the new process */
     proc->parent = t->proc;
 
+    /* Set the process to the process table */
     g_kvar->procs[pid] = proc;
 
     *task = t->arch;
