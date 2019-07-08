@@ -610,6 +610,7 @@ _alloc_pages(virt_memory_t *vmem, virt_memory_entry_t *e)
     page_t **pp;
     int ret;
     size_t nr;
+    size_t off;
     size_t i;
     void *r;
     int flags;
@@ -617,15 +618,36 @@ _alloc_pages(virt_memory_t *vmem, virt_memory_entry_t *e)
 
     /* # of pages */
     nr = e->size / MEMORY_PAGESIZE;
+    off = e->offset / MEMORY_PAGESIZE;
+
+    /* Search the insertion position, and make sure the pages for this region
+       are not allocated */
+    ret = 0;
+    pp = &e->object->pages;
+    p = e->object->pages;
+    while ( NULL != p ) {
+        if ( p->index < off ) {
+            pp = &p->next;
+        } else if ( p->index < off + nr ) {
+            /* off <= p->index < off + nr */
+            ret = -1;
+            break;
+        } else {
+            break;
+        }
+        p = p->next;
+    }
+    if ( ret < 0 ) {
+        return -1;
+    }
 
     /* Allocate and map pages */
-    pp = &e->object->pages;
     for ( i = 0; i < nr; i++ ) {
         p = (page_t *)vmem->allocator.alloc(vmem);
         if ( NULL == p ) {
             goto error_page;
         }
-        p->index = i;
+        p->index = off + i;
         p->zone = MEMORY_ZONE_NUMA_AWARE;
         p->numadomain = 0;
         p->flags = 0;

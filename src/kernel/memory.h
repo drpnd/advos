@@ -138,7 +138,7 @@ typedef struct virt_memory_object virt_memory_object_t;
 struct virt_memory_object {
     /* Type */
     virt_memory_object_type_t type;
-    /* Pointer to the list of pages */
+    /* Pointer to the list of pages (sorted by the index) */
     page_t *pages;
     /* Size */
     size_t size;
