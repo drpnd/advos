@@ -608,6 +608,7 @@ _alloc_pages(virt_memory_t *vmem, virt_memory_entry_t *e)
 {
     page_t *p;
     page_t **pp;
+    page_t **savepp;
     int ret;
     size_t nr;
     size_t off;
@@ -642,6 +643,8 @@ _alloc_pages(virt_memory_t *vmem, virt_memory_entry_t *e)
     }
 
     /* Allocate and map pages */
+    savepp = pp;
+    virtual = e->start;
     for ( i = 0; i < nr; i++ ) {
         p = (page_t *)vmem->allocator.alloc(vmem);
         if ( NULL == p ) {
@@ -667,7 +670,7 @@ _alloc_pages(virt_memory_t *vmem, virt_memory_entry_t *e)
 
         /* Map */
         flags = vmem->flags;
-        ret = vmem->mem->ifs.map(vmem->arch, e->start + i * MEMORY_PAGESIZE,
+        ret = vmem->mem->ifs.map(vmem->arch, virtual,
                                  p, flags);
         if ( ret < 0 ) {
             vmem->allocator.free(vmem, (void *)p);
@@ -676,6 +679,7 @@ _alloc_pages(virt_memory_t *vmem, virt_memory_entry_t *e)
             goto error_page;
         }
 
+        virtual += MEMORY_PAGESIZE;
         *pp = p;
         pp = &p->next;
     }
@@ -683,15 +687,16 @@ _alloc_pages(virt_memory_t *vmem, virt_memory_entry_t *e)
     return 0;
 
 error_page:
-    p = e->object->pages;
+    p = *savepp;
     virtual = e->start;
-    while ( NULL != p ) {
+    for ( ; i--; i > 0 ) {
         ret = vmem->mem->ifs.unmap(vmem->arch, virtual, p);
         kassert(ret == 0);
-        virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
+        virtual += MEMORY_PAGESIZE;
         vmem->allocator.free(vmem, (void *)p);
         p = p->next;
     }
+    *savepp = p;
 
     return -1;
 }
