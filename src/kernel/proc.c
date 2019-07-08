@@ -51,7 +51,7 @@ _alloc_vmem(void)
     }
 
     /* Allocate an object */
-    obj = virt_memory_alloc_object(vmem, 0x40000000);
+    obj = virt_memory_alloc_object(vmem, PROC_PROG_SIZE);
     if ( NULL == obj ) {
         /* ToDo: Release vmem */
         return NULL;
