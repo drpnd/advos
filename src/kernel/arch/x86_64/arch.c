@@ -959,21 +959,8 @@ _init_new(void)
     nr = (size + MEMORY_PAGESIZE -1) / MEMORY_PAGESIZE;
 
     /* Program */
-    prog = virt_memory_alloc_pages_addr(proc->vmem, PROC_PROG_ADDR, nr,
-                                        MEMORY_ZONE_NUMA_AWARE, 0);
-    if ( NULL == prog ) {
-        return NULL;
-    }
+    prog = (void *)PROC_PROG_ADDR;
     kmemcpy(prog, start, size);
-
-    /* User stack */
-    addr = PROC_PROG_ADDR + PROC_PROG_SIZE - PROC_STACK_SIZE;
-    ustack = virt_memory_alloc_pages_addr(proc->vmem, addr,
-                                          PROC_STACK_SIZE / MEMORY_PAGESIZE,
-                                          MEMORY_ZONE_NUMA_AWARE, 0);
-    if ( NULL == ustack ) {
-        return NULL;
-    }
 
     ret = arch_task_init(proc->task, prog);
     if ( ret < 0 ) {

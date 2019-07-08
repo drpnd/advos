@@ -26,6 +26,57 @@
 #include "kvar.h"
 
 /*
+ * Allocate process memory
+ */
+static virt_memory_t *
+_alloc_vmem(void)
+{
+    virt_memory_t *vmem;
+    virt_memory_object_t *obj;
+    virt_memory_entry_t *e;
+    int ret;
+
+    /* Allocate a virtual memory */
+    vmem = g_kvar->mm.ifs.new();
+    if ( NULL == vmem ) {
+        return NULL;
+    }
+
+    /* Allocate a memory block */
+    ret = virt_memory_block_add(vmem, PROC_PROG_ADDR,
+                                PROC_PROG_ADDR + PROC_PROG_SIZE - 1);
+    if ( ret < 0 ) {
+        /* ToDo: Release vmem */
+        return NULL;
+    }
+
+    /* Allocate an object */
+    obj = virt_memory_alloc_object(vmem, 0x40000000);
+    if ( NULL == obj ) {
+        /* ToDo: Release vmem */
+        return NULL;
+    }
+
+    /* Allocate entries for program and stack */
+    e = virt_memory_alloc_entry(vmem, obj, PROC_PROG_ADDR, 0x00200000, 0,
+                                MEMORY_VMF_EXEC);
+    if ( NULL == e ) {
+        /* ToDo: Release vmem */
+        return NULL;
+    }
+    e = virt_memory_alloc_entry(vmem, obj, PROC_PROG_ADDR + PROC_PROG_SIZE
+                                - PROC_STACK_SIZE, PROC_STACK_SIZE,
+                                PROC_PROG_SIZE - PROC_STACK_SIZE,
+                                MEMORY_VMF_RW | MEMORY_VMF_EXEC);
+    if ( NULL == e ) {
+        /* ToDo: Release vmem */
+        return NULL;
+    }
+
+    return vmem;
+}
+
+/*
  * Create a new process
  */
 proc_t *
@@ -42,15 +93,8 @@ proc_new(pid_t pid)
     kmemset(proc, 0, sizeof(proc_t));
 
     /* Allocate a virtual memory */
-    proc->vmem = g_kvar->mm.ifs.new();
+    proc->vmem = _alloc_vmem();
     if ( NULL == proc->vmem ) {
-        memory_slab_free(&g_kvar->slab, SLAB_PROC, proc);
-        return NULL;
-    }
-    ret = virt_memory_block_add(proc->vmem, PROC_PROG_ADDR,
-                                PROC_PROG_ADDR + PROC_PROG_SIZE - 1);
-    if ( ret < 0 ) {
-        /* ToDo: Free vmem */
         memory_slab_free(&g_kvar->slab, SLAB_PROC, proc);
         return NULL;
     }
@@ -61,7 +105,6 @@ proc_new(pid_t pid)
         /* ToDo: Free vmem */
         memory_slab_free(&g_kvar->slab, SLAB_PROC, proc);
         return NULL;
-
     }
     proc->task->proc =  proc;
 

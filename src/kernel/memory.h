@@ -61,7 +61,7 @@
 #define MEMORY_SLAB_CACHE_NAME          "slab_cache"
 
 /*
- * PAGE
+ * Page
  */
 struct _phys_memory_buddy_page {
     /* Linked list's next pointer (virtual address) */
@@ -378,6 +378,11 @@ void * virt_memory_alloc_pages_addr(virt_memory_t *, uintptr_t, size_t, int, int
 
 int virt_memory_new(virt_memory_t *, memory_t *, virt_memory_allocator_t *);
 int virt_memory_fork(virt_memory_t *, virt_memory_t *);
+
+virt_memory_object_t * virt_memory_alloc_object(virt_memory_t *, size_t);
+virt_memory_entry_t *
+virt_memory_alloc_entry(virt_memory_t *, virt_memory_object_t *, uintptr_t,
+                        size_t, off_t, int);
 
 /* Defined in arch.c */
 int kmalloc_init(memory_slab_allocator_t *);
