@@ -64,7 +64,6 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
 
     mem->phys = phys;
     mem->kmem.blocks = NULL;
-    mem->kmem.objects = NULL;
     mem->kmem.mem = mem;
 
     /* Architecture specific data structure */
@@ -451,11 +450,6 @@ virt_memory_alloc_object(virt_memory_t *vmem, size_t size)
     obj->size = size;
     obj->pages = NULL;
     obj->refs = 0;
-    obj->next = NULL;
-
-    /* Insert into the linked list of the virtual memory */
-    obj->next = vmem->objects;
-    vmem->objects = obj;
 
     return obj;
 }
@@ -1097,7 +1091,6 @@ virt_memory_init(memory_t *mem, virt_memory_allocator_t *alloca)
     }
     vm->mem = mem;
     vm->blocks = NULL;
-    vm->objects = NULL;
 
     /* Setup allocator */
     vm->allocator.spec = alloca->spec;
@@ -1771,7 +1764,6 @@ virt_memory_new(virt_memory_t *dst, memory_t *mem, virt_memory_allocator_t *a)
 
     dst->mem = mem;
     dst->blocks = NULL;
-    dst->objects = NULL;
 
     /* Setup allocator */
     dst->allocator.spec = a->spec;
@@ -1799,6 +1791,7 @@ static void
 _release_entry(virt_memory_t *vmem, virt_memory_entry_t *e)
 {
     page_t *p;
+    page_t *tmp;
     uintptr_t virtual;
     int ret;
 
@@ -1809,13 +1802,22 @@ _release_entry(virt_memory_t *vmem, virt_memory_entry_t *e)
         ret = vmem->mem->ifs.unmap(vmem->arch, virtual, p);
         kassert(ret == 0);
         virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
-        vmem->allocator.free(vmem, (void *)p);
         p = p->next;
     }
     vmem->allocator.free(vmem, (void *)e);
 
     /* Decrement the reference counter */
     e->object->refs--;
+    if ( 0 == e->object->refs ) {
+        /* Release the object and pages */
+        p = e->object->pages;
+        while ( NULL != p ) {
+            tmp = p;
+            p = p->next;
+            vmem->allocator.free(vmem, (void *)tmp);
+        }
+        vmem->allocator.free(vmem, (void *)e->object);
+    }
 }
 
 /*
@@ -1837,18 +1839,6 @@ _block_free(virt_memory_t *vmem, virt_memory_block_t *b)
         r = _entry_delete(b, e);
         kassert( r == e );
         _release_entry(vmem, e);
-    }
-
-    /* Release objects if no others reference */
-    op = &vmem->objects;
-    while ( NULL != *op ) {
-        if ( 0 == (*op)->refs ) {
-            /* Remove the object */
-            vmem->allocator.free(vmem, (void *)*op);
-            *op = (*op)->next;
-        } else {
-            op = &(*op)->next;
-        }
     }
 
     /* Release free entries */
