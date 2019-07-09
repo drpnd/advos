@@ -24,6 +24,7 @@
 #include "../../proc.h"
 #include "arch.h"
 #include "apic.h"
+#include "pgt.h"
 
 /*
  * Initialize the architecture-specific task data structure
@@ -54,6 +55,15 @@ arch_task_init(task_t *t, void *entry)
     at->rp->flags = 0x202;
 
     return 0;
+}
+
+int
+arch_task_set_cr3(proc_t *proc)
+{
+    struct arch_task *at;
+
+    at = proc->task->arch;
+    at->cr3 = ((pgt_t *)proc->vmem->arch)->cr3;
 }
 
 /*

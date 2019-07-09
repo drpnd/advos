@@ -35,10 +35,21 @@ main(int argc, char *argv[])
     int pid;
 
     pid = fork();
-
-    for ( ;; ) {
-        syscall(766, 23, cnt);
-        cnt++;
+    if ( pid < 0 ) {
+        syscall(766, 20, 0);
+    } else if ( pid == 0 ) {
+        /* Child */
+        for ( ;; ) {
+            syscall(766, 21, cnt);
+            cnt++;
+        }
+    } else {
+        /* Parent */
+        syscall(766, 22, pid);
+        for ( ;; ) {
+            syscall(766, 23, cnt);
+            cnt++;
+        }
     }
 
     return 0;

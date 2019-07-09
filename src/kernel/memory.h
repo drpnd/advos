@@ -254,6 +254,9 @@ typedef struct {
 
     /* Context switch */
     int (*ctxsw)(void *);
+
+    /* Copy */
+    int (*copy)(void *, uintptr_t, uintptr_t, size_t);
 } memory_arch_interfaces_t;
 
 /*

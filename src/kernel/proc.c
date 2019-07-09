@@ -122,6 +122,10 @@ proc_new(pid_t pid)
     return proc;
 }
 
+int
+arch_task_init(task_t *t, void *entry);
+int
+arch_task_set_cr3(proc_t *proc);
 /*
  * Fork
  */
@@ -149,6 +153,30 @@ proc_fork(proc_t *op, pid_t pid)
         memory_slab_free(&g_kvar->slab, SLAB_PROC, np);
         return NULL;
     }
+
+    /* Allocate a task */
+    np->task = task_alloc();
+    if ( NULL == np->task ) {
+        /* ToDo: Free vmem */
+        memory_slab_free(&g_kvar->slab, SLAB_PROC, np);
+        return NULL;
+    }
+    np->task->proc =  np;
+
+    /* Copy kernel stack */
+    arch_task_init(np->task, NULL); /* FIXME */
+    kmemcpy(np->task->kstack, op->task->kstack, KSTACK_SIZE);
+    arch_task_set_cr3(np);
+
+    np->pid = pid;
+    kmemset(np->name, 0, PATH_MAX);
+    np->parent = NULL;
+    np->uid = op->uid;
+    np->gid = op->gid;
+
+    np->code.addr = op->code.addr;
+    np->code.size = op->code.size;
+    np->exit_status = 0;
 
     /* Set the original process to the parent of the forked proocess */
     np->parent = op;

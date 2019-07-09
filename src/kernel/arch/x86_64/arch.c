@@ -52,7 +52,7 @@ int arch_memory_prepare(void *, uintptr_t, size_t);
 int arch_memory_refer(void *, void *, uintptr_t, size_t);
 virt_memory_t * arch_memory_new(void);
 int arch_memory_ctxsw(void *);
-void * arch_memory_fork(void *);
+int arch_memory_copy(void *, uintptr_t, uintptr_t, size_t);
 
 /*
  * System memory map entry
@@ -358,6 +358,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     ifs.refer = arch_memory_refer;
     ifs.new = arch_memory_new;
     ifs.ctxsw = arch_memory_ctxsw;
+    ifs.copy = arch_memory_copy;
     ret = memory_init(&kvar->mm, &kvar->phys, pgt, KERNEL_LMAP, &ifs);
     if ( ret < 0 ) {
         panic("Failed to initialize the memory manager.");
@@ -659,6 +660,17 @@ arch_memory_ctxsw(void *arch)
 }
 
 /*
+ * Copy physical pages
+ */
+int
+arch_memory_copy(void *arch, uintptr_t dst, uintptr_t src, size_t size)
+{
+    kmemcpy((void *)dst + KERNEL_LMAP, (void *)src + KERNEL_LMAP, size);
+
+    return 0;
+}
+
+/*
  * Local APIC timer handler
  */
 struct arch_task *taska;
@@ -667,8 +679,9 @@ struct arch_task *taski;
 void
 ksignal_clock(void)
 {
-    uint16_t *base;
+    volatile uint16_t *base;
     static uint64_t cnt = 0;
+    int i;
 
     if ( lapic_id() == 0 ) {
         base = (uint16_t *)VIDEO_RAM_80X25;
@@ -679,6 +692,20 @@ ksignal_clock(void)
         /* Schedule next task (and context switch) */
         struct arch_cpu_data *cpu;
         cpu = (struct arch_cpu_data *)CPU_TASK(0);
+
+        base = (uint16_t *)VIDEO_RAM_80X25;
+        base += 80 * 19;
+        for ( i = 0; i < PROC_NR; i++ ) {
+            if ( NULL != g_kvar->procs[i] ) {
+                if ( g_kvar->procs[i]->task->arch == cpu->cur_task ) {
+                    *(base + i)= 0x0700 | ' ';
+                } else {
+                    cpu->next_task = g_kvar->procs[i]->task->arch;
+                    *(base + i)= 0x0700 | '*';
+                }
+            }
+        }
+#if 0
         if ( cpu->cur_task == taska ) {
             cpu->next_task = taskb;
         } else if ( cpu->cur_task == taskb ) {
@@ -686,6 +713,7 @@ ksignal_clock(void)
         } else {
             cpu->next_task = taskb;
         }
+#endif
     }
 }
 
@@ -947,7 +975,7 @@ _init_new(void)
     if ( ret < 0 ) {
         return NULL;
     }
-    proc = proc_new(0);
+    proc = proc_new(1);
     if ( NULL == proc ) {
         return NULL;
     }

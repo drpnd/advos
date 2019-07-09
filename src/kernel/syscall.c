@@ -73,7 +73,7 @@ sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
     pid = -1;
     for ( i = 0; i < PROC_NR; i++ ) {
         if ( NULL == g_kvar->procs[i] ) {
-            pid = i;
+            pid = i + 1;
             break;
         }
     }
@@ -91,13 +91,13 @@ sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
     proc->parent = t->proc;
 
     /* Set the process to the process table */
-    g_kvar->procs[pid] = proc;
+    g_kvar->procs[pid - 1] = proc;
 
-    *task = t->arch;
+    *task = proc->task->arch;
     *ret0 = 0;
     *ret1 = pid;
 
-    return -1;
+    return 0;
 }
 
 /*

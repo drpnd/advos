@@ -301,7 +301,7 @@ _sys_fork:
 /* void sys_fork_restart(void *task, pid_t ret0, pid_t ret1) */
 sys_fork_restart:
 	movq	%rdx,%rax
-	leaveq			/* Restore the stack */
+	leaveq			/* Restore the stack (_sys_fork) */
 	addq	$8,%rsp		/* Pop the return point (before _sys_fork) */
 	pushq	%rdi
 	pushq	%rsi

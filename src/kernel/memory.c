@@ -79,6 +79,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     mem->ifs.refer = ifs->refer;
     mem->ifs.new = ifs->new;
     mem->ifs.ctxsw = ifs->ctxsw;
+    mem->ifs.copy = ifs->copy;
 
     return 0;
 }
@@ -1605,6 +1606,31 @@ error_entry:
 }
 
 /*
+ * Copy object
+ */
+static int
+_copy_object(virt_memory_t *vmem, virt_memory_object_t *dst,
+             virt_memory_object_t *src)
+{
+    page_t *dp;
+    page_t *sp;
+
+    dp = dst->pages;
+    sp = src->pages;
+    while ( NULL != dp && NULL != sp ) {
+        if ( dp->index != sp->index || dp->order != sp->order ) {
+            return -1;
+        }
+        vmem->mem->ifs.copy(vmem->arch, dp->physical, sp->physical,
+                            (1ULL << dp->order) * MEMORY_PAGESIZE);
+        dp = dp->next;
+        sp = sp->next;
+    }
+
+    return 0;
+}
+
+/*
  * Copy entries
  */
 static int
@@ -1727,6 +1753,7 @@ _block_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *sb)
     virt_memory_block_t *b;
     size_t nr;
     struct virt_memory_fork_cache *ccl;
+    size_t i;
 
     /* Allocate data and initialize the block */
     b = virt_memory_block_add(dst, sb->start, sb->end);
@@ -1750,6 +1777,14 @@ _block_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *sb)
         _entry_free_all(dst, b->entries);
         dst->allocator.free(dst, (void *)b);
         return -1;
+    }
+
+    /* Copy object contents */
+    for ( i = 0; i < nr; i++ ) {
+        if ( NULL == ccl[i].orig ) {
+            break;
+        }
+        _copy_object(src, ccl[i].object, ccl[i].orig);
     }
 
     return 0;
