@@ -1852,7 +1852,7 @@ _block_free(virt_memory_t *vmem, virt_memory_block_t *b)
         }
     }
 
-    /* Free entries */
+    /* Release free entries */
     while ( NULL != b->frees.atree ) {
         n = b->frees.atree;
         f = (virt_memory_free_t *)n;
@@ -1861,10 +1861,7 @@ _block_free(virt_memory_t *vmem, virt_memory_block_t *b)
         vmem->allocator.free(vmem, (void *)f);
     }
 
-    /* Free objects */
-
-    /* Free free entries */
-
+    /* Release the block */
     vmem->allocator.free(vmem, (void *)b);
 }
 
@@ -1875,12 +1872,14 @@ void
 virt_memory_release(virt_memory_t *vmem)
 {
     virt_memory_block_t *b;
+    virt_memory_block_t *ob;
 
     /* Copy blocks */
     b = vmem->blocks;
     while ( NULL != b ) {
-        _block_free(vmem, b);
+        ob = b;
         b = b->next;
+        _block_free(vmem, ob);
     }
 }
 
