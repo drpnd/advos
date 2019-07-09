@@ -1804,7 +1804,6 @@ _release_entry(virt_memory_t *vmem, virt_memory_entry_t *e)
         virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
         p = p->next;
     }
-    vmem->allocator.free(vmem, (void *)e);
 
     /* Decrement the reference counter */
     e->object->refs--;
@@ -1818,6 +1817,8 @@ _release_entry(virt_memory_t *vmem, virt_memory_entry_t *e)
         }
         vmem->allocator.free(vmem, (void *)e->object);
     }
+
+    vmem->allocator.free(vmem, (void *)e);
 }
 
 /*
