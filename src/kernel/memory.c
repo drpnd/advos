@@ -1794,6 +1794,97 @@ virt_memory_new(virt_memory_t *dst, memory_t *mem, virt_memory_allocator_t *a)
 }
 
 /*
+ * Release entries
+ */
+static void
+_release_entry(virt_memory_t *vmem, virt_memory_entry_t *e)
+{
+    page_t *p;
+    uintptr_t virtual;
+    int ret;
+
+    /* Unmap pages */
+    p = e->object->pages;
+    virtual = e->start;
+    while ( NULL != p ) {
+        ret = vmem->mem->ifs.unmap(vmem->arch, virtual, p);
+        kassert(ret == 0);
+        virtual += ((uintptr_t)MEMORY_PAGESIZE << p->order);
+        vmem->allocator.free(vmem, (void *)p);
+        p = p->next;
+    }
+    vmem->allocator.free(vmem, (void *)e);
+
+    /* Decrement the reference counter */
+    e->object->refs--;
+}
+
+/*
+ * Free block
+ */
+static void
+_block_free(virt_memory_t *vmem, virt_memory_block_t *b)
+{
+    virt_memory_object_t **op;
+    virt_memory_entry_t *e;
+    virt_memory_free_t *f;
+    void *r;
+    btree_node_t *n;
+
+    /* Release entries and decrement the reference counter of objects */
+    while ( NULL != b->entries ) {
+        n = b->entries;
+        e = (virt_memory_entry_t *)n->data;
+        r = _entry_delete(b, e);
+        kassert( r == e );
+        _release_entry(vmem, e);
+    }
+
+    /* Release objects if no others reference */
+    op = &vmem->objects;
+    while ( NULL != *op ) {
+        if ( 0 == (*op)->refs ) {
+            /* Remove the object */
+            vmem->allocator.free(vmem, (void *)*op);
+            *op = (*op)->next;
+        } else {
+            op = &(*op)->next;
+        }
+    }
+
+    /* Free entries */
+    while ( NULL != b->frees.atree ) {
+        n = b->frees.atree;
+        f = (virt_memory_free_t *)n;
+        r = _free_delete(b, f);
+        kassert( r == f );
+        vmem->allocator.free(vmem, (void *)f);
+    }
+
+    /* Free objects */
+
+    /* Free free entries */
+
+    vmem->allocator.free(vmem, (void *)b);
+}
+
+/*
+ * Release a virtual memory instance
+ */
+void
+virt_memory_release(virt_memory_t *vmem)
+{
+    virt_memory_block_t *b;
+
+    /* Copy blocks */
+    b = vmem->blocks;
+    while ( NULL != b ) {
+        _block_free(vmem, b);
+        b = b->next;
+    }
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4
