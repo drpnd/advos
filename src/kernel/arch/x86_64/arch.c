@@ -327,6 +327,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     int ret;
     pgt_t *pgt;
     memory_arch_interfaces_t ifs;
+    virt_memory_block_t *b;
 
     /* Get the maximum address of the system memory */
     maxaddr = 0;
@@ -361,8 +362,8 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     if ( ret < 0 ) {
         panic("Failed to initialize the memory manager.");
     }
-    ret = virt_memory_block_add(&kvar->mm.kmem, 0xc0000000ULL, 0xffffffffULL);
-    if ( ret < 0 ) {
+    b = virt_memory_block_add(&kvar->mm.kmem, 0xc0000000ULL, 0xffffffffULL);
+    if ( NULL == b ) {
         panic("Failed to add kernel memory block.");
     }
 
@@ -378,9 +379,9 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     }
 
     /* Linear mapping */
-    ret = virt_memory_block_add(&kvar->mm.kmem, (uintptr_t)KERNEL_LMAP,
+    b = virt_memory_block_add(&kvar->mm.kmem, (uintptr_t)KERNEL_LMAP,
                                 (uintptr_t)KERNEL_LMAP + npg * 0x40000000 - 1);
-    if ( ret < 0 ) {
+    if ( NULL == b ) {
         panic("Failed to add linear mapping memory block.");
     }
     ret = virt_memory_wire(&kvar->mm.kmem, (uintptr_t)KERNEL_LMAP,
@@ -835,6 +836,7 @@ arch_create_new_task(void *f, size_t size)
     struct arch_task *t;
     void *prog;
     size_t nr;
+    virt_memory_block_t *b;
 
     /* Calculate the number of pages required for the program */
     nr = (size + MEMORY_PAGESIZE -1) / MEMORY_PAGESIZE;
@@ -843,8 +845,8 @@ arch_create_new_task(void *f, size_t size)
     if ( NULL == vmem ) {
         return NULL;
     }
-    ret = virt_memory_block_add(vmem, 0x80000000ULL, 0xbfffffffULL);
-    if ( ret < 0 ) {
+    b = virt_memory_block_add(vmem, 0x80000000ULL, 0xbfffffffULL);
+    if ( NULL == b ) {
         return NULL;
     }
 

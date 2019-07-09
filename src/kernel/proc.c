@@ -32,6 +32,7 @@ static virt_memory_t *
 _alloc_vmem(void)
 {
     virt_memory_t *vmem;
+    virt_memory_block_t *b;
     virt_memory_object_t *obj;
     virt_memory_entry_t *e;
     int ret;
@@ -43,9 +44,9 @@ _alloc_vmem(void)
     }
 
     /* Allocate a memory block */
-    ret = virt_memory_block_add(vmem, PROC_PROG_ADDR,
-                                PROC_PROG_ADDR + PROC_PROG_SIZE - 1);
-    if ( ret < 0 ) {
+    b = virt_memory_block_add(vmem, PROC_PROG_ADDR,
+                              PROC_PROG_ADDR + PROC_PROG_SIZE - 1);
+    if ( NULL == b ) {
         /* ToDo: Release vmem */
         return NULL;
     }

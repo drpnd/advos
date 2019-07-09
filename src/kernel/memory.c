@@ -37,6 +37,11 @@ struct virt_memory_size {
     virt_memory_free_t *ret;
 };
 
+struct virt_memory_fork_cache {
+    virt_memory_object_t *orig;
+    virt_memory_object_t *object;
+};
+
 /*
  * Prototype declarations
  */
@@ -1167,7 +1172,7 @@ virt_memory_free_pages(virt_memory_t *vmem, void *ptr)
 /*
  * Add a new memory block
  */
-int
+virt_memory_block_t *
 virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
 {
     virt_memory_free_t *fr;
@@ -1177,7 +1182,7 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     /* Allocate data and initialize the block */
     n = (virt_memory_block_t *)vmem->allocator.alloc(vmem);
     if ( NULL == n ) {
-        return -1;
+        return NULL;
     }
     n->start = start;
     n->end = end;
@@ -1190,7 +1195,7 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     fr = (virt_memory_free_t *)vmem->allocator.alloc(vmem);
     if ( NULL == fr ) {
         vmem->allocator.free(vmem, (void *)n);
-        return -1;
+        return NULL;
     }
     fr->start = (start + MEMORY_PAGESIZE - 1)
         & ~(uintptr_t)(MEMORY_PAGESIZE - 1);
@@ -1209,7 +1214,7 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     if ( ret < 0 ) {
         vmem->allocator.free(vmem, (void *)fr);
         vmem->allocator.free(vmem, (void *)n);
-        return -1;
+        return NULL;
     }
 
     /* Insert the block to the sorted list */
@@ -1217,10 +1222,10 @@ virt_memory_block_add(virt_memory_t *vmem, uintptr_t start, uintptr_t end)
     if ( ret < 0 ) {
         vmem->allocator.free(vmem, (void *)fr);
         vmem->allocator.free(vmem, (void *)n);
-        return -1;
+        return NULL;
     }
 
-    return 0;
+    return n;
 }
 
 /*
@@ -1604,26 +1609,54 @@ error_entry:
  */
 static int
 _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
-            btree_node_t *bn)
+            btree_node_t *bn, struct virt_memory_fork_cache *ccl, size_t nr)
 {
     virt_memory_entry_t *n;
     int ret;
     virt_memory_object_t *obj;
     virt_memory_entry_t *e;
+    struct virt_memory_fork_cache *ccp;
+    size_t i;
 
+    /* Get the original entry */
     e = (virt_memory_entry_t *)bn->data;
 
-    n = (virt_memory_entry_t *)dst->allocator.alloc(dst);
+    /* Check if the object is already copied */
+    ccp = NULL;
+    for ( i = 0; i < nr; i++ ) {
+        if ( NULL == ccl[i].orig ) {
+            break;
+        }
+        if ( ccl[i].orig == e->object ) {
+            ccp = &ccl[i];
+        }
+    }
+
+    if ( NULL != ccp ) {
+        /* Get the forked object */
+        obj = ccp->object;
+    } else {
+        if ( i >= nr ) {
+            return -1;
+        }
+
+        /* Copy the object (CoW is to be implemented.) */
+        obj = virt_memory_alloc_object(dst, e->object->size);
+        if ( NULL == obj ) {
+            return -1;
+        }
+        /* Add to the copied cache list */
+        ccl[i].orig = e->object;
+        ccl[i].object = obj;
+    }
+
+    /* Allocate an entry */
+    n = virt_memory_alloc_entry(dst, obj, e->start, e->size, e->offset,
+                                e->flags);
     if ( NULL == n ) {
+        /* ToDo: Release vmem */
         return -1;
     }
-    n->start = e->start;
-    n->size = e->size;
-    n->offset = e->offset;
-    n->flags = e->flags | MEMORY_VMF_COW;
-    n->object = NULL;
-    n->atree.left = NULL;
-    n->atree.right = NULL;
 
     /* Add this entry to the entry tree */
     ret = _entry_add(b, n);
@@ -1633,44 +1666,15 @@ _entry_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *b,
         return -1;
     }
 
-    /* Shadow object for the source entry */
-    obj = (virt_memory_object_t *)src->allocator.alloc(src);
-    if ( NULL == obj ) {
-        dst->allocator.free(dst, (void *)n);
-        return -1;
-    }
-    obj->type = MEMORY_SHADOW;
-    obj->pages = NULL;
-    obj->size = e->object->size;
-    obj->refs = 1;
-    obj->u.shadow.object = e->object;
-
-    /* Shadow object for the destination entry */
-    n->object = (virt_memory_object_t *)dst->allocator.alloc(dst);
-    if ( NULL == n->object ) {
-        src->allocator.free(src, (void *)obj);
-        dst->allocator.free(dst, (void *)n);
-        return -1;
-    }
-    n->object->type = MEMORY_SHADOW;
-    n->object->pages = NULL;
-    n->object->size = e->object->size;
-    n->object->refs = 1;
-    n->object->u.shadow.object = e->object;
-
-    /* Replace the reference from the source entry  */
-    e->object->refs++;
-    e->object = obj;
-
     /* Traverse the tree */
     if ( NULL != e->atree.left ) {
-        ret = _entry_fork(dst, src, b, e->atree.left);
+        ret = _entry_fork(dst, src, b, e->atree.left, ccl, nr);
         if ( ret < 0 ) {
             return -1;
         }
     }
     if ( NULL != e->atree.right ) {
-        ret = _entry_fork(dst, src, b, e->atree.right);
+        ret = _entry_fork(dst, src, b, e->atree.right, ccl, nr);
         if ( ret < -1 ) {
             return -1;
         }
@@ -1698,32 +1702,53 @@ _entry_free_all(virt_memory_t *vmem, btree_node_t *n)
 }
 
 /*
+ * Count entries
+ */
+int
+virt_memory_entry_count(void *n, void *data)
+{
+    virt_memory_entry_t *e;
+    size_t *size;
+
+    e = (virt_memory_entry_t *)n;
+    size = (size_t *)data;
+    (*size)++;
+
+    return 0;
+}
+
+/*
  * Copy a block
  */
 static int
 _block_fork(virt_memory_t *dst, virt_memory_t *src, virt_memory_block_t *sb)
 {
     int ret;
-    virt_memory_block_t *n;
+    virt_memory_block_t *b;
+    size_t nr;
+    struct virt_memory_fork_cache *ccl;
 
     /* Allocate data and initialize the block */
-    n = (virt_memory_block_t *)dst->allocator.alloc(dst);
-    if ( NULL == n ) {
+    b = virt_memory_block_add(dst, sb->start, sb->end);
+    if ( NULL == b ) {
         return -1;
     }
-    n->start = sb->start;
-    n->end = sb->end;
-    n->next = NULL;
-    n->entries = NULL;
-    n->frees.atree = NULL;
-    n->frees.stree = NULL;
+
+    /* Count the number of entries */
+    nr = 0;
+    (void)btree_traverse(sb->entries, &nr, virt_memory_entry_count);
+    ccl = alloca(sizeof(struct virt_memory_fork_cache) * nr);
+    if ( NULL == ccl ) {
+        return -1;
+    }
+    kmemset(ccl, 0, sizeof(struct virt_memory_fork_cache) * nr);
 
     /* Copy entries */
-    ret = _entry_fork(dst, src, n, sb->entries);
+    ret = _entry_fork(dst, src, b, sb->entries, ccl, nr);
     if ( ret < 0 ) {
         /* Free all entries */
-        _entry_free_all(dst, n->entries);
-        dst->allocator.free(dst, (void *)n);
+        _entry_free_all(dst, b->entries);
+        dst->allocator.free(dst, (void *)b);
         return -1;
     }
 

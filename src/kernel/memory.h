@@ -150,9 +150,6 @@ struct virt_memory_object {
             virt_memory_object_t *object;
         } shadow;
     } u;
-
-    /* Memo area for fork() */
-    void *memo;
 };
 
 /*
@@ -368,7 +365,8 @@ memory_init(memory_t *, phys_memory_t *, void *, uintptr_t,
 void * memory_alloc_pages(memory_t *, size_t, int, int);
 void memory_free_pages(memory_t *, void *);
 
-int virt_memory_block_add(virt_memory_t *, uintptr_t, uintptr_t);
+virt_memory_block_t *
+virt_memory_block_add(virt_memory_t *, uintptr_t, uintptr_t);
 int virt_memory_wire(virt_memory_t *, uintptr_t, size_t, uintptr_t);
 void * virt_memory_alloc_pages(virt_memory_t *, size_t, int, int);
 void virt_memory_free_pages(virt_memory_t *, void *);
