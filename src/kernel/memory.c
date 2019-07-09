@@ -703,7 +703,6 @@ error_f0:
     vmem->allocator.free(vmem, (void *)e);
 
     return NULL;
-
 }
 
 /*
