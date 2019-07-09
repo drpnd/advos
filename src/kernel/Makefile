@@ -20,6 +20,7 @@ kernel: arch/x86_64/asm.o \
 	arch/x86_64/desc.o arch/x86_64/i8254.o arch/x86_64/pgt.o \
 	arch/x86_64/vconsole.o arch/x86_64/tsc.o arch/x86_64/task.o
 	$(LD) -N -T kernel.ld -o $@ $^
+	$(LD) -N -T kerneldebug.ld -o $@ $^
 
 clean:
 	find . -name "*.o" | xargs rm -f
