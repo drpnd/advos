@@ -32,9 +32,18 @@
 void
 sys_exit(int status)
 {
+    task_t *t;
+
+    /* Get the caller task */
+    t = this_task();
+
     /* ToDo: Call atexit() */
 
-    /*  */
+    /* Set the state and exit status */
+    t->state = TASK_TERMINATED;
+    t->proc->exit_status = status;
+
+    /* Infinite loop until this task has been removed */
     for ( ;; ) {
         hlt();
     }
