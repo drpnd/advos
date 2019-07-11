@@ -889,8 +889,6 @@ _init_new(void)
     proc_t *proc;
     size_t nr;
     struct arch_task *t;
-    void *ustack;
-    uintptr_t addr;
     void *prog;
 
     /* Find /init from initrd */
