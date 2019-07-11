@@ -818,7 +818,7 @@ arch_memory_new(void)
     pages = phys_mem_buddy_alloc(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
                                  9);
     if ( NULL == pages ) {
-        panic("Cannot allocate pages for page tables.");
+        return NULL;
     }
     pgt = memory_slab_alloc(&g_kvar->slab, PGT_SLAB_NAME);
     if ( NULL == pgt ) {
