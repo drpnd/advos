@@ -666,6 +666,7 @@ arch_memory_ctxsw(void *arch)
 int
 arch_memory_copy(void *arch, uintptr_t dst, uintptr_t src, size_t size)
 {
+    (void)arch;
     kmemcpy((void *)dst + KERNEL_LMAP, (void *)src + KERNEL_LMAP, size);
 
     return 0;
