@@ -48,6 +48,15 @@ fork(void)
 }
 
 /*
+ * execve
+ */
+int
+execve(const char *path, char *const argv[], char *const envp[])
+{
+    return syscall(SYS_execve, path, argv, envp);
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4

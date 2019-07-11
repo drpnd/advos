@@ -27,6 +27,7 @@
 #include <advos/types.h>
 
 pid_t fork(void);
+int execve(const char *, char *const [], char *const []);
 
 #endif
 
