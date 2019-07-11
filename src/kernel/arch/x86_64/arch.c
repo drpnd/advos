@@ -674,9 +674,6 @@ arch_memory_copy(void *arch, uintptr_t dst, uintptr_t src, size_t size)
 /*
  * Local APIC timer handler
  */
-struct arch_task *taska;
-struct arch_task *taskb;
-struct arch_task *taski;
 void
 ksignal_clock(void)
 {
@@ -918,7 +915,6 @@ _init_new(void)
         return NULL;
     }
     t->cr3 = ((pgt_t *)proc->vmem->arch)->cr3;
-    taskb = t;
 
     return proc;
 }
@@ -936,6 +932,7 @@ _prepare_multitasking(void)
     proc_t *proc;
     void *kstack;
     void *ustack;
+    struct arch_task *taski;
 
     proc = _init_new();
     if ( NULL == proc ) {
@@ -983,7 +980,7 @@ _prepare_multitasking(void)
     /* Set the task A as the initial task */
     cpu = (struct arch_cpu_data *)CPU_TASK(0);
     cpu->cur_task = NULL;
-    cpu->next_task = taskb;
+    cpu->next_task = proc->task->arch;
     cpu->idle_task = taski;
 
     return 0;
