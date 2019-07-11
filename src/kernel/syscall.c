@@ -101,6 +101,33 @@ sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
 }
 
 /*
+ * Execute a file
+ *
+ * SYNOPSIS
+ *      int
+ *      sys_execve(const char *path, char *const argv[], char *const envp[]);
+ *
+ * DESCRIPTION
+ *      The function sys_execve() transforms the calling process into a new
+ *      process. The new process is constructed from an ordinary file, whose
+ *      name is pointed by path, called the new process file.  In the current
+ *      implementation, this file should be an executable object file, whose
+ *      text section virtual address starts from 0x80000000.  The design of
+ *      relocatable object support is still ongoing.
+ *
+ * RETURN VALUES
+ *      As the function sys_execve() overlays the current process image with a
+ *      new process image, the successful call has no process to return to.  If
+ *      it does return to the calling process, an error has occurred; the return
+ *      value will be -1.
+ */
+int
+sys_execve(const char *path, char *const argv[], char *const envp[])
+{
+    return -1;
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4
