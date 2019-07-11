@@ -92,7 +92,7 @@ task_alloc(void)
     /* Set the initial values */
     t->proc = NULL;
     t->id = 0;
-    t->state = TASK_CREATED;
+    t->state = TASK_READY;
     t->next = NULL;
     t->credit = 0;
 
