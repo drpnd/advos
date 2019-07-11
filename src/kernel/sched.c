@@ -21,6 +21,35 @@
  * SOFTWARE.
  */
 
+#include "kernel.h"
+#include "sched.h"
+#include "kvar.h"
+
+/*
+ * High level scheduler
+ */
+void
+sched_schedule(void)
+{
+    int i;
+    task_t *t;
+    task_t **rq;
+
+    rq = &g_kvar->runqueue;
+    for ( i = 0; i < PROC_NR; i++ ) {
+        if ( NULL != g_kvar->procs[i] ) {
+            t = g_kvar->procs[i]->task;
+            if ( NULL != t && (TASK_CREATED == t->state
+                               || TASK_READY == t->state) ) {
+                /* Add to the run queue */
+                t->credit = 10;
+                t->next = *rq;
+                *rq = t;
+            }
+        }
+    }
+}
+
 /*
  * Local variables:
  * tab-width: 4

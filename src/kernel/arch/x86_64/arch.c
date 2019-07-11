@@ -33,6 +33,7 @@
 #include "../../kernel.h"
 #include "../../memory.h"
 #include "../../kvar.h"
+#include "../../sched.h"
 #include <stdint.h>
 #include <sys/syscall.h>
 
@@ -679,41 +680,34 @@ struct arch_task *taski;
 void
 ksignal_clock(void)
 {
-    volatile uint16_t *base;
-    static uint64_t cnt = 0;
-    int i;
+    task_t *t;
 
     if ( lapic_id() == 0 ) {
-        base = (uint16_t *)VIDEO_RAM_80X25;
-        base += 80 * 24;
-        print_hex(base, cnt / 100, 8);
-        cnt++;
-
         /* Schedule next task (and context switch) */
         struct arch_cpu_data *cpu;
         cpu = (struct arch_cpu_data *)CPU_TASK(0);
 
-        base = (uint16_t *)VIDEO_RAM_80X25;
-        base += 80 * 19;
-        for ( i = 0; i < PROC_NR; i++ ) {
-            if ( NULL != g_kvar->procs[i] ) {
-                if ( g_kvar->procs[i]->task->arch == cpu->cur_task ) {
-                    *(base + i)= 0x0700 | ' ';
-                } else {
-                    cpu->next_task = g_kvar->procs[i]->task->arch;
-                    *(base + i)= 0x0700 | '*';
-                }
+        if ( NULL != cpu->cur_task ) {
+            t = this_task();
+            t->credit--;
+            if ( t->credit > 0 ) {
+                /* Keep this task */
+                return;
             }
         }
-#if 0
-        if ( cpu->cur_task == taska ) {
-            cpu->next_task = taskb;
-        } else if ( cpu->cur_task == taskb ) {
-            cpu->next_task = taski;
-        } else {
-            cpu->next_task = taskb;
+
+        /* Execute high-level scheduler */
+        if ( NULL == g_kvar->runqueue ) {
+            sched_schedule();
         }
-#endif
+        if ( NULL == g_kvar->runqueue ) {
+            cpu->next_task = cpu->idle_task;
+        } else {
+            /* Low level scheduler */
+            t = g_kvar->runqueue;
+            g_kvar->runqueue = t->next;
+            cpu->next_task = t->arch;
+        }
     }
 }
 
@@ -1235,6 +1229,9 @@ bsp_start(void)
     if ( ret < 0 ) {
         panic("Failed to initialize the kernel.");
     }
+
+    /* Initialize the scheduler */
+    g_kvar->runqueue = NULL;
 
     /* Setup system call */
     syscall_init(g_kvar->syscalls, SYS_MAXSYSCALL);

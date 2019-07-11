@@ -40,6 +40,7 @@ typedef struct {
     void **syscalls;
     console_t console;
     proc_t **procs;
+    task_t *runqueue;
     /* Architecture specific data */
     void *arch;
 } kvar_t;
