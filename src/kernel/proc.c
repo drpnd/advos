@@ -35,7 +35,6 @@ _alloc_vmem(void)
     virt_memory_block_t *b;
     virt_memory_object_t *obj;
     virt_memory_entry_t *e;
-    int ret;
 
     /* Allocate a virtual memory */
     vmem = g_kvar->mm.ifs.new();
@@ -84,7 +83,6 @@ proc_t *
 proc_new(pid_t pid)
 {
     proc_t *proc;
-    int ret;
 
     /* Allocate proc_t */
     proc = memory_slab_alloc(&g_kvar->slab, SLAB_PROC);
