@@ -34,12 +34,10 @@ initramfs_open(const char *path, int oflag, ...)
  * close
  */
 int
-initramfs_cloes(int fildes)
+initramfs_close(int fildes)
 {
     return -1;
 }
-
-
 
 /*
  * Local variables:
