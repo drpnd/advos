@@ -360,6 +360,10 @@ int phys_memory_init(phys_memory_t *, int, memory_sysmap_entry_t *, uint64_t);
 
 /* Defined in kmem.c */
 int kmem_init(virt_memory_t *, phys_memory_t *, uintptr_t);
+int kmem_slab_init(void);
+int kmem_slab_create_cache(const char *, size_t);
+void * kmem_slab_alloc(const char *);
+int kmem_slab_free(const char *, void *);
 
 /* Defined in memory.c */
 int
@@ -393,7 +397,6 @@ int memory_slab_init(memory_slab_allocator_t *, memory_t *);
 void * memory_slab_alloc(memory_slab_allocator_t *, const char *);
 int memory_slab_free(memory_slab_allocator_t *, const char *, void *);
 int memory_slab_create_cache(memory_slab_allocator_t *, const char *, size_t);
-
 
 #endif
 

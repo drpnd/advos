@@ -23,6 +23,7 @@
 
 #include "memory.h"
 #include "kernel.h"
+#include "kvar.h"
 
 union kmem_data {
     virt_memory_data_t vmem;
@@ -95,6 +96,30 @@ kmem_init(virt_memory_t *kmem, phys_memory_t *phys, uintptr_t p2v)
     kmem->flags = 0;
 
     return 0;
+}
+
+/*
+ * Slab allocator wrappers
+ */
+int
+kmem_slab_init(void)
+{
+    return memory_slab_init(&g_kvar->slab, &g_kvar->mm);
+}
+void *
+kmem_slab_alloc(const char *name)
+{
+    return memory_slab_alloc(&g_kvar->slab, name);
+}
+int
+kmem_slab_free(const char *name, void *obj)
+{
+    return memory_slab_free(&g_kvar->slab, name, obj);
+}
+int
+kmem_slab_create_cache(const char *name, size_t size)
+{
+    return memory_slab_create_cache(&g_kvar->slab, name, size);
 }
 
 /*

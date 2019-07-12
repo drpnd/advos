@@ -740,7 +740,7 @@ vmem_data_alloc(virt_memory_t *vmem)
     void *data;
 
     (void)vmem;
-    data = memory_slab_alloc(&g_kvar->slab, VIRT_MEMORY_SLAB_DATA_NAME);
+    data = kmem_slab_alloc(VIRT_MEMORY_SLAB_DATA_NAME);
     if ( NULL == data ) {
         return NULL;
     }
@@ -760,7 +760,7 @@ vmem_data_free(virt_memory_t *vmem, void *data)
     int ret;
 
     (void)vmem;
-    ret = memory_slab_free(&g_kvar->slab, VIRT_MEMORY_SLAB_DATA_NAME, data);
+    ret = kmem_slab_free(VIRT_MEMORY_SLAB_DATA_NAME, data);
     kassert( ret == 0 );
 }
 
@@ -772,17 +772,16 @@ vmem_callback_init(void)
 {
     int ret;
 
-    ret = memory_slab_create_cache(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME,
-                                   sizeof(virt_memory_t));
+    ret = kmem_slab_create_cache(VIRT_MEMORY_SLAB_NAME, sizeof(virt_memory_t));
     if ( ret < 0 ) {
         return -1;
     }
-    ret = memory_slab_create_cache(&g_kvar->slab, VIRT_MEMORY_SLAB_DATA_NAME,
-                                   sizeof(virt_memory_data_t));
+    ret = kmem_slab_create_cache(VIRT_MEMORY_SLAB_DATA_NAME,
+                                 sizeof(virt_memory_data_t));
     if ( ret < 0 ) {
         return -1;
     }
-    ret = memory_slab_create_cache(&g_kvar->slab, PGT_SLAB_NAME, sizeof(pgt_t));
+    ret = kmem_slab_create_cache(PGT_SLAB_NAME, sizeof(pgt_t));
     if ( ret < 0 ) {
         return -1;
     }
@@ -807,7 +806,7 @@ arch_memory_new(void)
     void *pages;
     pgt_t *pgt;
 
-    vmem = memory_slab_alloc(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME);
+    vmem = kmem_slab_alloc(VIRT_MEMORY_SLAB_NAME);
     if ( NULL == vmem ) {
         return NULL;
     }
@@ -818,9 +817,9 @@ arch_memory_new(void)
     if ( NULL == pages ) {
         return NULL;
     }
-    pgt = memory_slab_alloc(&g_kvar->slab, PGT_SLAB_NAME);
+    pgt = kmem_slab_alloc(PGT_SLAB_NAME);
     if ( NULL == pgt ) {
-        memory_slab_free(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME, vmem);
+        kmem_slab_free(VIRT_MEMORY_SLAB_NAME, vmem);
         return NULL;
     }
     pgt_init(pgt, pages, 1 << 9, KERNEL_LMAP);
@@ -833,8 +832,8 @@ arch_memory_new(void)
     if ( ret < 0 ) {
         phys_mem_buddy_free(g_kvar->phys.czones[MEMORY_ZONE_KERNEL].heads,
                             pages, 9);
-        memory_slab_free(&g_kvar->slab, PGT_SLAB_NAME, pgt);
-        memory_slab_free(&g_kvar->slab, VIRT_MEMORY_SLAB_NAME, vmem);
+        kmem_slab_free(PGT_SLAB_NAME, pgt);
+        kmem_slab_free(VIRT_MEMORY_SLAB_NAME, vmem);
         return NULL;
     }
     vmem->flags = MEMORY_MAP_USER;
@@ -947,8 +946,7 @@ _prepare_multitasking(void)
     }
     kprintf("Found /init: %llx %lld\n", start, size);
 
-    ret = memory_slab_create_cache(&g_kvar->slab, ARCH_TASK_NAME,
-                                   sizeof(struct arch_task));
+    ret = kmem_slab_create_cache(ARCH_TASK_NAME, sizeof(struct arch_task));
     if ( ret < 0 ) {
         panic("Cannot create a slab for arch_task.");
     }
@@ -1112,7 +1110,7 @@ bsp_start(void)
     }
 
     /* Initialize the slab allocator */
-    ret = memory_slab_init(&kvar->slab, &kvar->mm);
+    ret = kmem_slab_init();
     if ( ret < 0 ) {
         panic("Failed to initialize the slab allocator.");
     }
