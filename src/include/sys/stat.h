@@ -21,16 +21,16 @@
  * SOFTWARE.
  */
 
-#ifndef _SYS_SYSCALL_H
-#define _SYS_SYSCALL_H
+#ifndef _SYS_STAT_H
+#define _SYS_STAT_H
 
-#define SYS_exit        1
-#define SYS_fork        2
-#define SYS_execve      59
-#define SYS_fstat       551
-#define SYS_MAXSYSCALL  768
+#include "../advos/types.h"
 
-#endif /* _SYS_SYSCALL_H */
+struct stat {
+    off_t st_size;              /* file size, in bytes */
+};
+
+#endif /* _SYS_STAT_H */
 
 /*
  * Local variables:

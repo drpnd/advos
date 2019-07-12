@@ -22,6 +22,8 @@
  */
 
 #include <sys/syscall.h>
+#include <sys/fcntl.h>
+#include <sys/stat.h>
 #include "kernel.h"
 #include "proc.h"
 #include "kvar.h"
@@ -133,8 +135,123 @@ sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
 int
 sys_execve(const char *path, char *const argv[], char *const envp[])
 {
+    int fd;
+#if 0
+    size_t len;
+    void *p;
+    struct stat stat;
+#endif
+
+    /* Open */
+    fd = sys_open(path, O_RDONLY);
+    if ( fd < 0 ) {
+        return -1;
+    }
+
+#if 0
+    /* Get the file stats */
+    fstat(fd, &stat);
+
+    /* MMap */
+    len = 0;
+    p = sys_mmap((void *)0x80000000, len, PROT_READ | PROT_EXEC, MAP_FIXED, fd
+                 0);
+#endif
+
     return -1;
 }
+
+/*
+ * Open or create a file for reading or writing
+ *
+ * SYNOPSIS
+ *      int
+ *      sys_open(const char *path, int oflags);
+ *
+ * DESCRIPTION
+ *      The sys_open() function attempts to open a file specified by path for
+ *      reading and/or writing, as specified by the argument oflag.
+ *
+ *      The flags specified for the oflag argument are formed by or'ing the
+ *      following values (to be implemented):
+ *
+ *              O_RDONLY        open for reading only
+ *              O_WRONLY        open for writing only
+ *              O_RDWR          open for reading and writing
+ *              O_NONBLOCK      do not block on open or for data to become
+ *                              available
+ *              O_APPEND        append on each write
+ *              O_CREAT         create a file if it does not exist
+ *              O_TRUNC         truncate size to 0
+ *              O_EXCL          error if O_CREAT and the file exists
+ *              O_SHLOCK        atomically obtain a shared lock
+ *              O_EXLOCK        atomically obtain an exclusive lock
+ *              O_NOFOLLOW      do not follow symlinks
+ *              O_SYMLINK       allow open of symlinks
+ *              O_EVTONLY       descriptor requested for event notifications
+ *                              only
+ *              O_CLOEXEC       mark as close-on-exec
+ *
+ * RETURN VALUES
+ *      If success, sys_open() returns a non-negative integer, termed a file
+ *      descriptor.  It returns -1 on failure.
+ */
+int
+sys_open(const char *path, int oflag, ...)
+{
+    return -1;
+}
+
+/*
+ * Allocate memory, or map files or devices into memory
+ *
+ * SYNOPSIS
+ *      The sys_mmap() system call causes the pages starting at addr and
+ *      continuing for at most len bytes to be mapped from the object described
+ *      by fd, starting at byte offset offset.  If offset or len is not a
+ *      multiple of the pagesize, the mapped region may extend past the
+ *      specified range.  Any extension beyond the end of the mapped object will
+ *      be zero-filled.
+ *
+ *      The addr argument is used by the system to determine the starting
+ *      address of the mapping, and its interpretation is dependent on the
+ *      setting of the MAP_FIXED flag.  If MAP_FIXED is specified in flags, the
+ *      system will try to place the mapping at the specified address, possibly
+ *      removing a mapping that already exists at that location.  If MAP_FIXED
+ *      is not specified, then the system will attempt to use the range of
+ *      addresses starting at addr if they do not overlap any existing mappings,
+ *      including memory allocated by malloc(3) and other such allocators.
+ *      Otherwise, the system will choose an alternate address for the mapping
+ *      (using an implementation dependent algorithm) that does not overlap any
+ *      existing mappings.  In other words, without MAP_FIXED the system will
+ *      attempt to find an empty location in the address space if the specified
+ *      address range has already been mapped by something else.  If addr is
+ *      zero and MAP_FIXED is not specified, then an address will be selected by
+ *      the system so as not to overlap any existing mappings in the address
+ *      space.  In all cases, the actual starting address of the region is
+ *      returned.  If MAP_FIXED is specified, a successful mmap deletes any
+ *      previous mapping in the allocated address range.  Previous mappings are
+ *      never deleted if MAP_FIXED is not specified.
+ *
+ * RETURN VALUES
+ *      Upon successful completion, sys_mmap() returns a pointer to the mapped
+ *      region.  Otherwise, a value of MAP_FAILED is returned.
+ */
+void *
+sys_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
+{
+    return (void *)-1;
+}
+
+/*
+ * Get file status
+ */
+int
+sys_fstat(int fildes, struct stat *buf)
+{
+    return -1;
+}
+
 
 /*
  * Local variables:

@@ -84,6 +84,8 @@ int ksnprintf(char *, size_t, const char *, ...);
 void sys_exit(int);
 pid_t sys_fork(void);
 int sys_execve(const char *, char *const [], char *const []);
+int sys_open(const char *, int, ...);
+void * sys_mmap(void *, size_t, int, int, int, off_t);
 
 #endif
 
