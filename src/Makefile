@@ -18,7 +18,8 @@ CFLAGS=-g -O3 -fleading-underscore -mcmodel=large -nostdlib -nodefaultlibs -fno-
 
 initrd: $(LIBCOBJS) lib/crt0.o
 	$(MAKE) -C servers/init
-	./create_initrd.sh initrd servers/init/init:/init
+	$(MAKE) -C drivers/tty
+	./create_initrd.sh initrd servers/init/init:init drivers/tty/tty:tty
 
 clean:
 	$(MAKE) -C boot clean

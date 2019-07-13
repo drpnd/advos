@@ -55,6 +55,7 @@ initramfs_open(const char *path, int oflag, ...)
             (void *)INITRAMFS_BASE + e->offset;
             e->size;
         }
+        e++;
     }
 
     return -1;

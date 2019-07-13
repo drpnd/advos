@@ -22,7 +22,6 @@
  */
 
 #include <unistd.h>
-#include <sys/syscall.h>
 
 unsigned long long syscall(int, ...);
 
@@ -33,25 +32,10 @@ int
 main(int argc, char *argv[])
 {
     unsigned long long cnt = 0;
-    int pid;
 
-    pid = fork();
-    if ( pid < 0 ) {
-        syscall(766, 20, 0);
-    } else if ( pid == 0 ) {
-        /* Child */
-        syscall(SYS_initexec, "tty");
-        for ( ;; ) {
-            syscall(766, 21, cnt);
-            cnt++;
-        }
-    } else {
-        /* Parent */
-        syscall(766, 22, pid);
-        for ( ;; ) {
-            syscall(766, 23, cnt);
-            cnt++;
-        }
+    for ( ;; ) {
+        syscall(766, 20, cnt);
+        cnt++;
     }
 
     return 0;

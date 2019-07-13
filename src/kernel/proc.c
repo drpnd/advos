@@ -169,9 +169,8 @@ proc_fork(proc_t *op, pid_t pid)
     arch_task_set_cr3(np);
 
     np->pid = pid;
-    kmemset(np->name, 0, PATH_MAX);
-    kmemset(np->cwd, 0, PATH_MAX);
-    kstrcpy(np->cwd, "/");
+    kmemcpy(np->name, op->name, PATH_MAX);
+    kmemcpy(np->cwd, op->cwd, PATH_MAX);
     np->parent = NULL;
     np->uid = op->uid;
     np->gid = op->gid;

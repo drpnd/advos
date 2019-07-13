@@ -892,8 +892,8 @@ _init_new(void)
     struct arch_task *t;
     void *prog;
 
-    /* Find /init from initrd */
-    ret = _initrd_find_file("/init", &start, &size);
+    /* Find init from initrd */
+    ret = _initrd_find_file("init", &start, &size);
     if ( ret < 0 ) {
         return NULL;
     }
@@ -943,12 +943,12 @@ _prepare_multitasking(void)
         panic("Could not initialize the init process.");
     }
 
-    /* Find /init from initrd */
-    ret = _initrd_find_file("/init", &start, &size);
+    /* Find init from initrd */
+    ret = _initrd_find_file("init", &start, &size);
     if ( ret < 0 ) {
-        panic("Could not find /init.");
+        panic("Could not find init.");
     }
-    kprintf("Found /init: %llx %lld\n", start, size);
+    kprintf("Found init: %llx %lld\n", start, size);
 
     ret = kmem_slab_create_cache(ARCH_TASK_NAME, sizeof(struct arch_task));
     if ( ret < 0 ) {

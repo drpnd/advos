@@ -86,6 +86,7 @@ pid_t sys_fork(void);
 int sys_execve(const char *, char *const [], char *const []);
 int sys_open(const char *, int, ...);
 void * sys_mmap(void *, size_t, int, int, int, off_t);
+int sys_initexec(const char *path, char *const[], char *const[]);
 
 #endif
 

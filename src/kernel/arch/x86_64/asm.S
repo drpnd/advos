@@ -51,6 +51,7 @@
 	.globl	_lldt
 	.globl	_ltr
 	.globl	_sys_fork
+	.globl	_task_replace
 	.globl	_task_restart
 	.globl	_intr_null
 	.globl	_intr_apic_loc_tmr
@@ -356,6 +357,52 @@ sys_fork_restart:
 1:
 	popq	%rbp
 	sysretq
+
+/* Replace the currently running task (for execve) */
+_task_replace:
+	/* Get the APIC ID */
+	movq	$MSR_APIC_BASE,%rcx
+	rdmsr
+	shlq	$32,%rdx
+	addq	%rax,%rdx
+	andq	$0xfffffffffffff000,%rdx	/* APIC Base */
+	xorq	%rax,%rax
+	movl	0x020(%rdx),%eax	/* Local APIC ID */
+	shrl	$24,%eax
+	shlq	$CPU_DATA_SIZE_SHIFT,%rax
+	movq	%rax,%rcx
+	/* Task base address (struct arch_task *) */
+	movq	$CPU_TASK_BASE,%rbp
+	addq	%rcx,%rbp
+	/* Get the restart point from the current task */
+	movq	TASK_RP(%rdi),%rsp	/* task->rp */
+	/* Change page table */
+	movq	TASK_CR3(%rdi),%rax
+	movq	%rax,%cr3
+	/* Setup sp0 in TSS */
+	movq	TASK_SP0(%rdi),%rdx	/* task->sp0 */
+	movq	$CPU_TSS_BASE,%rax	/* TSS */
+	addq	%rcx,%rax
+	movq	%rdx,TSS_SP0(%rax)
+	/* Pop all registers from the stackframe */
+	popw	%gs
+	popw	%fs
+	popq	%rbp
+	popq	%rdi
+	popq	%rsi
+	popq	%r15
+	popq	%r14
+	popq	%r13
+	popq	%r12
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdx
+	popq	%rcx
+	popq	%rbx
+	popq	%rax
+	iretq
 
 /* Restart a task */
 _task_restart:

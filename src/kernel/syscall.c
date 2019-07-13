@@ -292,7 +292,9 @@ struct initrd_entry {
     uint64_t offset;
     uint64_t size;
 };
-
+int
+arch_task_init(task_t *t, void *entry);
+void task_replace(void *);
 /*
  * Execute from initramfs (initrd)
  */
@@ -303,6 +305,12 @@ sys_initexec(const char *path, char *const argv[], char *const envp[])
     void *start;
     size_t size;
     int i;
+    task_t *t;
+
+    t = this_task();
+    if ( NULL == t || NULL == t->proc ) {
+        return -1;
+    }
 
     e = (void *)INITRAMFS_BASE;
     start = NULL;
@@ -313,11 +321,17 @@ sys_initexec(const char *path, char *const argv[], char *const envp[])
             size = e->size;
             break;
         }
+        e++;
     }
     if ( NULL == start ) {
         return -1;
     }
+    //return -1;
+
+    kstrlcpy(t->proc->name, path, PATH_MAX);
     kmemcpy((void *)PROC_PROG_ADDR, start, size);
+    arch_task_init(t, (void *)PROC_PROG_ADDR); /* FIXME */
+    task_replace(t->arch);
 
     return 0;
 }
