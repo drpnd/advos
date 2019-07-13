@@ -286,6 +286,41 @@ sys_fstat(int fildes, struct stat *buf)
     return -1;
 }
 
+#define INITRAMFS_BASE  0xc0030000
+struct initrd_entry {
+    char name[16];
+    uint64_t offset;
+    uint64_t size;
+};
+
+/*
+ * Execute from initramfs (initrd)
+ */
+int
+sys_initexec(const char *path, char *const argv[], char *const envp[])
+{
+    struct initrd_entry *e;
+    void *start;
+    size_t size;
+    int i;
+
+    e = (void *)INITRAMFS_BASE;
+    start = NULL;
+    for ( i = 0; i < 128; i++ ) {
+        if ( 0 == kstrcmp(path, e->name) ) {
+            /* Found */
+            start = (void *)INITRAMFS_BASE + e->offset;
+            size = e->size;
+            break;
+        }
+    }
+    if ( NULL == start ) {
+        return -1;
+    }
+    kmemcpy((void *)PROC_PROG_ADDR, start, size);
+
+    return 0;
+}
 
 /*
  * Local variables:

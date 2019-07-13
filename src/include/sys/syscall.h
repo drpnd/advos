@@ -28,6 +28,7 @@
 #define SYS_fork        2
 #define SYS_execve      59
 #define SYS_fstat       551
+#define SYS_initexec    701
 #define SYS_MAXSYSCALL  768
 
 #endif /* _SYS_SYSCALL_H */
