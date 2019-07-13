@@ -26,15 +26,19 @@
 
 #include "kernel.h"
 #include "memory.h"
+#include "vfs.h"
 
 #define SLAB_TASK               "task"
 #define SLAB_PROC               "proc"
 #define SLAB_TASK_STACK         "kstack"
+#define SLAB_FILDES             "fildes"
 
 #define PROC_PROG_ADDR          0x80000000ULL
 #define PROC_PROG_SIZE          0x40000000ULL
 #define PROC_STACK_SIZE         0x10000
 #define PROC_NR                 65536
+
+#define FD_MAX                  1024
 
 typedef enum {
     TASK_CREATED,
@@ -46,6 +50,20 @@ typedef enum {
 
 typedef struct _task task_t;
 typedef struct _proc proc_t;
+
+/*
+ * File descriptor
+ */
+typedef struct {
+    /* Filesystem-specific data */
+    void *fsdata;
+
+    /* Virtual filesystem */
+    vfs_t *vfs;
+
+    /* Reference counter */
+    int refs;
+} fildes_t;
 
 /*
  * Task
@@ -83,11 +101,17 @@ struct _proc {
     /* Process name */
     char name[PATH_MAX];
 
+    /* Working directory */
+    char cwd[PATH_MAX];
+
     /* Parent process */
     proc_t *parent;
 
     /* Task (currently, supporting single thread processes) */
     task_t *task;
+
+    /* File descriptors */
+    fildes_t *fds[FD_MAX];
 
     /* Process user information */
     uid_t uid;

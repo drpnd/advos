@@ -35,21 +35,26 @@ task_mgr_init(size_t atsize)
     int i;
     int nr;
 
-    /* Allocate the kernel stack slab */
-    ret = memory_slab_create_cache(&g_kvar->slab, SLAB_PROC, sizeof(proc_t));
+    /* Allocate the process slab */
+    ret = kmem_slab_create_cache(SLAB_PROC, sizeof(proc_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    /* Allocate the file descriptor slab */
+    ret = kmem_slab_create_cache(SLAB_FILDES, sizeof(proc_t));
     if ( ret < 0 ) {
         return -1;
     }
 
     /* Allocate the kernel stack slab */
-    ret = memory_slab_create_cache(&g_kvar->slab, SLAB_TASK_STACK, KSTACK_SIZE);
+    ret = kmem_slab_create_cache(SLAB_TASK_STACK, KSTACK_SIZE);
     if ( ret < 0 ) {
         return -1;
     }
 
     /* Allocate the task */
-    ret = memory_slab_create_cache(&g_kvar->slab, SLAB_TASK,
-                                   sizeof(task_t) + atsize);
+    ret = kmem_slab_create_cache(SLAB_TASK, sizeof(task_t) + atsize);
     if ( ret < 0 ) {
         return -1;
     }

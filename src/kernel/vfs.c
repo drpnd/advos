@@ -14,36 +14,35 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
 
-#ifndef _ADVOS_VFS_H
-#define _ADVOS_VFS_H
-
-#include "kernel.h"
-#include <sys/stat.h>
+#include "vfs.h"
 
 /*
- * Virtual filesystem interfaces
+ * Get directory
  */
-typedef struct {
-    int (*open)(const char *, int, ...);
-    int (*close)(int);
-    int (*fstat)(int, struct stat *);
-} vfs_interfaces_t;
+char *
+vfs_open(const char *path)
+{
+    const char *dir;
 
-/*
- * Virtual filesystem
- */
-typedef struct {
-    vfs_interfaces_t *vfs;
-} vfs_t;
+    /* Resolve the filesystem */
+    dir = path;
+    while ( '\0' != *path ) {
+        if ( '/' == *path ) {
+            /* Delimiter */
+            break;
+        }
+        path++;
+    }
 
-#endif
+    return NULL;
+}
 
 /*
  * Local variables:

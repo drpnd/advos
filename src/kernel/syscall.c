@@ -199,6 +199,18 @@ sys_execve(const char *path, char *const argv[], char *const envp[])
 int
 sys_open(const char *path, int oflag, ...)
 {
+    const char *dir;
+
+    /* Resolve the filesystem */
+    dir = path;
+    while ( '\0' != *path ) {
+        if ( '/' == *path ) {
+            /* Delimiter */
+            break;
+        }
+        path++;
+    }
+
     return -1;
 }
 
@@ -245,10 +257,32 @@ sys_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
 
 /*
  * Get file status
+ *
+ * SYNOPSIS
+ *      The fstat() function obtains information about an open file known by the
+ *      file descriptor fildes.
+ *
+ * RETURN VALUES
+ *      Upon successful completion, a value of 0 is returned.  Otherwise, a
+ *      value of -1 is returned.
  */
 int
 sys_fstat(int fildes, struct stat *buf)
 {
+    task_t *t;
+    fildes_t *fd;
+
+    /* Resolve fildes from the process */
+    t = this_task();
+    if ( NULL == t || NULL == t->proc ) {
+        return -1;
+    }
+    if ( NULL == t->proc->fds[fildes] ) {
+        /* Not opened */
+        return -1;
+    }
+    fd = t->proc->fds[fildes];
+
     return -1;
 }
 

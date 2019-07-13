@@ -109,6 +109,8 @@ proc_new(pid_t pid)
 
     proc->pid = pid;
     kmemset(proc->name, 0, PATH_MAX);
+    kmemset(proc->cwd, 0, PATH_MAX);
+    kstrcpy(proc->cwd, "/");
     proc->parent = NULL;
     proc->uid = 0;
     proc->gid = 0;
@@ -168,6 +170,8 @@ proc_fork(proc_t *op, pid_t pid)
 
     np->pid = pid;
     kmemset(np->name, 0, PATH_MAX);
+    kmemset(np->cwd, 0, PATH_MAX);
+    kstrcpy(np->cwd, "/");
     np->parent = NULL;
     np->uid = op->uid;
     np->gid = op->gid;

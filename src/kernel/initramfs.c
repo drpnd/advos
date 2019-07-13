@@ -21,12 +21,42 @@
  * SOFTWARE.
  */
 
+#include "vfs.h"
+#include "kernel.h"
+
+/*
+ * initrd
+ */
+struct initrd_entry {
+    char name[16];
+    uint64_t offset;
+    uint64_t size;
+};
+
+struct initramfs_fildes {
+    int inode;
+};
+
+#define INITRAMFS_BASE  0xc0030000
+
 /*
  * open
  */
 int
 initramfs_open(const char *path, int oflag, ...)
 {
+    struct initrd_entry *e;
+    int i;
+
+    e = (void *)INITRAMFS_BASE;
+    for ( i = 0; i < 128; i++ ) {
+        if ( 0 == kstrcmp(path, e->name) ) {
+            /* Found */
+            (void *)INITRAMFS_BASE + e->offset;
+            e->size;
+        }
+    }
+
     return -1;
 }
 
@@ -35,6 +65,15 @@ initramfs_open(const char *path, int oflag, ...)
  */
 int
 initramfs_close(int fildes)
+{
+    return -1;
+}
+
+/*
+ * fstat
+ */
+int
+initramfs_fstat(int fildes, struct stat *buf)
 {
     return -1;
 }
