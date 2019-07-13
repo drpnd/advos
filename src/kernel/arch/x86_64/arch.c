@@ -698,6 +698,9 @@ ksignal_clock(void)
         if ( NULL == g_kvar->runqueue ) {
             sched_schedule();
         }
+        if ( NULL != cpu->cur_task ) {
+            cpu->cur_task->task->state = TASK_READY;
+        }
         if ( NULL == g_kvar->runqueue ) {
             cpu->next_task = cpu->idle_task;
         } else {
@@ -705,6 +708,7 @@ ksignal_clock(void)
             t = g_kvar->runqueue;
             g_kvar->runqueue = t->next;
             cpu->next_task = t->arch;
+            t->state = TASK_RUNNING;
         }
     }
 }
