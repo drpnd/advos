@@ -304,6 +304,7 @@ sys_initexec(const char *path, char *const argv[], char *const envp[])
     size_t size;
     int i;
     task_t *t;
+    int ret;
 
     t = this_task();
     if ( NULL == t || NULL == t->proc ) {
@@ -327,8 +328,11 @@ sys_initexec(const char *path, char *const argv[], char *const envp[])
 
     kstrlcpy(t->proc->name, path, PATH_MAX);
     kmemcpy((void *)PROC_PROG_ADDR, start, size);
-    g_kvar->task_mgr.init(t, (void *)PROC_PROG_ADDR);
-    g_kvar->task_mgr.replace(t->arch);
+    ret = task_init(t, (void *)PROC_PROG_ADDR);
+    if ( ret < 0 ) {
+        return -1;
+    }
+    task_exec(t);
 
     return 0;
 }

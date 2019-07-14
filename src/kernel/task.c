@@ -29,8 +29,7 @@
  * Initialize the task manager
  */
 int
-task_mgr_init(size_t atsize, int (*init)(task_t *, void *),
-              void (*replace)(void *))
+task_mgr_init(size_t atsize)
 {
     int ret;
     int i;
@@ -72,8 +71,6 @@ task_mgr_init(size_t atsize, int (*init)(task_t *, void *),
 
     /* Initialize the task manager */
     g_kvar->task_mgr.lock = 0;
-    g_kvar->task_mgr.init = init;
-    g_kvar->task_mgr.replace = replace;
 
     return 0;
 }

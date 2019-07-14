@@ -30,7 +30,7 @@
  * Initialize the architecture-specific task data structure
  */
 int
-arch_task_init(task_t *t, void *entry)
+task_init(task_t *t, void *entry)
 {
     struct arch_task *at;
 
@@ -59,6 +59,15 @@ arch_task_init(task_t *t, void *entry)
     }
 
     return 0;
+}
+
+/*
+ * Execute the specified task
+ */
+void
+task_exec(task_t *t)
+{
+    task_replace(t->arch);
 }
 
 /*

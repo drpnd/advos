@@ -790,7 +790,7 @@ vmem_callback_init(void)
         return -1;
     }
 
-    ret = task_mgr_init(sizeof(struct arch_task), arch_task_init, task_replace);
+    ret = task_mgr_init(sizeof(struct arch_task));
     if ( ret < 0 ) {
         return -1;
     }
@@ -914,7 +914,7 @@ _init_new(void)
     prog = (void *)PROC_PROG_ADDR;
     kmemcpy(prog, start, size);
 
-    ret = arch_task_init(proc->task, prog);
+    ret = task_init(proc->task, prog);
     if ( ret < 0 ) {
         return NULL;
     }

@@ -160,7 +160,7 @@ proc_fork(proc_t *op, pid_t pid)
     np->task->proc =  np;
 
     /* Copy kernel stack */
-    g_kvar->task_mgr.init(np->task, NULL);
+    task_init(np->task, NULL);
     kmemcpy(np->task->kstack, op->task->kstack, KSTACK_SIZE);
 
     np->pid = pid;
