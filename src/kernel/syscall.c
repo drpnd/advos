@@ -256,6 +256,38 @@ sys_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
 }
 
 /*
+ * Suspend thread execution for an interval measured in nanoseconds
+ *
+ * SYNOPSIS
+ *      int
+ *      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+ *
+ * DESCRIPTION
+ *      The sys_nanosleep() function causes the calling thread to sleep for the
+ *      amount of time specified in ratp (the actual time slept may be longer,
+ *      due to system latencies and possible limitations in the timer resolution
+ *      of the hardware).  An unmasked signal will cause sys_nanosleep() to
+ *      terminate the sleep early, regardless of the SA_RESTART value on the
+ *      interrupting signal.
+ *
+ * RETURN VALUES
+ *      If sys_nanosleep() returns because the requested time has elapsed, the
+ *      value returned will be zero.
+ *
+ *      If sys_nanosleep() returns due to the delivery of a signal, the value
+ *      returned will be the -1, and the global variable errno will be set to
+ *      indicate the interruption.  If rmtp is non-NULL, the timespec structure
+ *      it references is updated to contain the unslept amount (the request time
+ *      minus the time actually slept).
+ */
+int
+sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
+{
+    return -1;
+}
+
+
+/*
  * Get file status
  *
  * SYNOPSIS
