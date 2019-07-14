@@ -307,11 +307,6 @@ _xrstor64:
 	xrstor64	(%rdi)
 	ret
 
-/* void sys_hlt(void) */
-_sys_hlt:
-	hlt
-	sysretq
-
 /* pid_t sys_fork(void) */
 _sys_fork:
 	pushq	%rbp

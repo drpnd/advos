@@ -84,6 +84,7 @@ int kvsnprintf(char *, size_t, const char *, va_list);
 int ksnprintf(char *, size_t, const char *, ...);
 
 /* Defined in syscall.c */
+void sys_hlt(void);
 void sys_exit(int);
 pid_t sys_fork(void);
 int sys_execve(const char *, char *const [], char *const []);

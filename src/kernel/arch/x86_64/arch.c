@@ -250,9 +250,12 @@ isr_page_fault(uint64_t virtual, uint64_t error, uint64_t rip, uint64_t cs,
                uint64_t rflags, uint64_t rsp)
 {
     char buf[4096];
+    task_t *t;
 
-    ksnprintf(buf, sizeof(buf), "#PF: virtual=%llx, error=%llx, rip=%llx, "
-              "cs=%llx, rflags=%llx, rsp=%llx", virtual, error, rip, cs, rflags,
+    t = this_task();
+    ksnprintf(buf, sizeof(buf), "#PF: task=%llx, virtual=%llx, error=%llx, "
+              "rip=%llx, cs=%llx, rflags=%llx, rsp=%llx", t, virtual,
+              error, rip, cs, rflags,
               rsp);
     panic(buf);
 }
@@ -735,10 +738,13 @@ ksignal_clock(void)
 
         if ( NULL != cpu->cur_task ) {
             t = this_task();
-            t->credit--;
-            if ( t->credit > 0 ) {
-                /* Keep this task */
-                return;
+            if ( NULL != t ) {
+                /* Idle tasks do not have task_t... */
+                t->credit--;
+                if ( t->credit > 0 ) {
+                    /* Keep this task */
+                    return;
+                }
             }
         }
 
@@ -747,7 +753,10 @@ ksignal_clock(void)
             sched_schedule();
         }
         if ( NULL != cpu->cur_task ) {
-            cpu->cur_task->task->state = TASK_READY;
+            if ( NULL != cpu->cur_task->task ) {
+                /* FIXME: Add task_t for idle tasks. */
+                cpu->cur_task->task->state = TASK_READY;
+            }
         }
         if ( NULL == g_kvar->runqueue ) {
             cpu->next_task = cpu->idle_task;
@@ -1021,10 +1030,10 @@ _prepare_multitasking(void)
     taski->sp0 = (uint64_t)kstack + 4096 - 16;
     taski->rp->sp = (uint64_t)ustack + 4096 - 16;
     taski->rp->ip = (uint64_t)task_idle;
-    taski->rp->cs = GDT_RING3_CODE64_SEL + 3;
-    taski->rp->ss = GDT_RING3_DATA64_SEL + 3;
-    taski->rp->fs = GDT_RING3_DATA64_SEL + 3;
-    taski->rp->gs = GDT_RING3_DATA64_SEL + 3;
+    taski->rp->cs = GDT_RING0_CODE_SEL;
+    taski->rp->ss = GDT_RING0_DATA_SEL;
+    taski->rp->fs = GDT_RING0_DATA_SEL;
+    taski->rp->gs = GDT_RING0_DATA_SEL;
     taski->rp->flags = 0x202;
     taski->xregs = kmalloc(4096);
     if ( NULL == taski->xregs ) {
@@ -1430,6 +1439,21 @@ ap_start(void)
     for ( ;; ) {
         hlt();
     }
+}
+
+/*
+ * hlt
+ */
+void
+sys_hlt(void)
+{
+    task_t *t;
+    /* Allowed only from idle tasks */
+    t = this_task();
+    if ( NULL != t->proc ) {
+        return;
+    }
+    hlt();
 }
 
 /*

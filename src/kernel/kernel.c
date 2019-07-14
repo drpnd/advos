@@ -89,11 +89,6 @@ sys_print_counter(int ln, uint64_t cnt)
     base += 80 * ln;
     print_hex(base, cnt, 8);
 }
-void
-sys_hlt(void)
-{
-    __asm__ __volatile__ ("hlt");
-}
 
 /*
  * Initialize the kernel
@@ -119,13 +114,13 @@ kernel_init(void)
     for ( i = 0; i < SYS_MAXSYSCALL; i++ ) {
         syscalls[i] = NULL;
     }
+    syscalls[SYS_hlt] = sys_hlt;
     syscalls[SYS_exit] = sys_exit;
     syscalls[SYS_fork] = sys_fork;
     syscalls[SYS_execve] = sys_execve;
     syscalls[SYS_nanosleep] = sys_nanosleep;
     syscalls[SYS_initexec] = sys_initexec;
     syscalls[766] = sys_print_counter;
-    syscalls[767] = sys_hlt;
 
     /* Set the table to the kernel variable */
     g_kvar->syscalls = syscalls;

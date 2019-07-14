@@ -75,8 +75,6 @@ sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
     pid_t pid;
     int i;
 
-    return -1;
-
     /* Get the currently running task, and the corresponding process */
     t = this_task();
     if ( NULL == t || NULL == t->proc ) {
