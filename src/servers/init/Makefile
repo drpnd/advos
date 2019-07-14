@@ -7,10 +7,11 @@ include ../../app.mk
 
 .PHONY: all clean
 
-init: init.o
+init: main.o
 	$(LD) -T ../../app.ld -o $@ $^
 
 all: init
 
 clean:
+	find . -name "*.o" | xargs rm -f
 	rm -rf init

@@ -21,24 +21,18 @@
  * SOFTWARE.
  */
 
+#include <sys/syscall.h>
 #include <unistd.h>
 
 unsigned long long syscall(int, ...);
 
 /*
- * Entry point for the init program
+ * execve
  */
 int
-main(int argc, char *argv[])
+initexec(const char *path, char *const argv[], char *const envp[])
 {
-    unsigned long long cnt = 0;
-
-    for ( ;; ) {
-        syscall(766, 21, cnt);
-        cnt++;
-    }
-
-    return 0;
+    return syscall(SYS_initexec, path, argv, envp);
 }
 
 /*

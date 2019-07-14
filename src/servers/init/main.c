@@ -21,8 +21,10 @@
  * SOFTWARE.
  */
 
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <sys/advos.h>
 
 unsigned long long syscall(int, ...);
 
@@ -40,7 +42,7 @@ main(int argc, char *argv[])
         syscall(766, 20, 0);
     } else if ( pid == 0 ) {
         /* Child */
-        syscall(SYS_initexec, "tty");
+        initexec("tty", NULL, NULL);
     } else {
         /* Parent */
         syscall(766, 22, pid);
