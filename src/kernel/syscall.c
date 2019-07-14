@@ -306,11 +306,13 @@ sys_initexec(const char *path, char *const argv[], char *const envp[])
     task_t *t;
     int ret;
 
+    /* Get the currently running task */
     t = this_task();
     if ( NULL == t || NULL == t->proc ) {
         return -1;
     }
 
+    /* Search the file specified by path from initrd */
     e = (void *)INITRAMFS_BASE;
     start = NULL;
     for ( i = 0; i < 128; i++ ) {
@@ -323,17 +325,26 @@ sys_initexec(const char *path, char *const argv[], char *const envp[])
         e++;
     }
     if ( NULL == start ) {
+        /* Not found */
         return -1;
     }
 
-    kstrlcpy(t->proc->name, path, PATH_MAX);
-    kmemcpy((void *)PROC_PROG_ADDR, start, size);
+    /* Initialize the task */
     ret = task_init(t, (void *)PROC_PROG_ADDR);
     if ( ret < 0 ) {
         return -1;
     }
+
+    /* Update the process name */
+    kstrlcpy(t->proc->name, path, PATH_MAX);
+
+    /* Copy the program */
+    kmemcpy((void *)PROC_PROG_ADDR, start, size);
+
+    /* Execute the task */
     task_exec(t);
 
+    /* will never reach here */
     return 0;
 }
 
