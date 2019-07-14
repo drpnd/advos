@@ -50,6 +50,8 @@ typedef __builtin_va_list va_list;
 /* Defined in arch/<architecture>/{arch.c,asm.S} */
 void panic(const char *, ...);
 void hlt(void);
+void spin_lock(int *);
+void spin_unlock(int *);
 
 #define kassert(cond)        do {                                       \
         char buf[4096];                                                 \

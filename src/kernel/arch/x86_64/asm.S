@@ -752,7 +752,7 @@ _syscall_setup:
 	popq	%rbx
 	ret
 
-/* void spin_lock(void *) */
+/* void spin_lock(int *) */
 _spin_lock:
 	xorl	%ecx,%ecx
 	incl	%ecx
@@ -762,7 +762,7 @@ _spin_lock:
 	jnz	1b
 	ret
 
-/* void spin_unlock(void *) */
+/* void spin_unlock(int *) */
 _spin_unlock:
 	xorl	%eax,%eax
 	lock xchgl	(%rdi),%eax

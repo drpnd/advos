@@ -188,9 +188,6 @@ void intr_crash(void);
 void syscall_entry(void);
 void syscall_setup(uint64_t, uint64_t);
 
-void spin_lock(void *);
-void spin_unlock(void *);
-
 /* vconsole.c */
 console_dev_t * vconsole_init(void);
 int vconsole_write(console_dev_t *, const void *, size_t);
