@@ -326,7 +326,6 @@ sys_initexec(const char *path, char *const argv[], char *const envp[])
     if ( NULL == start ) {
         return -1;
     }
-    //return -1;
 
     kstrlcpy(t->proc->name, path, PATH_MAX);
     kmemcpy((void *)PROC_PROG_ADDR, start, size);
