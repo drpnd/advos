@@ -84,16 +84,16 @@ task_alloc(void)
     task_t *t;
 
     /* Prepare a task data structure */
-    t = memory_slab_alloc(&g_kvar->slab, SLAB_TASK);
+    t = kmem_slab_alloc(SLAB_TASK);
     if ( NULL == t ) {
         return NULL;
     }
     t->arch = (void *)t + sizeof(task_t);
 
     /* Prepare kernel stack */
-    t->kstack = memory_slab_alloc(&g_kvar->slab, SLAB_TASK_STACK);
+    t->kstack = kmem_slab_alloc(SLAB_TASK_STACK);
     if ( NULL == t->kstack ) {
-        memory_slab_free(&g_kvar->slab, SLAB_TASK, t);
+        kmem_slab_free(SLAB_TASK, t);
         return NULL;
     }
 

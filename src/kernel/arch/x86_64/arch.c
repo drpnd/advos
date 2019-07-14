@@ -1012,42 +1012,9 @@ _prepare_multitasking(void)
         panic("Cannot create a slab for arch_task.");
     }
 
-    /* Idle task */
-    taski = kmalloc(sizeof(struct arch_task));
-    if ( NULL == taski ) {
-        return -1;
-    }
-    kstack = kmalloc(4096);
-    if ( NULL == kstack ) {
-        return -1;
-    }
-    ustack = kmalloc(4096);
-    if ( NULL == ustack ) {
-        return -1;
-    }
-    taski->rp = kstack + 4096 - 16 - sizeof(struct stackframe64);
-    kmemset(taski->rp, 0, sizeof(struct stackframe64));
-    taski->sp0 = (uint64_t)kstack + 4096 - 16;
-    taski->rp->sp = (uint64_t)ustack + 4096 - 16;
-    taski->rp->ip = (uint64_t)task_idle;
-    taski->rp->cs = GDT_RING0_CODE_SEL;
-    taski->rp->ss = GDT_RING0_DATA_SEL;
-    taski->rp->fs = GDT_RING0_DATA_SEL;
-    taski->rp->gs = GDT_RING0_DATA_SEL;
-    taski->rp->flags = 0x202;
-    taski->xregs = kmalloc(4096);
-    if ( NULL == taski->xregs ) {
-        return -1;
-    }
-    kmemset(taski->xregs, 0 , 4096);
-    taski->cr3 = ((pgt_t *)g_kvar->mm.kmem.arch)->cr3;
-
     /* Set the task A as the initial task */
     cpu = (struct arch_cpu_data *)CPU_TASK(0);
-    cpu->cur_task = NULL;
     cpu->next_task = proc->task->arch;
-    cpu->idle_task = taski;
-    cpu->fpu_task = NULL;
 
     return 0;
 }
@@ -1202,6 +1169,10 @@ bsp_start(void)
     g_kvar->console.dev = dev;
 
     /* Prepare multitasking */
+    ret = _prepare_idle_task(lapic_id());
+    if ( ret < 0 ) {
+        panic("Cannot initialize the idle task.");
+    }
     ret = _prepare_multitasking();
     if ( ret < 0 ) {
         panic("Failed to prepare multitasking");
@@ -1348,49 +1319,42 @@ bsp_start(void)
 static int
 _prepare_idle_task(int lapic_id)
 {
+    task_t *t;
     struct arch_cpu_data *cpu;
-    struct arch_task *idle;
+    struct arch_task *at;
     void *kstack;
     void *ustack;
 
-    /* Idle task */
-    idle = kmalloc(sizeof(struct arch_task));
-    if ( NULL == idle ) {
-        return -1;
-    }
-    kstack = kmalloc(4096);
-    if ( NULL == kstack ) {
-        kfree(idle);
-        return -1;
-    }
-    ustack = kmalloc(4096);
-    if ( NULL == ustack ) {
-        kfree(kstack);
-        kfree(idle);
-        return -1;
-    }
-    idle->rp = kstack + 4096 - 16 - sizeof(struct stackframe64);
-    kmemset(idle->rp, 0, sizeof(struct stackframe64));
-    idle->sp0 = (uint64_t)kstack + 4096 - 16;
-    idle->rp->sp = (uint64_t)ustack + 4096 - 16;
-    idle->rp->ip = (uint64_t)task_idle;
-    idle->rp->cs = GDT_RING0_CODE_SEL;
-    idle->rp->ss = GDT_RING0_DATA_SEL;
-    idle->rp->fs = GDT_RING0_DATA_SEL;
-    idle->rp->gs = GDT_RING0_DATA_SEL;
-    idle->rp->flags = 0x202;
-    idle->xregs = kmalloc(4096);
-    if ( NULL == idle->xregs ) {
-        return -1;
-    }
-    kmemset(idle->xregs, 0 , 4096);
-    idle->cr3 = ((pgt_t *)g_kvar->mm.kmem.arch)->cr3;
+    /* Allocate a task */
+    t = task_alloc();
+    at = t->arch;
+    at->task = t;
+
+    /* Restart point in the kernel stack */
+    at->rp = t->kstack + KSTACK_SIZE - KSTACK_GUARD
+        - sizeof(struct stackframe64);
+    kmemset(at->rp, 0, sizeof(struct stackframe64));
+
+    /* Kernel stack on interrupts (will be ignored as this task runs at ring 0)
+     */
+    at->sp0 = (uint64_t)t->kstack + KSTACK_SIZE - KSTACK_GUARD;
+
+    /* Set up the stackframe */
+    at->rp->sp = (uint64_t)t->kstack + KSTACK_SIZE - KSTACK_GUARD;
+    at->rp->ip = (uint64_t)task_idle;
+    at->rp->cs = GDT_RING0_CODE_SEL;
+    at->rp->ss = GDT_RING0_DATA_SEL;
+    at->rp->fs = GDT_RING0_DATA_SEL;
+    at->rp->gs = GDT_RING0_DATA_SEL;
+    at->rp->flags = 0x202;
+    at->xregs = NULL;
+    at->cr3 = ((pgt_t *)g_kvar->mm.kmem.arch)->cr3;
 
     /* Set the task A as the initial task */
     cpu = (struct arch_cpu_data *)(uintptr_t)CPU_TASK(lapic_id);
     cpu->cur_task = NULL;
-    cpu->next_task = idle;
-    cpu->idle_task = idle;
+    cpu->next_task = at;
+    cpu->idle_task = at;
     cpu->fpu_task = NULL;
 
     return 0;
