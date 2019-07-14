@@ -738,13 +738,10 @@ ksignal_clock(void)
 
         if ( NULL != cpu->cur_task ) {
             t = this_task();
-            if ( NULL != t ) {
-                /* Idle tasks do not have task_t... */
-                t->credit--;
-                if ( t->credit > 0 ) {
-                    /* Keep this task */
-                    return;
-                }
+            t->credit--;
+            if ( t->credit > 0 ) {
+                /* Keep this task */
+                return;
             }
         }
 
@@ -753,10 +750,7 @@ ksignal_clock(void)
             sched_schedule();
         }
         if ( NULL != cpu->cur_task ) {
-            if ( NULL != cpu->cur_task->task ) {
-                /* FIXME: Add task_t for idle tasks. */
-                cpu->cur_task->task->state = TASK_READY;
-            }
+            cpu->cur_task->task->state = TASK_READY;
         }
         if ( NULL == g_kvar->runqueue ) {
             cpu->next_task = cpu->idle_task;
