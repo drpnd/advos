@@ -25,6 +25,7 @@
 #define _ADVOS_KERNEL_H
 
 #include <stdint.h>
+#include <time.h>
 
 /* Variable length argument support */
 typedef __builtin_va_list va_list;
@@ -88,7 +89,8 @@ pid_t sys_fork(void);
 int sys_execve(const char *, char *const [], char *const []);
 int sys_open(const char *, int, ...);
 void * sys_mmap(void *, size_t, int, int, int, off_t);
-int sys_initexec(const char *path, char *const[], char *const[]);
+int sys_nanosleep(const struct timespec *, struct timespec *);
+int sys_initexec(const char *, char *const[], char *const[]);
 
 #endif
 
