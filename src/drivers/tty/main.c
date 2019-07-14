@@ -26,7 +26,7 @@
 unsigned long long syscall(int, ...);
 
 /*
- * Entry point for the init program
+ * Entry point for the tty program
  */
 int
 main(int argc, char *argv[])

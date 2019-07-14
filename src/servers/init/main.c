@@ -36,14 +36,18 @@ main(int argc, char *argv[])
 {
     unsigned long long cnt = 0;
     int pid;
+    char *tty_console_args[] = {"tty", "console", NULL};
 
+    /* Launch tty driver */
     pid = fork();
-    if ( pid < 0 ) {
-        syscall(766, 20, 0);
-    } else if ( pid == 0 ) {
+    switch ( pid ) {
+    case -1:
+        return -1;
+    case 0:
         /* Child */
-        initexec("tty", NULL, NULL);
-    } else {
+        initexec("tty", tty_console_args, NULL);
+        break;
+    default:
         /* Parent */
         syscall(766, 22, pid);
         for ( ;; ) {
