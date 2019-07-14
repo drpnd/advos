@@ -326,7 +326,7 @@ sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
     task_switch();
 
     /* Will be resumed from here when awake */
-    if ( t-> signaled ) {
+    if ( t->signaled ) {
         /* Wake up by another signal */
         if ( NULL != rmtp ) {
             if ( fire < g_kvar->jiffies ) {

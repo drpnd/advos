@@ -496,7 +496,7 @@ _task_switch:
 	pushq	%rdi
 	pushq	%rbp
 	pushw	%fs
-	pushw	%fs
+	pushw	%gs
 
 	/* If the next task is not scheduled, run the idle task */
 	cmpq	$0,TASK_NEXT(%rbp)
@@ -509,6 +509,10 @@ _task_switch:
 	/* Save the stack pointer to the restart pointer */
 	movq	TASK_CUR(%rbp),%rax
 	movq	%rsp,TASK_RP(%rax)
+	/* Set TS */
+	movq	%cr0,%rax
+	btsq	$3,%rax
+	movq	%rax,%cr0
 	/* Notify that the current task is switched (to the kernel) */
 	movq	TASK_CUR(%rbp),%rdi
 	movq	%rbx,%rsi
@@ -560,8 +564,8 @@ _task_switch:
 	popq	%rdx
 	popq	%rcx
 	popq	%rbx
-	leaveq
-	ret
+	popq	%rbp
+	retq
 
 /* Restart a task */
 _task_restart:

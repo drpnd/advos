@@ -43,7 +43,6 @@ main(int argc, char *argv[])
     pid = fork();
     switch ( pid ) {
     case -1:
-        syscall(766, 20, pid);
         return -1;
     case 0:
         /* Child */
@@ -56,7 +55,7 @@ main(int argc, char *argv[])
         struct timespec tm;
         tm.tv_sec = 1;
         tm.tv_nsec = 0;
-        //nanosleep(&tm, NULL);
+        nanosleep(&tm, NULL);
         for ( ;; ) {
             syscall(766, 23, cnt);
             cnt++;

@@ -732,6 +732,19 @@ ksignal_clock(void)
         /* Increment jiffies */
         g_kvar->jiffies++;
 
+        /* Execute timer */
+        timer_event_t *e;
+        timer_event_t *tmp;
+        e = g_kvar->timer;
+        while ( NULL != e && e->jiffies < g_kvar->jiffies ) {
+            /* Fire the event */
+            e->proc->task->state = TASK_READY;
+            tmp = e;
+            e = e->next;
+            kmem_slab_free("timer_event", tmp);
+        }
+        g_kvar->timer = e;
+
         /* Schedule next task (and context switch) */
         struct arch_cpu_data *cpu;
         cpu = (struct arch_cpu_data *)CPU_TASK(0);
