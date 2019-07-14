@@ -50,6 +50,7 @@
 	.globl	_sidt
 	.globl	_lldt
 	.globl	_ltr
+	.globl	_clts
 	.globl	_sys_fork
 	.globl	_task_replace
 	.globl	_task_restart
@@ -274,6 +275,11 @@ _lldt:
 /* void ltr(uint16_t) */
 _ltr:
 	ltr	%di
+	ret
+
+/* void clts(void) */
+_clts:
+	clts
 	ret
 
 /* pid_t sys_fork(void) */

@@ -116,6 +116,9 @@ struct arch_task {
     /* CR3 (TASK_CR3) */
     uint64_t cr3;
 
+    /* FPU/SSE registers */
+    void *xregs;
+
     /* Kernel task (architecture-independent data structure) */
     task_t *task;
 } __attribute__ ((packed));
@@ -151,6 +154,7 @@ void lidt(void *);
 void sidt(void *);
 void lldt(uint16_t);
 void ltr(uint16_t);
+void clts(void);
 void hlt(void);
 void pause(void);
 
