@@ -57,6 +57,7 @@
 	.globl	_xrstor64
 	.globl	_sys_fork
 	.globl	_task_replace
+	.globl	_task_switch
 	.globl	_task_restart
 	.globl	_intr_null
 	.globl	_intr_apic_loc_tmr
@@ -306,6 +307,11 @@ _xrstor64:
 	xrstor64	(%rdi)
 	ret
 
+/* void sys_hlt(void) */
+_sys_hlt:
+	hlt
+	sysretq
+
 /* pid_t sys_fork(void) */
 _sys_fork:
 	pushq	%rbp
@@ -327,7 +333,7 @@ _sys_fork:
 1:
 	/* Return on error */
 	leaveq
-	ret
+	retq
 
 /* void sys_fork_restart(void *task, pid_t ret0, pid_t ret1) */
 sys_fork_restart:
@@ -434,6 +440,134 @@ _task_replace:
 	popq	%rax
 	iretq
 
+/* Switch the task */
+_task_switch:
+	pushq	%rbp
+	movq	%rsp,%rbp
+	pushq	%rbx
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	pushq	%r12
+	pushq	%r13
+	pushq	%r14
+	pushq	%r15
+
+	/* Get the APIC ID */
+	movq	$MSR_APIC_BASE,%rcx
+	rdmsr
+	shlq	$32,%rdx
+	addq	%rax,%rdx
+	andq	$0xfffffffffffff000,%rdx	/* APIC Base */
+	xorq	%rax,%rax
+	movl	0x020(%rdx),%eax	/* Local APIC ID */
+	shrl	$24,%eax
+	shlq	$CPU_DATA_SIZE_SHIFT,%rax
+	movq	%rax,%r15
+	/* Task base address (struct arch_cpu_data *) */
+	movq	$CPU_TASK_BASE,%rbp
+	addq	%r15,%rbp
+
+	/* If the current task is not set, then do nothing */
+	cmpq	$0,TASK_CUR(%rbp)
+	jz	3f
+
+	/* Save the stackframe of the current task */
+	movq	%rsp,%rdx
+	movabs	$3f,%rax	/* %rip */
+	pushq	$GDT_RING0_DATA_SEL	/* %ss */
+	pushq	%rdx		/* %rsp */
+	pushfq			/* %rflags */
+	pushq	$GDT_RING0_CODE_SEL	/* %cs */
+	pushq	%rax		/* %rip */
+	pushq	$0		/* %rax */
+	pushq	%rbx
+	pushq	%rcx
+	pushq	$0		/* %rdx */
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	pushq	%r12
+	pushq	%r13
+	pushq	%r14
+	pushq	%r15
+	pushq	%rsi
+	pushq	%rdi
+	pushq	%rbp
+	pushw	%fs
+	pushw	%fs
+
+	/* If the next task is not scheduled, run the idle task */
+	cmpq	$0,TASK_NEXT(%rbp)
+	jnz	1f
+	movq	TASK_IDLE(%rbp),%rbx	/* idle task */
+	jmp	2f
+1:
+	movq	TASK_NEXT(%rbp),%rbx	/* next task */
+2:
+	/* Save the stack pointer to the restart pointer */
+	movq	TASK_CUR(%rbp),%rax
+	movq	%rsp,TASK_RP(%rax)
+	/* Notify that the current task is switched (to the kernel) */
+	movq	TASK_CUR(%rbp),%rdi
+	movq	%rbx,%rsi
+	/* to implement */
+
+	/* Task switch (set the stack frame of the new task) */
+	movq	%rbx,TASK_CUR(%rbp)	/* cur_task */
+	movq	TASK_RP(%rbx),%rsp
+	movq	$0,TASK_NEXT(%rbp)	/* next_task */
+	/* Change page table */
+	movq	TASK_CR3(%rbx),%rdx
+	movq	%rdx,%cr3
+	/* Setup sp0 in TSS */
+	movq	TASK_SP0(%rbx),%rdx	/* cur_task->sp0 */
+	movq	$CPU_TSS_BASE,%rax	/* TSS */
+	addq	%r15,%rax
+	movq	%rdx,TSS_SP0(%rax)
+
+	/* Pop all registers from the stackframe */
+	popw	%gs
+	popw	%fs
+	popq	%rbp
+	popq	%rdi
+	popq	%rsi
+	popq	%r15
+	popq	%r14
+	popq	%r13
+	popq	%r12
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rdx
+	popq	%rcx
+	popq	%rbx
+	popq	%rax
+	iretq
+3:
+	popq	%r15
+	popq	%r14
+	popq	%r13
+	popq	%r12
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx
+	popq	%rcx
+	popq	%rbx
+	leaveq
+	ret
+
 /* Restart a task */
 _task_restart:
 	/* Get the APIC ID */
@@ -446,10 +580,10 @@ _task_restart:
 	movl	0x020(%rdx),%eax	/* Local APIC ID */
 	shrl	$24,%eax
 	shlq	$CPU_DATA_SIZE_SHIFT,%rax
-	movq	%rax,%rcx
-	/* Task base address (struct arch_task *) */
+	movq	%rax,%r15
+	/* Task base address (struct arch_cpu_data *) */
 	movq	$CPU_TASK_BASE,%rbp
-	addq	%rcx,%rbp
+	addq	%r15,%rbp
 	/* If the next task is not scheduled, immediately restart this task. */
 	cmpq	$0,TASK_NEXT(%rbp)	/* next_task */
 	jz	2f
@@ -481,7 +615,7 @@ _task_restart:
 	movq	TASK_CUR(%rbp),%rax	/* cur_task */
 	movq	TASK_SP0(%rax),%rdx	/* cur_task->sp0 */
 	movq	$CPU_TSS_BASE,%rax	/* TSS */
-	addq	%rcx,%rax
+	addq	%r15,%rax
 	movq	%rdx,TSS_SP0(%rax)
 2:
 	/* Pop all registers from the stackframe */

@@ -23,6 +23,7 @@
 
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <time.h>
 
 unsigned long long syscall(int, ...);
 
@@ -54,6 +55,15 @@ int
 execve(const char *path, char *const argv[], char *const envp[])
 {
     return syscall(SYS_execve, path, argv, envp);
+}
+
+/*
+ * nanosleep
+ */
+int
+nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
+{
+    return syscall(SYS_nanosleep, rqtp, rmtp);
 }
 
 /*

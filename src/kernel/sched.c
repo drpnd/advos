@@ -41,9 +41,9 @@ sched_schedule(void)
             t = g_kvar->procs[i]->task;
             if ( NULL != t && TASK_READY == t->state ) {
                 /* Add to the run queue */
-                t->credit = 10;
-                t->next = *rq;
-                *rq = t;
+                //t->credit = 10;
+                //t->next = *rq;
+                //*rq = t;
             }
         }
     }

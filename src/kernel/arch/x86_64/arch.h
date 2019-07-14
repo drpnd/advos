@@ -96,8 +96,8 @@ struct stackframe64 {
     uint64_t ip;            /* Instruction pointer */
     uint64_t cs;            /* Code segment */
     uint64_t flags;         /* Flags */
-    uint64_t sp;            /* Stack pointer */
-    uint64_t ss;            /* Stack segment */
+    uint64_t sp;            /* Stack pointer (if CPL changes) */
+    uint64_t ss;            /* Stack segment (if CPL changes) */
 } __attribute__ ((packed));
 
 /*

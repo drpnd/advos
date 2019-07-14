@@ -55,6 +55,8 @@ virt_memory_t * arch_memory_new(void);
 int arch_memory_ctxsw(void *);
 int arch_memory_copy(void *, uintptr_t, uintptr_t, size_t);
 
+static int _prepare_idle_task(int);
+
 /*
  * System memory map entry
  */
@@ -248,10 +250,6 @@ isr_page_fault(uint64_t virtual, uint64_t error, uint64_t rip, uint64_t cs,
                uint64_t rflags, uint64_t rsp)
 {
     char buf[4096];
-
-    uint64_t rax;
-    __asm__ __volatile__ ("movq %%cr0,%%rax" : "=a"(rax) );
-    panic("#PF %llx ", rax);
 
     ksnprintf(buf, sizeof(buf), "#PF: virtual=%llx, error=%llx, rip=%llx, "
               "cs=%llx, rflags=%llx, rsp=%llx", virtual, error, rip, cs, rflags,
@@ -728,6 +726,9 @@ ksignal_clock(void)
     task_t *t;
 
     if ( lapic_id() == 0 ) {
+        /* Increment jiffies */
+        g_kvar->jiffies++;
+
         /* Schedule next task (and context switch) */
         struct arch_cpu_data *cpu;
         cpu = (struct arch_cpu_data *)CPU_TASK(0);
@@ -1020,10 +1021,10 @@ _prepare_multitasking(void)
     taski->sp0 = (uint64_t)kstack + 4096 - 16;
     taski->rp->sp = (uint64_t)ustack + 4096 - 16;
     taski->rp->ip = (uint64_t)task_idle;
-    taski->rp->cs = GDT_RING0_CODE_SEL;
-    taski->rp->ss = GDT_RING0_DATA_SEL;
-    taski->rp->fs = GDT_RING0_DATA_SEL;
-    taski->rp->gs = GDT_RING0_DATA_SEL;
+    taski->rp->cs = GDT_RING3_CODE64_SEL + 3;
+    taski->rp->ss = GDT_RING3_DATA64_SEL + 3;
+    taski->rp->fs = GDT_RING3_DATA64_SEL + 3;
+    taski->rp->gs = GDT_RING3_DATA64_SEL + 3;
     taski->rp->flags = 0x202;
     taski->xregs = kmalloc(4096);
     if ( NULL == taski->xregs ) {
@@ -1061,7 +1062,7 @@ syscall_init(void *table, int nr)
     }
 
     /* EFLAG mask */
-    wrmsr(MSR_IA32_FMASK, 0x0002);
+    wrmsr(MSR_IA32_FMASK, 0x0202);
 
     /* Entry point to the system call */
     wrmsr(MSR_IA32_LSTAR, (uint64_t)syscall_entry);

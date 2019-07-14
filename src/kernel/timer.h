@@ -14,57 +14,32 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <sys/advos.h>
-#include <time.h>
+#ifndef _ADVOS_TIMER_H
+#define _ADVOS_TIMER_H
 
-unsigned long long syscall(int, ...);
+#include "proc.h"
 
 /*
- * Entry point for the init program
+ * Kernel timer
  */
-int
-main(int argc, char *argv[])
-{
-    unsigned long long cnt = 0;
-    int pid;
-    char *tty_console_args[] = {"tty", "console", NULL};
+typedef struct _timer_event timer_event_t;
+struct _timer_event {
+    /* Jiffies to fire this event */
+    uint64_t jiffies;
+    /* Process attached to this event */
+    proc_t *proc;
+    /* Next scheduled event */
+    timer_event_t *next;
+};
 
-    /* Launch tty driver */
-    pid = fork();
-    switch ( pid ) {
-    case -1:
-        syscall(766, 20, pid);
-        return -1;
-    case 0:
-        /* Child */
-        initexec("tty", tty_console_args, NULL);
-        break;
-    default:
-        /* Parent */
-        syscall(766, 22, pid);
-
-        struct timespec tm;
-        tm.tv_sec = 1;
-        tm.tv_nsec = 0;
-        //nanosleep(&tm, NULL);
-        for ( ;; ) {
-            syscall(766, 23, cnt);
-            cnt++;
-        }
-    }
-
-    return 0;
-}
+#endif
 
 /*
  * Local variables:

@@ -105,6 +105,7 @@ kernel_init(void)
     int nr;
     void **syscalls;
     int i;
+    int ret;
 
     /* Allocate memory for system calls */
     sz = sizeof(void *) * SYS_MAXSYSCALL;
@@ -128,6 +129,12 @@ kernel_init(void)
 
     /* Set the table to the kernel variable */
     g_kvar->syscalls = syscalls;
+
+    /* Create slab for event */
+    ret = kmem_slab_create_cache("timer_event", sizeof(timer_event_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
 
     return 0;
 }

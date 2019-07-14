@@ -89,6 +89,9 @@ struct _task {
 
     /* Quantum */
     int credit;
+
+    /* Signaled? */
+    int signaled;
 };
 
 /*
@@ -146,10 +149,11 @@ proc_t * proc_new(pid_t);
 void proc_use(proc_t *);
 proc_t * proc_fork(proc_t *, pid_t);
 
-/* Defined in arch/<>architecture/task.c */
+/* Defined in arch/<>architecture/{task.c,asm.S} */
 task_t * this_task(void);
 int task_init(task_t *, void *);
 void task_exec(task_t *);
+void task_switch(void);
 
 #endif
 

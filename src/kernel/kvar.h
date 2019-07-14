@@ -28,6 +28,7 @@
 #include "memory.h"
 #include "console.h"
 #include "proc.h"
+#include "timer.h"
 #include <sys/syscall.h>
 
 /*
@@ -42,6 +43,8 @@ typedef struct {
     proc_t **procs;
     task_t *runqueue;
     task_mgr_t task_mgr;
+    uint64_t jiffies;
+    timer_event_t *timer;
     /* Architecture specific data */
     void *arch;
 } kvar_t;

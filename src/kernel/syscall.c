@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include "kernel.h"
 #include "proc.h"
+#include "timer.h"
 #include "kvar.h"
 
 /*
@@ -73,6 +74,8 @@ sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
     proc_t *proc;
     pid_t pid;
     int i;
+
+    return -1;
 
     /* Get the currently running task, and the corresponding process */
     t = this_task();
@@ -283,7 +286,67 @@ sys_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
 int
 sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
-    return -1;
+    task_t *t;
+    uint64_t fire;
+    uint64_t delta;
+    timer_event_t *e;
+    timer_event_t **ep;
+
+    /* Get the currently running task */
+    t = this_task();
+    if ( NULL == t || NULL == t->proc ) {
+        return -1;
+    }
+
+    /* Calculate the time to fire */
+    fire = rqtp->tv_sec * HZ + (rqtp->tv_nsec * HZ / 1000000000)
+        + g_kvar->jiffies;
+
+    /* Allocate an event */
+    e = kmem_slab_alloc("timer_event");
+    if ( NULL == e ) {
+        return -1;
+    }
+    e->jiffies = fire;
+    e->proc = t->proc;
+    e->next = NULL;
+
+    /* Search the appropriate position to inesrt the timer event */
+    ep = &g_kvar->timer;
+    while ( NULL != *ep && fire < (*ep)->jiffies ) {
+        ep = &(*ep)->next;
+    }
+    /* Insert the event */
+    e->next = *ep;
+    *ep = e;
+
+    /* Set the task state to blocked */
+    t->state = TASK_BLOCKED;
+    t->signaled = 0;
+
+    /* Switch the task */
+    task_switch();
+
+    /* Will be resumed from here when awake */
+    if ( t-> signaled ) {
+        /* Wake up by another signal */
+        if ( NULL != rmtp ) {
+            if ( fire < g_kvar->jiffies ) {
+                /* No remaining time */
+                rmtp->tv_sec = 0;
+                rmtp->tv_nsec = 0;
+            } else {
+                /* Remaining time */
+                delta = fire - g_kvar->jiffies;
+                rmtp->tv_sec = delta / HZ;
+                rmtp->tv_nsec = (delta % HZ) * 1000000000 / HZ;
+            }
+        }
+        t->signaled = 0;
+        return -1;
+    }
+
+    return 0;
 }
 
 
