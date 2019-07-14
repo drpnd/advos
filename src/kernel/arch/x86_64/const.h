@@ -25,8 +25,8 @@
 #define _ADVOS_CONST_H
 
 /* Maximum number of supported processors */
-#define MAX_PROCESSORS          256
-#define MAX_MEMORY_REGIONS      256
+#define MAX_PROCESSORS          128
+#define MAX_MEMORY_REGIONS      128
 
 /* Trampoline: 0x70 (0x70000) */
 #define TRAMPOLINE_VEC          0x70
@@ -47,22 +47,25 @@
 #define IDT_ADDR                0xc0076000ULL
 #define IDT_MAX_SIZE            0x2000
 
-/* Per-core data (128-byte per core) */
-#define CPU_DATA_SIZE_SHIFT     7
+/* Per-core data (256-byte per core) */
+#define CPU_DATA_SIZE_SHIFT     8
 #define CPU_DATA_SIZE           (1 << CPU_DATA_SIZE_SHIFT)
 #define CPU_DATA_BASE           0xc0060000
-#define CPU_DATA(i)             (CPU_DATA_BASE + ((uint64_t)(i) << 7))
+#define CPU_DATA(i)             (CPU_DATA_BASE  \
+                                 + ((uint64_t)(i) << CPU_DATA_SIZE_SHIFT))
 #define CPU_TSS_BASE            (CPU_DATA_BASE + 0)
-#define CPU_TSS(i)              (CPU_TSS_BASE + ((uint64_t)(i) << 7))
+#define CPU_TSS(i)              (CPU_TSS_BASE   \
+                                 + ((uint64_t)(i) << CPU_DATA_SIZE_SHIFT))
 #define CPU_TASK_BASE           (CPU_DATA_BASE + 104)
-#define CPU_TASK(i)             (CPU_TASK_BASE + ((uint64_t)(i) << 7))
+#define CPU_TASK(i)             (CPU_TASK_BASE  \
+                                 + ((uint64_t)(i) << CPU_DATA_SIZE_SHIFT))
 
 /* struct arch_task */
 #define TASK_RP                 0
 #define TASK_SP0                8
 #define TASK_CR3                16
 
-/* Task */
+/* Task (struct arch_cpu_data) */
 #define TASK_CUR                0
 #define TASK_NEXT               8
 #define TASK_IDLE               16

@@ -198,6 +198,49 @@ isr_exception_werror(uint32_t vec, uint64_t error, uint64_t rip, uint64_t cs,
 }
 
 /*
+ * Error handler for device not available (#NM)
+ */
+void
+isr_device_not_available(uint64_t rip, uint64_t cs, uint64_t rflags,
+                         uint64_t rsp)
+{
+    task_t *t;
+    struct arch_task *at;
+    struct arch_cpu_data *cpu;
+
+    uint64_t rax;
+    uint64_t rbx;
+    uint64_t rcx;
+    uint64_t rdx;
+
+    (void)rip;
+    (void)cs;
+    (void)rflags;
+    (void)rsp;
+
+    cpu = (struct arch_cpu_data *)(uintptr_t)CPU_TASK(lapic_id());
+
+    /* CPU */
+    rax = cpuid(1, &rbx, &rcx, &rdx);
+    if ( (rcx >> 26) & 1 ) {
+        /* XSAVE: To implement */
+    } else if ( (rdx >> 24) & 1 ) {
+        /* FXSR */
+        t = this_task();
+        at = t->arch;
+        /* Clear TS */
+        clts();
+        if ( cpu->fpu_task != at ) {
+            if ( NULL != cpu->fpu_task ) {
+                fxsave64(cpu->fpu_task->xregs);
+            }
+            fxrstor64(at->xregs);
+            cpu->fpu_task = at;
+        }
+    }
+}
+
+/*
  * Error handler for page fault (#PF)
  */
 void
@@ -205,6 +248,10 @@ isr_page_fault(uint64_t virtual, uint64_t error, uint64_t rip, uint64_t cs,
                uint64_t rflags, uint64_t rsp)
 {
     char buf[4096];
+
+    uint64_t rax;
+    __asm__ __volatile__ ("movq %%cr0,%%rax" : "=a"(rax) );
+    panic("#PF %llx ", rax);
 
     ksnprintf(buf, sizeof(buf), "#PF: virtual=%llx, error=%llx, rip=%llx, "
               "cs=%llx, rflags=%llx, rsp=%llx", virtual, error, rip, cs, rflags,
@@ -978,6 +1025,11 @@ _prepare_multitasking(void)
     taski->rp->fs = GDT_RING0_DATA_SEL;
     taski->rp->gs = GDT_RING0_DATA_SEL;
     taski->rp->flags = 0x202;
+    taski->xregs = kmalloc(4096);
+    if ( NULL == taski->xregs ) {
+        return -1;
+    }
+    kmemset(taski->xregs, 0 , 4096);
     taski->cr3 = ((pgt_t *)g_kvar->mm.kmem.arch)->cr3;
 
     /* Set the task A as the initial task */
@@ -985,6 +1037,7 @@ _prepare_multitasking(void)
     cpu->cur_task = NULL;
     cpu->next_task = proc->task->arch;
     cpu->idle_task = taski;
+    cpu->fpu_task = NULL;
 
     return 0;
 }
@@ -1316,6 +1369,11 @@ _prepare_idle_task(int lapic_id)
     idle->rp->fs = GDT_RING0_DATA_SEL;
     idle->rp->gs = GDT_RING0_DATA_SEL;
     idle->rp->flags = 0x202;
+    idle->xregs = kmalloc(4096);
+    if ( NULL == idle->xregs ) {
+        return -1;
+    }
+    kmemset(idle->xregs, 0 , 4096);
     idle->cr3 = ((pgt_t *)g_kvar->mm.kmem.arch)->cr3;
 
     /* Set the task A as the initial task */
@@ -1323,6 +1381,7 @@ _prepare_idle_task(int lapic_id)
     cpu->cur_task = NULL;
     cpu->next_task = idle;
     cpu->idle_task = idle;
+    cpu->fpu_task = NULL;
 
     return 0;
 }

@@ -51,6 +51,10 @@
 	.globl	_lldt
 	.globl	_ltr
 	.globl	_clts
+	.globl	_fxsave64
+	.globl	_fxrstor64
+	.globl	_xsave64
+	.globl	_xrstor64
 	.globl	_sys_fork
 	.globl	_task_replace
 	.globl	_task_restart
@@ -282,6 +286,26 @@ _clts:
 	clts
 	ret
 
+/* void fxsave64(void *) */
+_fxsave64:
+	fxsave64	(%rdi)
+	ret
+
+/* void fxrstor64(void *) */
+_fxrstor64:
+	fxrstor64	(%rdi)
+	ret
+
+/* void xsave64(void *) */
+_xsave64:
+	xsave64	(%rdi)
+	ret
+
+/* void xrstor64(void *) */
+_xrstor64:
+	xrstor64	(%rdi)
+	ret
+
 /* pid_t sys_fork(void) */
 _sys_fork:
 	pushq	%rbp
@@ -436,6 +460,10 @@ _task_restart:
 	/* Save the stack pointer (restart point) */
 	movq	TASK_CUR(%rbp),%rax
 	movq	%rsp,TASK_RP(%rax)	/* cur_task->rp */
+	/* Set TS */
+	movq	%cr0,%rax
+	btsq	$3,%rax
+	movq	%rax,%cr0
 1:
 	/* Notify that the current task is switched (to the kernel) */
 	movq	TASK_CUR(%rbp),%rdi
@@ -521,10 +549,7 @@ _intr_crash:
 	hlt
 	jmp	1b
 
-/* Macro for generic exception handlers */
-.macro  intr_exception_generic name vec
-	.globl	_intr_\name
-_intr_\name:
+.macro	intr_exception_prolog
 	/* Save registers*/
 	pushq	%rbp
 	movq	%rsp,%rbp
@@ -538,14 +563,8 @@ _intr_\name:
 	pushq	%r10
 	pushq	%r11
 	pushq	%rbx
-	/* Call isr_exception_generic() */
-	movq	$\vec,%rdi
-	movq	8(%rbp),%rdx	/* rip */
-	movq	16(%rbp),%rcx	/* cs */
-	movq	24(%rbp),%r8	/* rflags */
-	movq	32(%rbp),%r9	/* rsp */
-	/* 40(%rbp): ss */
-	call	_isr_exception
+.endm
+.macro	intr_exception_epilog
 	/* Restore registers */
 	popq	%rbx
 	popq	%r11
@@ -558,6 +577,22 @@ _intr_\name:
 	popq	%rdi
 	popq	%rax
 	popq	%rbp
+.endm
+
+/* Macro for generic exception handlers */
+.macro  intr_exception_generic name vec
+	.globl	_intr_\name
+_intr_\name:
+	intr_exception_prolog
+	/* Call isr_exception_generic() */
+	movq	$\vec,%rdi
+	movq	8(%rbp),%rsi	/* rip */
+	movq	16(%rbp),%rdx	/* cs */
+	movq	24(%rbp),%rcx	/* rflags */
+	movq	32(%rbp),%r8	/* rsp */
+	/* 40(%rbp): ss */
+	call	_isr_exception
+	intr_exception_epilog
 	iretq
 .endm
 
@@ -565,19 +600,7 @@ _intr_\name:
 .macro  intr_exception_werror name vec
 	.globl	_intr_\name
 _intr_\name:
-	/* Save registers*/
-	pushq	%rbp
-	movq	%rsp,%rbp
-	pushq	%rax
-	pushq	%rdi
-	pushq	%rsi
-	pushq	%rdx
-	pushq	%rcx
-	pushq	%r8
-	pushq	%r9
-	pushq	%r10
-	pushq	%r11
-	pushq	%rbx
+	intr_exception_prolog
 	/* Call isr_exception_werror() */
 	movq	$\vec,%rdi
 	movq	8(%rbp),%rsi	/* error code */
@@ -587,18 +610,7 @@ _intr_\name:
 	movq	40(%rbp),%r9	/* rsp */
 	/* 48(%rbp): ss */
 	call	_isr_exception_werror
-	/* Restore registers */
-	popq	%rbx
-	popq	%r11
-	popq	%r10
-	popq	%r9
-	popq	%r8
-	popq	%rcx
-	popq	%rdx
-	popq	%rsi
-	popq	%rdi
-	popq	%rax
-	popq	%rbp
+	intr_exception_epilog
 	addq	$0x8,%rsp
 	iretq
 .endm
@@ -618,7 +630,16 @@ _intr_\name:
 /* Invalid Opcode (#UD) */
 	intr_exception_generic ud 0x06
 /* Device Not Available (#NM) */
-	intr_exception_generic nm 0x07
+	.globl	_intr_nm
+_intr_nm:
+	intr_exception_prolog
+	call	_isr_device_not_available
+	movq	8(%rbp),%rdi	/* rip */
+	movq	16(%rbp),%rsi	/* cs */
+	movq	24(%rbp),%rdx	/* rflags */
+	movq	32(%rbp),%rcx	/* rsp */
+	intr_exception_epilog
+	iretq
 /* Double Fault (#DF) */
 	intr_exception_werror df 0x08
 /* Coprocessor Segment Overrun */
@@ -634,19 +655,7 @@ _intr_\name:
 /* Page Fault (#PF) */
 	.globl	_intr_pf
 _intr_pf:
-	/* Save registers*/
-	pushq	%rbp
-	movq	%rsp,%rbp
-	pushq	%rax
-	pushq	%rdi
-	pushq	%rsi
-	pushq	%rdx
-	pushq	%rcx
-	pushq	%r8
-	pushq	%r9
-	pushq	%r10
-	pushq	%r11
-	pushq	%rbx
+	intr_exception_prolog
 	/* Call isr_page_fault() */
 	movq	%cr2,%rdi	/* virtual address */
 	movq	8(%rbp),%rsi	/* error code */
@@ -656,18 +665,7 @@ _intr_pf:
 	movq	40(%rbp),%r9	/* rsp */
 	/* 48(%rbp): ss */
 	call	_isr_page_fault
-	/* Restore registers */
-	popq	%rbx
-	popq	%r11
-	popq	%r10
-	popq	%r9
-	popq	%r8
-	popq	%rcx
-	popq	%rdx
-	popq	%rsi
-	popq	%rdi
-	popq	%rax
-	popq	%rbp
+	intr_exception_epilog
 	addq	$0x8,%rsp
 	iretq
 /* x87 Floating-Point Exception (#MF) */

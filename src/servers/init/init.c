@@ -34,6 +34,7 @@ main(int argc, char *argv[])
 {
     unsigned long long cnt = 0;
     int pid;
+    double f;
 
     pid = fork();
     if ( pid < 0 ) {
@@ -41,15 +42,12 @@ main(int argc, char *argv[])
     } else if ( pid == 0 ) {
         /* Child */
         syscall(SYS_initexec, "tty");
-        for ( ;; ) {
-            syscall(766, 21, cnt);
-            cnt++;
-        }
     } else {
         /* Parent */
         syscall(766, 22, pid);
         for ( ;; ) {
-            syscall(766, 23, cnt);
+            f = (double)cnt / pid;
+            syscall(766, 23, (uint64_t)f);
             cnt++;
         }
     }

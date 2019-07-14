@@ -54,6 +54,12 @@ task_init(task_t *t, void *entry)
     at->rp->gs = GDT_RING3_DATA64_SEL + 3;
     at->rp->flags = 0x202;
 
+    at->xregs = kmalloc(4096);
+    kmemset(at->xregs, 0 , 4096);
+
+    /* CPUID.01H XSAVE=ECX[26] OXSAVE=ECX[27] FXSR=EDX[24] */
+    /* CPUID.0DH => XSAVE/XSTORE information */
+
     if ( NULL != t->proc ) {
         at->cr3 = ((pgt_t *)t->proc->vmem->arch)->cr3;
     }

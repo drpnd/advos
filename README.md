@@ -42,7 +42,7 @@ $ docker-compose run qemu
 | `00010000` | `0002ffff` | Kernel (up to 128 KiB) |
 | `00030000` | `0004ffff` | initrd (up to 128 KiB) |
 | `00050000` | `0005ffff` | Reserved |
-| `00060000` | `00067fff` | Per-core data (128-byte * 256) |
+| `00060000` | `00067fff` | Per-core data (256-byte * 128) |
 | `00068000` | `00068e00` | Global variables |
 | `00068f00` | `00068fff` | Global variables for assembly |
 | `00069000` | `0006ffff` | MOVED: Kernel's base page table |

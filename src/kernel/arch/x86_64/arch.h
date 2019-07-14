@@ -124,12 +124,17 @@ struct arch_task {
 } __attribute__ ((packed));
 
 /*
- * Processor's task information (24 bytes)
+ * Processor's task information (must not exceed (256-104) bytes)
  */
 struct arch_cpu_data {
+    /* Do not change the first three variables.  These must be on the top.  See
+       asm.S and const.h. */
     struct arch_task *cur_task;
     struct arch_task *next_task;
     struct arch_task *idle_task;
+
+    /* FPU context */
+    struct arch_task *fpu_task;
 } __attribute__ ((packed));
 
 #define sfence()        __asm__ __volatile__ ("sfence")
@@ -155,6 +160,10 @@ void sidt(void *);
 void lldt(uint16_t);
 void ltr(uint16_t);
 void clts(void);
+void fxsave64(void *);
+void fxrstor64(void *);
+void xsave64(void *);
+void xrstor64(void *);
 void hlt(void);
 void pause(void);
 

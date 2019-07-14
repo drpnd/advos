@@ -32,9 +32,12 @@ int
 main(int argc, char *argv[])
 {
     unsigned long long cnt = 0;
+    pid_t pid = 2;
+    double f;
 
     for ( ;; ) {
-        syscall(766, 20, cnt);
+        f = (double)cnt / pid;
+        syscall(766, 20, (uint64_t)f);
         cnt++;
     }
 
