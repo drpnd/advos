@@ -154,6 +154,7 @@ void ltr(uint16_t);
 void hlt(void);
 void pause(void);
 
+void task_replace(void *);
 void task_restart(void);
 
 /* Interrupt handlers */

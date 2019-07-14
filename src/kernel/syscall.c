@@ -292,9 +292,7 @@ struct initrd_entry {
     uint64_t offset;
     uint64_t size;
 };
-int
-arch_task_init(task_t *t, void *entry);
-void task_replace(void *);
+
 /*
  * Execute from initramfs (initrd)
  */
@@ -329,8 +327,8 @@ sys_initexec(const char *path, char *const argv[], char *const envp[])
 
     kstrlcpy(t->proc->name, path, PATH_MAX);
     kmemcpy((void *)PROC_PROG_ADDR, start, size);
-    arch_task_init(t, (void *)PROC_PROG_ADDR); /* FIXME */
-    task_replace(t->arch);
+    g_kvar->task_mgr.init(t, (void *)PROC_PROG_ADDR);
+    g_kvar->task_mgr.replace(t->arch);
 
     return 0;
 }

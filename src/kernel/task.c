@@ -29,7 +29,8 @@
  * Initialize the task manager
  */
 int
-task_mgr_init(size_t atsize)
+task_mgr_init(size_t atsize, int (*init)(task_t *, void *),
+              void (*replace)(void *))
 {
     int ret;
     int i;
@@ -68,6 +69,11 @@ task_mgr_init(size_t atsize)
     for ( i = 0; i < PROC_NR; i++ ) {
         g_kvar->procs[i] = NULL;
     }
+
+    /* Initialize the task manager */
+    g_kvar->task_mgr.lock = 0;
+    g_kvar->task_mgr.init = init;
+    g_kvar->task_mgr.replace = replace;
 
     return 0;
 }

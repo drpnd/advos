@@ -41,6 +41,7 @@ typedef struct {
     console_t console;
     proc_t **procs;
     task_t *runqueue;
+    task_mgr_t task_mgr;
     /* Architecture specific data */
     void *arch;
 } kvar_t;

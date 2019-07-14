@@ -54,16 +54,11 @@ arch_task_init(task_t *t, void *entry)
     at->rp->gs = GDT_RING3_DATA64_SEL + 3;
     at->rp->flags = 0x202;
 
+    if ( NULL != t->proc ) {
+        at->cr3 = ((pgt_t *)t->proc->vmem->arch)->cr3;
+    }
+
     return 0;
-}
-
-int
-arch_task_set_cr3(proc_t *proc)
-{
-    struct arch_task *at;
-
-    at = proc->task->arch;
-    at->cr3 = ((pgt_t *)proc->vmem->arch)->cr3;
 }
 
 /*

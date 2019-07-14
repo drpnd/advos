@@ -122,10 +122,6 @@ proc_new(pid_t pid)
     return proc;
 }
 
-int
-arch_task_init(task_t *t, void *entry);
-int
-arch_task_set_cr3(proc_t *proc);
 /*
  * Fork
  */
@@ -164,9 +160,8 @@ proc_fork(proc_t *op, pid_t pid)
     np->task->proc =  np;
 
     /* Copy kernel stack */
-    arch_task_init(np->task, NULL); /* FIXME */
+    g_kvar->task_mgr.init(np->task, NULL);
     kmemcpy(np->task->kstack, op->task->kstack, KSTACK_SIZE);
-    arch_task_set_cr3(np);
 
     np->pid = pid;
     kmemcpy(np->name, op->name, PATH_MAX);

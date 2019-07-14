@@ -130,8 +130,17 @@ struct _proc {
     int exit_status;
 };
 
+/*
+ * Task manager
+ */
+typedef struct {
+    int lock;
+    int (*init)(task_t *, void *);
+    void (*replace)(void *);
+} task_mgr_t;
+
 /* Defined in task.c */
-int task_mgr_init(size_t);
+int task_mgr_init(size_t, int (*)(task_t *, void *), void (*)(void *));
 task_t * task_alloc(void);
 
 /* Defined in proc. */
