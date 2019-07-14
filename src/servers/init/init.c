@@ -34,7 +34,6 @@ main(int argc, char *argv[])
 {
     unsigned long long cnt = 0;
     int pid;
-    double f;
 
     pid = fork();
     if ( pid < 0 ) {
@@ -46,8 +45,7 @@ main(int argc, char *argv[])
         /* Parent */
         syscall(766, 22, pid);
         for ( ;; ) {
-            f = (double)cnt / pid;
-            syscall(766, 23, (uint64_t)f);
+            syscall(766, 23, cnt);
             cnt++;
         }
     }
