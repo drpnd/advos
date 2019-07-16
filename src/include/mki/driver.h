@@ -21,20 +21,13 @@
  * SOFTWARE.
  */
 
-#ifndef _SYS_SYSCALL_H
-#define _SYS_SYSCALL_H
+#ifndef _MKI_DRIVER_H
+#define _MKI_DRIVER_H
 
-#define SYS_hlt         0
-#define SYS_exit        1
-#define SYS_fork        2
-#define SYS_execve      59
-#define SYS_nanosleep   240
-#define SYS_fstat       551
-#define SYS_initexec    701
-#define SYS_driver      702
-#define SYS_MAXSYSCALL  768
+#define SYSDRIVER_MMAP          11
+#define SYSDRIVER_MUNMAP        12
 
-#endif /* _SYS_SYSCALL_H */
+#endif /* _MKI_DRIVER_H */
 
 /*
  * Local variables:

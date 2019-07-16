@@ -14,27 +14,60 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
 
-#ifndef _SYS_SYSCALL_H
-#define _SYS_SYSCALL_H
+#include <sys/syscall.h>
+#include <mki/driver.h>
+#include "kernel.h"
+#include "proc.h"
+#include "kvar.h"
 
-#define SYS_hlt         0
-#define SYS_exit        1
-#define SYS_fork        2
-#define SYS_execve      59
-#define SYS_nanosleep   240
-#define SYS_fstat       551
-#define SYS_initexec    701
-#define SYS_driver      702
-#define SYS_MAXSYSCALL  768
+/*
+ * mmap
+ */
+static int
+_mmap(task_t *t, void *args)
+{
+    return -1;
+}
 
-#endif /* _SYS_SYSCALL_H */
+/*
+ * munmap
+ */
+static int
+_munmap(task_t *t, void *args)
+{
+    return -1;
+}
+
+/*
+ * Driver-related system call
+ */
+int
+sys_driver(int nr, void *args)
+{
+    task_t *t;
+
+    /* Get the current task */
+    t = this_task();
+    if ( NULL == t || NULL == t->proc ) {
+        return -1;
+    }
+
+    switch ( nr ) {
+    case SYSDRIVER_MMAP:
+        return _mmap(t, args);
+    case SYSDRIVER_MUNMAP:
+        return _munmap(t, args);
+    default:
+        return -1;
+    }
+}
 
 /*
  * Local variables:

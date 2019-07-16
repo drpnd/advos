@@ -998,9 +998,6 @@ _prepare_multitasking(void)
     void *start;
     size_t size;
     proc_t *proc;
-    void *kstack;
-    void *ustack;
-    struct arch_task *taski;
 
     proc = _init_new();
     if ( NULL == proc ) {
@@ -1012,7 +1009,6 @@ _prepare_multitasking(void)
     if ( ret < 0 ) {
         panic("Could not find init.");
     }
-    kprintf("Found init: %llx %lld\n", start, size);
 
     ret = kmem_slab_create_cache(ARCH_TASK_NAME, sizeof(struct arch_task));
     if ( ret < 0 ) {
