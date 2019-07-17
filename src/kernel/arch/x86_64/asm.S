@@ -66,6 +66,8 @@
 	.globl	_asm_ioapic_map_intr
 	.globl	_syscall_entry
 	.globl	_syscall_setup
+	.globl	_spin_lock
+	.globl	_spin_unlock
 
 	/* Code segment */
 	.text

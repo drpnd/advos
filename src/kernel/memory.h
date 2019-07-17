@@ -345,6 +345,7 @@ struct memory_slab_cache {
  * Slab allocator
  */
 typedef struct {
+    int lock;
     memory_t *mem;
     memory_slab_cache_t *root;
 } memory_slab_allocator_t;
