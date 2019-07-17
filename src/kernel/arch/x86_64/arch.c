@@ -1328,6 +1328,9 @@ _prepare_idle_task(int lapic_id)
 
     /* Allocate a task */
     t = task_alloc();
+    if ( NULL == t ) {
+        return -1;
+    }
     at = t->arch;
     at->task = t;
 
@@ -1383,6 +1386,9 @@ ap_start(void)
 
     /* Load TSS */
     tr_load(lapic_id());
+
+    /* Set the page table */
+    pgt_set_cr3((pgt_t *)g_kvar->mm.kmem.arch);
 
     /* Estimate bus frequency */
     busfreq = _estimate_bus_freq(((arch_var_t *)g_kvar->arch)->acpi);
