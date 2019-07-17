@@ -1325,8 +1325,6 @@ _prepare_idle_task(int lapic_id)
     task_t *t;
     struct arch_cpu_data *cpu;
     struct arch_task *at;
-    void *kstack;
-    void *ustack;
 
     /* Allocate a task */
     t = task_alloc();
