@@ -187,6 +187,8 @@ phys_mem_alloc(phys_memory_t *mem, int order, int zone, int domain)
 {
     void *ptr;
 
+    spin_lock(&mem->lock);
+
     ptr = NULL;
     if ( MEMORY_ZONE_DMA == zone || MEMORY_ZONE_KERNEL == zone ) {
         ptr = phys_mem_buddy_alloc(mem->czones[zone].heads, order);
@@ -200,6 +202,8 @@ phys_mem_alloc(phys_memory_t *mem, int order, int zone, int domain)
     if ( NULL != ptr ) {
         ptr = ptr - mem->p2v;
     }
+
+    spin_unlock(&mem->lock);
 
     return ptr;
 }
@@ -281,6 +285,8 @@ phys_mem_buddy_free(phys_memory_buddy_page_t **buddy, void *ptr, int order)
 void
 phys_mem_free(phys_memory_t *mem, void *ptr, int order, int zone, int domain)
 {
+    spin_lock(&mem->lock);
+
     /* Physical to virtual */
     if ( NULL != ptr ) {
         ptr = ptr + mem->p2v;
@@ -293,6 +299,8 @@ phys_mem_free(phys_memory_t *mem, void *ptr, int order, int zone, int domain)
             phys_mem_buddy_free(mem->numazones[domain].heads, ptr, order);
         }
     }
+
+    spin_unlock(&mem->lock);
 }
 
 /*

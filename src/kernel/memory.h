@@ -93,6 +93,9 @@ typedef struct {
     /* NUMA zones */
     int max_domain;
     phys_memory_zone_t *numazones;
+
+    /* Lock */
+    int lock;
 } phys_memory_t;
 
 /*
