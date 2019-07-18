@@ -314,16 +314,20 @@ memory_slab_create_cache(memory_slab_allocator_t *slab, const char *name,
     memory_slab_hdr_t *s;
     int ret;
 
+    spin_lock(&slab->lock);
+
     /* Duplicate check */
     cache = _find_slab_cache(slab->root, name);
     if ( NULL != cache ) {
         /* Already exists */
+        spin_unlock(&slab->lock);
         return -1;
     }
 
     /* Try to allocate a memory_slab_cache_t from the named slab cache */
     cache = _slab_alloc(slab, MEMORY_SLAB_CACHE_NAME);
     if ( NULL == cache ) {
+        spin_unlock(&slab->lock);
         return -1;
     }
     kstrlcpy(cache->name, name, MEMORY_SLAB_CACHE_NAME_MAX);
@@ -342,6 +346,8 @@ memory_slab_create_cache(memory_slab_allocator_t *slab, const char *name,
     /* Add to the cache tree */
     ret = _add_slab_cache(&slab->root, cache);
     kassert( ret == 0 );
+
+    spin_unlock(&slab->lock);
 
     return 0;
 }
