@@ -124,21 +124,18 @@ _add_slab_cache(memory_slab_cache_t **t, memory_slab_cache_t *n)
 /*
  * Allocate an object from the slab cache specified by the name
  */
-void *
-memory_slab_alloc(memory_slab_allocator_t *slab, const char *name)
+static void *
+_slab_alloc(memory_slab_allocator_t *slab, const char *name)
 {
     memory_slab_cache_t *c;
     memory_slab_hdr_t *s;
     int i;
     void *obj;
 
-    spin_lock(&slab->lock);
-
     /* Find the slab cache corresponding to the name */
     c = _find_slab_cache(slab->root, name);
     if ( NULL == c ) {
         /* Not found */
-        spin_unlock(&slab->lock);
         return NULL;
     }
 
@@ -147,7 +144,6 @@ memory_slab_alloc(memory_slab_allocator_t *slab, const char *name)
         s = _new_slab(slab, c->size);
         if ( NULL == s ) {
             /* Could not allocate a new slab */
-            spin_unlock(&slab->lock);
             return NULL;
         }
         s->cache = c;
@@ -182,6 +178,15 @@ memory_slab_alloc(memory_slab_allocator_t *slab, const char *name)
         c->freelist.empty = s;
     }
 
+    return obj;
+}
+void *
+memory_slab_alloc(memory_slab_allocator_t *slab, const char *name)
+{
+    void *obj;
+
+    spin_lock(&slab->lock);
+    obj = _slab_alloc(slab, name);
     spin_unlock(&slab->lock);
 
     return obj;
