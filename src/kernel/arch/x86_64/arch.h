@@ -135,6 +135,9 @@ struct arch_cpu_data {
 
     /* FPU context */
     struct arch_task *fpu_task;
+
+    /* Bus frequuency */
+    uint64_t busfreq;
 } __attribute__ ((packed));
 
 #define sfence()        __asm__ __volatile__ ("sfence")

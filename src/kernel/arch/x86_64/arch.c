@@ -1077,6 +1077,7 @@ bsp_start(void)
     uint64_t busfreq;
     console_dev_t *dev;
     void *bstack;
+    struct arch_cpu_data *cpu;
 
     /* Kernel variables */
     kvar = (kvar_t *)KVAR_ADDR;
@@ -1271,6 +1272,11 @@ bsp_start(void)
     busfreq = _estimate_bus_freq(acpi);
     kprintf("Estimated bus frequency: %lld Hz\r\n", busfreq);
 
+
+    /* Set the bus frequency */
+    cpu = (struct arch_cpu_data *)CPU_TASK(lapic_id());
+    cpu->busfreq = busfreq;
+
     /* Print CPU domain */
     nr = 0;
     for ( i = 0; i < MAX_PROCESSORS; i++ ) {
@@ -1373,6 +1379,7 @@ ap_start(void)
     uint16_t *base;
     int ret;
     uint64_t busfreq;
+    struct arch_cpu_data *cpu;
 
     base = (uint16_t *)VIDEO_RAM_80X25;
     *(base + 80 * lapic_id() + 79) = 0x0700 | '!';
@@ -1392,6 +1399,10 @@ ap_start(void)
 
     /* Estimate bus frequency */
     busfreq = _estimate_bus_freq(((arch_var_t *)g_kvar->arch)->acpi);
+
+    /* Set the bus frequency */
+    cpu = (struct arch_cpu_data *)CPU_TASK(lapic_id());
+    cpu->busfreq = busfreq;
 
     /* Prepare per-core data */
     ret = _prepare_idle_task(lapic_id());
