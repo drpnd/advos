@@ -24,7 +24,6 @@
 #ifndef _SYS_SYSCALL_H
 #define _SYS_SYSCALL_H
 
-#define SYS_hlt         0
 #define SYS_exit        1
 #define SYS_fork        2
 #define SYS_execve      59

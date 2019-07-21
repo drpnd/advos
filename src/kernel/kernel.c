@@ -114,7 +114,6 @@ kernel_init(void)
     for ( i = 0; i < SYS_MAXSYSCALL; i++ ) {
         syscalls[i] = NULL;
     }
-    syscalls[SYS_hlt] = sys_hlt;
     syscalls[SYS_exit] = sys_exit;
     syscalls[SYS_fork] = sys_fork;
     syscalls[SYS_execve] = sys_execve;
