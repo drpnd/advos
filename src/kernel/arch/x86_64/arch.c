@@ -81,23 +81,6 @@ hex(int c)
 }
 
 /*
- * Print out the hexdecimal w-byte value
- */
-static int
-print_hex(volatile uint16_t *vbase, uint64_t val, int w)
-{
-    int i;
-    uint16_t v;
-
-    for ( i = 0; i < w * 2; i++ ) {
-        v = (val >> (w * 8 - 4 - i * 4)) & 0xf;
-        *(vbase + i) = 0x0700 | hex(v);
-    }
-
-    return i;
-}
-
-/*
  * panic -- print an error message and stop everything
  * damn blue screen, lovely green screen
  */
