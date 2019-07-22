@@ -68,19 +68,6 @@ typedef struct {
 } __attribute__ ((packed)) sysaddrmap_entry_t;
 
 /*
- * Convert a hexdecimal 4-bit value to an ascii code
- */
-static int
-hex(int c)
-{
-    if ( c > 9 ) {
-        return 'a' + c - 10;
-    } else {
-        return '0' + c;
-    }
-}
-
-/*
  * panic -- print an error message and stop everything
  * damn blue screen, lovely green screen
  */
