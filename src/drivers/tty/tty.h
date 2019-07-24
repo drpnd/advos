@@ -90,6 +90,13 @@ typedef struct {
     kbd_t kbd;
 } console_t;
 
+/* in kbd.c */
+int kbd_init(kbd_t *);
+int kbd_set_led(kbd_t *);
+
+/* in console.c */
+int coonsole_init(console_t *);
+
 #endif /* _TTY_H */
 
 /*

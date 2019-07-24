@@ -22,8 +22,16 @@
  */
 
 #include <unistd.h>
+#include "tty.h"
 
-
+/*
+ * Initialize the console
+ */
+int
+cnsole_init(console_t *con, const char *ttyname)
+{
+    return -1;
+}
 
 /*
  * Local variables:
