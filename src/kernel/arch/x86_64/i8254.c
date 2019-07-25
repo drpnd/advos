@@ -45,9 +45,9 @@ i8254_start_timer(int hz)
 
     /* Start the timer of counter 0 with the specified rate */
     counter = I8254_HZ / hz;
-    outb(I8254_REG_CTRL, I8254_CTRL_RL_16BIT | I8254_CTRL_SQUAREWAVE);
-    outb(I8254_REG_CNTR0, counter & 0xff);
-    outb(I8254_REG_CNTR0, counter >> 8);
+    out8(I8254_REG_CTRL, I8254_CTRL_RL_16BIT | I8254_CTRL_SQUAREWAVE);
+    out8(I8254_REG_CNTR0, counter & 0xff);
+    out8(I8254_REG_CNTR0, counter >> 8);
 }
 
 /*
@@ -57,9 +57,9 @@ void
 i8254_stop_timer(void)
 {
     /* Reset to the BIOS default */
-    outb(I8254_REG_CTRL, 0x30);
-    outb(I8254_REG_CNTR0, 0x0);
-    outb(I8254_REG_CNTR0, 0x0);
+    out8(I8254_REG_CTRL, 0x30);
+    out8(I8254_REG_CNTR0, 0x0);
+    out8(I8254_REG_CNTR0, 0x0);
 }
 
 /*

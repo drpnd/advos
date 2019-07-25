@@ -130,9 +130,9 @@ panic(const char *fmt, ...)
 
     /* Move the cursor */
     val = ((i & 0xff) << 8) | 0x0f;
-    outw(0x3d4, val);   /* Low */
+    out16(0x3d4, val);   /* Low */
     val = (((i >> 8) & 0xff) << 8) | 0x0e;
-    outw(0x3d4, val);   /* High */
+    out16(0x3d4, val);   /* High */
 
     /* Stop forever */
     while ( 1 ) {

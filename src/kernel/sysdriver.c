@@ -64,6 +64,13 @@ sys_driver(int nr, void *args)
         return _mmap(t, args);
     case SYSDRIVER_MUNMAP:
         return _munmap(t, args);
+    case SYSDRIVER_IN8:
+    case SYSDRIVER_IN16:
+    case SYSDRIVER_IN32:
+    case SYSDRIVER_OUT8:
+    case SYSDRIVER_OUT16:
+    case SYSDRIVER_OUT32:
+        return -1;
     default:
         return -1;
     }

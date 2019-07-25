@@ -38,12 +38,12 @@
 	.globl	_wrmsr
 	.globl	_mfrd32
 	.globl	_mfwr32
-	.globl	_inb
-	.globl	_inw
-	.globl	_inl
-	.globl	_outb
-	.globl	_outw
-	.globl	_outl
+	.globl	_in8
+	.globl	_in16
+	.globl	_in32
+	.globl	_out8
+	.globl	_out16
+	.globl	_out32
 	.globl	_lgdt
 	.globl	_sgdt
 	.globl	_lidt
@@ -200,43 +200,43 @@ _mfwr32:
 	movl	%esi,(%rdi)
 	ret
 
-/* uint8_t inb(uint16_t port) */
-_inb:
+/* uint8_t in8(uint16_t port) */
+_in8:
 	movw	%di,%dx
 	xorq	%rax,%rax
 	inb	%dx,%al
 	ret
 
-/* uint16_t inw(uint16_t port) */
-_inw:
+/* uint16_t in16(uint16_t port) */
+_in16:
 	movw	%di,%dx
 	xorq	%rax,%rax
 	inw	%dx,%ax
 	ret
 
-/* uint32_t inl(uint16_t port) */
-_inl:
+/* uint32_t in32(uint16_t port) */
+_in32:
 	movw	%di,%dx
 	xorq	%rax,%rax
 	inl	%dx,%eax
 	ret
 
-/* void outb(uint16_t port, uint8_t value) */
-_outb:
+/* void out8(uint16_t port, uint8_t value) */
+_out8:
 	movw	%di,%dx
 	movb	%sil,%al
 	outb	%al,%dx
 	ret
 
-/* void outw(uint16_t port, uint16_t value) */
-_outw:
+/* void out16(uint16_t port, uint16_t value) */
+_out16:
 	movw	%di,%dx
 	movw	%si,%ax
 	outw	%ax,%dx
 	ret
 
-/* void outl(uint16_t port, uint32_t value) */
-_outl:
+/* void out32(uint16_t port, uint32_t value) */
+_out32:
 	movw	%di,%dx
 	movl	%esi,%eax
 	outl	%eax,%dx

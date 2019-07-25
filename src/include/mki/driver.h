@@ -27,6 +27,13 @@
 #define SYSDRIVER_MMAP          11
 #define SYSDRIVER_MUNMAP        12
 
+#define SYSDRIVER_IN8           101
+#define SYSDRIVER_IN16          102
+#define SYSDRIVER_IN32          103
+#define SYSDRIVER_OUT8          111
+#define SYSDRIVER_OUT16         112
+#define SYSDRIVER_OUT32         113
+
 #endif /* _MKI_DRIVER_H */
 
 /*

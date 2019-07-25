@@ -81,9 +81,9 @@ static void
 _update_cursor(int pos)
 {
     /* Low */
-    outw(VIDEO_PORT, ((pos & 0xff) << 8) | 0x0f);
+    out16(VIDEO_PORT, ((pos & 0xff) << 8) | 0x0f);
     /* High */
-    outw(VIDEO_PORT, (((pos >> 8) & 0xff) << 8) | 0x0e);
+    out16(VIDEO_PORT, (((pos >> 8) & 0xff) << 8) | 0x0e);
 }
 
 /*

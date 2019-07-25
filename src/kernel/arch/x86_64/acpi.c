@@ -605,7 +605,7 @@ acpi_timer_available(acpi_t *acpi)
 uint32_t
 acpi_get_timer(acpi_t *acpi)
 {
-    return inl(acpi->pm_tmr_port);
+    return in32(acpi->pm_tmr_port);
 }
 
 /*
