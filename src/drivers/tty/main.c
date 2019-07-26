@@ -22,8 +22,12 @@
  */
 
 #include <unistd.h>
+#include <mki/driver.h>
+#include <sys/syscall.h>
 
 unsigned long long syscall(int, ...);
+
+#define VIDEO_PORT      0x3d4
 
 /*
  * Entry point for the tty program
@@ -32,6 +36,29 @@ int
 main(int argc, char *argv[])
 {
     unsigned long long cnt = 0;
+
+    sysdriver_io_t io;
+    sysdriver_mmio_t mmio;
+    int pos;
+    int ret;
+
+    pos = 80 * 20;
+    mmio.addr = (void *)0xb8000;
+    mmio.size = 4096;
+    ret = syscall(SYS_driver, SYSDRIVER_MMAP, &mmio);
+    if ( 0 == ret ) {
+        uint16_t *video;
+        video = mmio.addr;
+        *(video + pos) = (0x07 << 8) | 'a';
+    }
+    pos++;
+    io.port = VIDEO_PORT;
+    io.data = ((pos & 0xff) << 8) | 0x0f;
+    syscall(SYS_driver, SYSDRIVER_OUT16, &io);
+    __sync_synchronize();
+    io.port = VIDEO_PORT;
+    io.data = (((pos >> 8) & 0xff) << 8) | 0x0e;
+    syscall(SYS_driver, SYSDRIVER_OUT16, &io);
 
     for ( ;; ) {
         syscall(766, 21, cnt);

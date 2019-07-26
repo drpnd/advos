@@ -31,9 +31,44 @@
  * mmap
  */
 static int
-_mmap(task_t *t, void *args)
+_mmap(task_t *t, sysdriver_mmio_t *mmio)
 {
-    return -1;
+    proc_t *proc;
+    virt_memory_t *vmem;
+    size_t npg;
+    void *ptr;
+
+    /* Process */
+    proc = t->proc;
+    if ( NULL == proc ) {
+        /* Invalid process */
+        return -1;
+    }
+
+    /* Virtual memory */
+    vmem = proc->vmem;
+    if ( NULL == vmem ) {
+        /* Invalid virtual memory */
+        return -1;
+    }
+
+    if ( (uintptr_t)mmio->addr & (MEMORY_PAGESIZE - 1) ) {
+        /* Address is not page aligned */
+        return -1;
+    }
+    if ( mmio->size & (MEMORY_PAGESIZE - 1) ) {
+        /* Size is not page aligned */
+        return -1;
+    }
+    npg = mmio->size / MEMORY_PAGESIZE;
+
+    ptr = virt_memory_wire2(vmem, (uintptr_t)mmio->addr, npg);
+    if ( NULL == ptr ) {
+        return -1;
+    }
+    mmio->addr = ptr;
+
+    return 0;
 }
 
 /*
@@ -43,6 +78,38 @@ static int
 _munmap(task_t *t, void *args)
 {
     return -1;
+}
+
+/*
+ * I/O
+ */
+static int
+_io(int nr, sysdriver_io_t *io)
+{
+    switch ( nr ) {
+    case SYSDRIVER_IN8:
+        io->data = in8(io->port);
+        break;
+    case SYSDRIVER_IN16:
+        io->data = in16(io->port);
+        break;
+    case SYSDRIVER_IN32:
+        io->data = in32(io->port);
+        break;
+    case SYSDRIVER_OUT8:
+        out8(io->port, io->data);
+        break;
+    case SYSDRIVER_OUT16:
+        out16(io->port, io->data);
+        break;
+    case SYSDRIVER_OUT32:
+        out32(io->port, io->data);
+        break;
+    default:
+        return -1;
+    }
+
+    return 0;
 }
 
 /*
@@ -70,7 +137,7 @@ sys_driver(int nr, void *args)
     case SYSDRIVER_OUT8:
     case SYSDRIVER_OUT16:
     case SYSDRIVER_OUT32:
-        return -1;
+        return _io(nr, args);
     default:
         return -1;
     }

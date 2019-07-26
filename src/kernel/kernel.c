@@ -119,6 +119,7 @@ kernel_init(void)
     syscalls[SYS_execve] = sys_execve;
     syscalls[SYS_nanosleep] = sys_nanosleep;
     syscalls[SYS_initexec] = sys_initexec;
+    syscalls[SYS_driver] = sys_driver;
     syscalls[766] = sys_print_counter;
 
     /* Set the table to the kernel variable */

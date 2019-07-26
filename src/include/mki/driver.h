@@ -24,6 +24,8 @@
 #ifndef _MKI_DRIVER_H
 #define _MKI_DRIVER_H
 
+#include <unistd.h>
+
 #define SYSDRIVER_MMAP          11
 #define SYSDRIVER_MUNMAP        12
 
@@ -33,6 +35,22 @@
 #define SYSDRIVER_OUT8          111
 #define SYSDRIVER_OUT16         112
 #define SYSDRIVER_OUT32         113
+
+/*
+ * Data structure for the I/O interface
+ */
+typedef struct {
+    long long port;
+    long long data;
+} sysdriver_io_t;
+
+/*
+ * Data structure for the memory mapped I/O interface
+ */
+typedef struct {
+    void *addr;
+    size_t size;
+} sysdriver_mmio_t;
 
 #endif /* _MKI_DRIVER_H */
 

@@ -57,7 +57,7 @@ uint8_t in8(uint16_t);
 uint16_t in16(uint16_t);
 uint32_t in32(uint16_t);
 void out8(uint16_t, uint8_t);
-void out16(uint16_t, uint8_t);
+void out16(uint16_t, uint16_t);
 void out32(uint16_t, uint32_t);
 
 #define kassert(cond)        do {                                       \
@@ -98,6 +98,7 @@ int sys_open(const char *, int, ...);
 void * sys_mmap(void *, size_t, int, int, int, off_t);
 int sys_nanosleep(const struct timespec *, struct timespec *);
 int sys_initexec(const char *, char *const[], char *const[]);
+int sys_driver(int, void *);
 
 #endif
 
