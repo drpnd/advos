@@ -22,6 +22,7 @@
  */
 
 #include <unistd.h>
+#include <mki/driver.h>
 #include "tty.h"
 
 #define KBD_OK          0
@@ -65,6 +66,14 @@
 #define KBD_CTRL_STAT_SELFTEST_OK   0x55
 #define KBD_CTRL_STAT_SELFTEST_NG   0xfc
 
+/*
+ * Read control status
+ */
+static unsigned char
+_read_ctrl_status(void)
+{
+    return driver_in8(KBD_CTRL_STAT);
+}
 
 /*
  * Write command to the keyboard encoder
@@ -72,6 +81,15 @@
 static int
 _enc_write_cmd(unsigned char cmd)
 {
+    int retry;
+
+    for ( retry = 0; retry < KBD_MAX_RETRY; retry++ ) {
+        if ( 0 == (_read_ctrl_status() & KBD_STAT_IBUF) ) {
+            driver_out8(KBD_ENC_CMD, cmd);
+            return KBD_OK;
+        }
+    }
+
     return KBD_ERROR;
 }
 
@@ -110,12 +128,23 @@ kbd_init(kbd_t *kbd)
 int
 kbd_set_led(kbd_t *kbd)
 {
-    int state;
     int ret;
+    int led;
 
-    state = 0;
+    /* LED status from the key stateus */
+    led = KBD_LED_NONE;
+    if ( kbd->state.scrplllock ) {
+        led |= KBD_LED_SCROLLLOCK;
+    }
+    if ( kbd->state.numlock ) {
+        led |= KBD_LED_NUMLOCK;
+    }
+    if ( kbd->state.capslock ) {
+        led |= KBD_LED_CAPSLOCK;
+    }
+
     ret = _enc_write_cmd(KBD_ENC_CMD_SETLED);
-    ret |= _enc_write_cmd((unsigned char)state);
+    ret |= _enc_write_cmd((unsigned char)led);
 
     return ret;
 }

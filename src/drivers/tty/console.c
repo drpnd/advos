@@ -22,15 +22,38 @@
  */
 
 #include <unistd.h>
+#include <mki/driver.h>
+#include <sys/syscall.h>
 #include "tty.h"
+
+#define VIDEO_RAM   0x000b8000
+#define VIDEO_PORT  0x3d4
+
 
 /*
  * Initialize the console
  */
 int
-cnsole_init(console_t *con, const char *ttyname)
+console_init(console_t *con, const char *ttyname)
 {
-    return -1;
+    sysdriver_mmio_t mmio;
+    int ret;
+
+    /* Initialzie the keyboard */
+    ret = kbd_init(&con->kbd);
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    /* Initialize the video driver */
+    mmio.addr = (void *)VIDEO_RAM;
+    mmio.size = 4096;
+    ret = driver_mmap(&mmio);
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /*

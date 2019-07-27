@@ -22,6 +22,7 @@
  */
 
 #include <sys/syscall.h>
+#include <mki/driver.h>
 #include <unistd.h>
 
 unsigned long long syscall(int, ...);
@@ -33,6 +34,73 @@ int
 initexec(const char *path, char *const argv[], char *const envp[])
 {
     return syscall(SYS_initexec, path, argv, envp);
+}
+
+/*
+ * MMIO
+ */
+int
+driver_mmap(sysdriver_mmio_t *mmio)
+{
+    return syscall(SYS_driver, SYSDRIVER_MMAP, mmio);
+}
+
+/*
+ * I/O
+ */
+int
+driver_in8(int port)
+{
+    sysdriver_io_t io;
+
+    io.port = port;
+    syscall(SYS_driver, SYSDRIVER_IN8, &io);
+    return io.data;
+}
+int
+driver_in16(int port)
+{
+    sysdriver_io_t io;
+
+    io.port = port;
+    syscall(SYS_driver, SYSDRIVER_IN16, &io);
+    return io.data;
+}
+int
+driver_in32(int port)
+{
+    sysdriver_io_t io;
+
+    io.port = port;
+    syscall(SYS_driver, SYSDRIVER_IN32, &io);
+    return io.data;
+}
+void
+driver_out8(int port, int data)
+{
+    sysdriver_io_t io;
+
+    io.port = port;
+    io.data = data;
+    syscall(SYS_driver, SYSDRIVER_OUT8, &io);
+}
+void
+driver_out16(int port, int data)
+{
+    sysdriver_io_t io;
+
+    io.port = port;
+    io.data = data;
+    syscall(SYS_driver, SYSDRIVER_OUT16, &io);
+}
+void
+driver_out32(int port, int data)
+{
+    sysdriver_io_t io;
+
+    io.port = port;
+    io.data = data;
+    syscall(SYS_driver, SYSDRIVER_OUT32, &io);
 }
 
 /*

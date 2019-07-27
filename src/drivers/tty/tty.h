@@ -83,11 +83,20 @@ typedef struct {
 } kbd_t;
 
 /*
+ * Video
+ */
+typedef struct {
+    uint16_t *vram;
+} video_t;
+
+/*
  * Console
  */
 typedef struct {
     /* Keyboard */
     kbd_t kbd;
+    /* Video */
+    video_t video;
 } console_t;
 
 /* in kbd.c */
@@ -95,7 +104,7 @@ int kbd_init(kbd_t *);
 int kbd_set_led(kbd_t *);
 
 /* in console.c */
-int coonsole_init(console_t *);
+int console_init(console_t *, const char *);
 
 #endif /* _TTY_H */
 

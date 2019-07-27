@@ -52,6 +52,15 @@ typedef struct {
     size_t size;
 } sysdriver_mmio_t;
 
+/* Defined in the user library */
+int driver_mmap(sysdriver_mmio_t *);
+int driver_in8(int);
+int driver_in16(int);
+int driver_in32(int);
+void driver_out8(int, int);
+void driver_out16(int, int);
+void driver_out32(int, int);
+
 #endif /* _MKI_DRIVER_H */
 
 /*

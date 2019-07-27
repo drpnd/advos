@@ -7,7 +7,7 @@ include ../../app.mk
 
 .PHONY: all clean
 
-tty: main.o console.o
+tty: main.o console.o kbd.o
 	$(LD) -T ../../app.ld -o $@ $^
 
 all: tty
