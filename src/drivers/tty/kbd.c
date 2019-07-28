@@ -66,6 +66,26 @@
 #define KBD_CTRL_STAT_SELFTEST_OK   0x55
 #define KBD_CTRL_STAT_SELFTEST_NG   0xfc
 
+/* Default keymap */
+static unsigned char keymap_base[] =
+    "  1234567890-=\x08\t"      /* 0x00-0x0f */
+    "qwertyuiop[]\r as"         /* 0x10-0x1f */
+    "dfghjkl;'` \\zxcv"         /* 0x20-0x2f */
+    "bnm,./          "          /* 0x30-0x3f */
+    "                "          /* 0x40-0x4f */
+    "                "          /* 0x50-0x5f */
+    "                "          /* 0x60-0x6f */
+    "                ";         /* 0x70-0x7f */
+static unsigned char keymap_shift[] =
+    "  !@#$%^&*()_+\x08\t"      /* 0x00-0x0f */
+    "QWERTYUIOP{}\r AS"         /* 0x10-0x1f */
+    "DFGHJKL:\"~ |ZXCV"         /* 0x20-0x2f */
+    "BNM<>?          "          /* 0x30-0x3f */
+    "                "          /* 0x40-0x4f */
+    "                "          /* 0x50-0x5f */
+    "                "          /* 0x60-0x6f */
+    "                ";         /* 0x70-0x7f */
+
 /*
  * Read control status
  */
@@ -73,6 +93,34 @@ static unsigned char
 _read_ctrl_status(void)
 {
     return driver_in8(KBD_CTRL_STAT);
+}
+
+/*
+ * Write a cntrol command
+ */
+static int
+_write_ctrl_cmd(unsigned char cmd)
+{
+    int retry;
+
+    /* Retry until it succeeds or exceeds retry max */
+    for ( retry = 0; retry < KBD_MAX_RETRY; retry++ ) {
+        if ( 0 == (_read_ctrl_status() & KBD_STAT_IBUF) ) {
+            driver_out8(KBD_CTRL_CMD, cmd);
+            return KBD_OK;
+        }
+    }
+
+    return KBD_ERROR;
+}
+
+/*
+ * Read from the keyboard encoder
+ */
+static unsigned char
+_enc_read_buf(void)
+{
+    return driver_in8(KBD_ENC_BUF);
 }
 
 /*
