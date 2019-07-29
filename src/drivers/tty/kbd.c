@@ -142,6 +142,26 @@ _enc_write_cmd(unsigned char cmd)
 }
 
 /*
+ * Wait until the output buffer becomes full
+ */
+static int
+_wait_until_outbuf_full(void)
+{
+    unsigned char stat;
+    int retry;
+
+    for ( retry = 0; retry < KBD_MAX_RETRY; retry++ ) {
+        stat = _read_ctrl_status();
+
+        if ( KBD_STAT_OBUF == (stat & KBD_STAT_OBUF) ) {
+            return KBD_OK;
+        }
+    }
+
+    return KBD_ERROR;
+}
+
+/*
  * Initialize the keyboard
  */
 int
@@ -197,6 +217,35 @@ kbd_set_led(kbd_t *kbd)
     return ret;
 }
 
+/*
+ * Perform self-test
+ */
+int
+kbd_selftest(void)
+{
+    unsigned char encbuf;
+    int stat;
+
+    stat = _write_ctrl_cmd(KBD_CTRL_CMD_SELFTEST);
+    if ( KBD_OK != stat ) {
+        return stat;
+    }
+
+    /* Wait until output buffer becomes full */
+    stat = _wait_until_outbuf_full();
+    if ( KBD_OK != stat ) {
+        return stat;
+    }
+
+    /* Check the self-test result */
+    encbuf = _enc_read_buf();
+    if ( KBD_CTRL_STAT_SELFTEST_OK == encbuf ) {
+        /* KBD_OK */
+        return stat;
+    }
+
+    return KBD_ERROR;
+}
 
 /*
  * Local variables:
