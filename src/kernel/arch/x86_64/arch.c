@@ -135,6 +135,7 @@ panic(const char *fmt, ...)
     out16(0x3d4, val);   /* High */
 
     /* Stop forever */
+    sti();
     while ( 1 ) {
         hlt();
     }
@@ -1242,7 +1243,6 @@ bsp_start(void)
     busfreq = _estimate_bus_freq(acpi);
     kprintf("Estimated bus frequency: %lld Hz\r\n", busfreq);
 
-
     /* Set the bus frequency */
     cpu = (struct arch_cpu_data *)CPU_TASK(lapic_id());
     cpu->busfreq = busfreq;
@@ -1391,21 +1391,6 @@ ap_start(void)
     for ( ;; ) {
         hlt();
     }
-}
-
-/*
- * hlt
- */
-void
-sys_hlt(void)
-{
-    task_t *t;
-    /* Allowed only from idle tasks */
-    t = this_task();
-    if ( NULL != t->proc ) {
-        return;
-    }
-    hlt();
 }
 
 /*
