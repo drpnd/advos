@@ -106,6 +106,10 @@ int kbd_set_led(kbd_t *);
 /* in console.c */
 int console_init(console_t *, const char *);
 
+/* in tty.c */
+int tty_line_buffer_init(tty_line_buffer_t *);
+int tty_line_buffer_putc(tty_line_buffer_t *, int);
+
 #endif /* _TTY_H */
 
 /*

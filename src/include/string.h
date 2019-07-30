@@ -21,44 +21,21 @@
  * SOFTWARE.
  */
 
-	.text
-	.code64
-	.globl	_syscall
-	.globl	_memcpy
-	.globl	_memmove
+#ifndef _STRING_H
+#define _STRING_H
 
-/* int syscall(arg0, ..., arg5) */
-_syscall:
-	pushq	%rbp
-	movq	%rdi,%rax
-	movq	%rsi,%rdi
-	movq	%rdx,%rsi
-	movq	%rcx,%rdx
-	movq 	%r8,%r10
-	movq	%r9,%r8
-	movq	-8(%rsp),%r9
-	syscall
-	popq	%rbp
-	ret
+#include <advos/types.h>
 
-/* void * memcpy(void *__restrict dst, const void *__restrict src, size_t n) */
-_memcpy:
-	movq	%rdi,%rax	/* Return value */
-	movq	%rdx,%rcx	/* n */
-	cld			/* Ensure the DF cleared */
-	rep	movsb		/* Copy byte at (%rsi) to (%rdi) */
-	ret
+void * memcpy(void *__restrict, const void *__restrict, size_t);
+void * memmove(void *, const void *, size_t);
 
-/* int memmove(void *dst, void *src, size_t len) */
-_memmove:
-	cmpq	%rdi,%rsi	/* Compare the addresses of dst/src */
-	ja	_memcpy		/* If %rsi > %rdi, just execute memcpy() */
-	/* Copy backwards */
-	movq	%rdi,%rax	/* Return value */
-	movq	%rdx,%rcx       /* n */
-	std			/* Ensure the DF set */
-	addq	%rcx,%rdi
-	addq	%rcx,%rsi
-	rep	movsb		/* Copy byte at (%rsi) to (%rdi), backwards */
-	cld			/* Reset DF flag */
-	ret
+#endif
+
+/*
+ * Local variables:
+ * tab-width: 4
+ * c-basic-offset: 4
+ * End:
+ * vim600: sw=4 ts=4 fdm=marker
+ * vim<600: sw=4 ts=4
+ */

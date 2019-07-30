@@ -21,13 +21,17 @@
  * SOFTWARE.
  */
 
+#include <stdlib.h>
 #include <unistd.h>
+#include <termios.h>
 #include <mki/driver.h>
 #include <sys/syscall.h>
 #include "tty.h"
 
 unsigned long long syscall(int, ...);
 
+#define TTY_CONSOLE_PREFIX  "console"
+#define TTY_SERIAL_PREFIX   "ttys"
 #define VIDEO_PORT      0x3d4
 
 /*
@@ -37,11 +41,25 @@ int
 main(int argc, char *argv[])
 {
     unsigned long long cnt = 0;
+    int ret;
+    char *pash_args[] = {"/bin/pash", NULL};
+    tty_t tty;
 
     sysdriver_io_t io;
     int pos;
-    int ret;
     console_t con;
+
+    /* Initialize the tty */
+    tty.term.c_iflag = 0;
+    tty.term.c_oflag = 0;
+    tty.term.c_cflag = 0;
+    tty.term.c_lflag = ECHO;
+    tty.term.ispeed = 0;
+    tty.term.ospeed = 0;
+    ret = tty_line_buffer_init(&tty.lnbuf);
+    if ( ret < 0 ) {
+        return -1;
+    }
 
     /* Initialize the console */
     ret = console_init(&con, "console");

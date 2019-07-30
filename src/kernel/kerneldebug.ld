@@ -1,5 +1,5 @@
 OUTPUT_ARCH(i386:x86-64);
-ENTRY(kstart64)
+ENTRY(kentry)
 
 SECTIONS
 {
