@@ -42,7 +42,7 @@ struct initramfs_fildes {
 /*
  * open
  */
-int
+void *
 initramfs_open(const char *path, int oflag, ...)
 {
     struct initrd_entry *e;
@@ -54,11 +54,13 @@ initramfs_open(const char *path, int oflag, ...)
             /* Found */
             (void *)INITRAMFS_BASE + e->offset;
             e->size;
+            /* FIXME */
+            return NULL;
         }
         e++;
     }
 
-    return -1;
+    return NULL;
 }
 
 /*
@@ -78,6 +80,12 @@ initramfs_fstat(int fildes, struct stat *buf)
 {
     return -1;
 }
+
+vfs_interfaces_t initramfs = {
+    .open = initramfs_open,
+    .close = initramfs_close,
+    .fstat = initramfs_fstat,
+};
 
 /*
  * Local variables:

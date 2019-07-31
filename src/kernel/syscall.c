@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include "kernel.h"
 #include "proc.h"
+#include "vfs.h"
 #include "timer.h"
 #include "kvar.h"
 

@@ -31,7 +31,7 @@
  * Virtual filesystem interfaces
  */
 typedef struct {
-    int (*open)(const char *, int, ...);
+    void * (*open)(const char *, int, ...);
     int (*close)(int);
     int (*fstat)(int, struct stat *);
 } vfs_interfaces_t;
