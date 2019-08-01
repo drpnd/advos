@@ -81,10 +81,47 @@ initramfs_fstat(int fildes, struct stat *buf)
     return -1;
 }
 
+/*
+ * readfile
+ */
+ssize_t
+initramfs_readfile(const char *path, char *buf, size_t size, off_t off)
+{
+    struct initrd_entry *e;
+    char *ptr;
+    int i;
+
+    e = (void *)INITRAMFS_BASE;
+    for ( i = 0; i < 128; i++ ) {
+        if ( 0 == kstrcmp(path, e->name) ) {
+            /* Found */
+            ptr = (void *)INITRAMFS_BASE + e->offset;
+            if ( (off_t)e->size <= off ) {
+                /* No data to copy */
+                return 0;
+            }
+            if ( e->size - off > size ) {
+                /* Exceed the buffer size, then copy the buffer-size data */
+                kmemcpy(buf, ptr + off, size);
+                return size;
+            } else {
+                /* Copy  */
+                kmemcpy(buf, ptr + off, e->size - off);
+                return e->size - off;
+            }
+        }
+        e++;
+    }
+
+    /* Not found */
+    return -1;
+}
+
 vfs_interfaces_t initramfs = {
     .open = initramfs_open,
     .close = initramfs_close,
     .fstat = initramfs_fstat,
+    .readfile = initramfs_readfile,
 };
 
 /*

@@ -34,6 +34,7 @@ typedef struct {
     void * (*open)(const char *, int, ...);
     int (*close)(int);
     int (*fstat)(int, struct stat *);
+    ssize_t (*readfile)(const char *, char *, size_t, off_t);
 } vfs_interfaces_t;
 
 /*
