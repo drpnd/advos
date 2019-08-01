@@ -32,8 +32,8 @@
  */
 typedef struct {
     void * (*open)(const char *, int, ...);
-    int (*close)(int);
-    int (*fstat)(int, struct stat *);
+    int (*close)(void *);
+    int (*fstat)(void *, struct stat *);
     ssize_t (*readfile)(const char *, char *, size_t, off_t);
 } vfs_interfaces_t;
 
@@ -41,6 +41,7 @@ typedef struct {
  * Virtual filesystem
  */
 typedef struct {
+    void *spec;
     vfs_interfaces_t *vfs;
 } vfs_t;
 

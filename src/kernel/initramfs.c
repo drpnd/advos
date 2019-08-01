@@ -23,6 +23,7 @@
 
 #include "vfs.h"
 #include "kernel.h"
+#include "memory.h"
 
 /*
  * initrd
@@ -35,9 +36,30 @@ struct initrd_entry {
 
 struct initramfs_fildes {
     int inode;
+    uint64_t offset;
+    uint64_t size;
 };
 
-#define INITRAMFS_BASE  0xc0030000
+#define INITRAMFS_BASE          0xc0030000
+#define INITRAMFS_FILDES_SLAB   "initramfs_fildes"
+
+/*
+ * Initialize initramfs
+ */
+int
+initramfs_init(void)
+{
+    int ret;
+
+    /* Allocate the process slab */
+    ret = kmem_slab_create_cache(INITRAMFS_FILDES_SLAB,
+                                 sizeof(struct initramfs_fildes));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    return 0;
+}
 
 /*
  * open
@@ -45,20 +67,31 @@ struct initramfs_fildes {
 void *
 initramfs_open(const char *path, int oflag, ...)
 {
+    struct initramfs_fildes *fildes;
     struct initrd_entry *e;
     int i;
 
+    /* Allocate a VFS-specific file descriptor */
+    fildes = kmem_slab_alloc(INITRAMFS_FILDES_SLAB);
+    if ( NULL == fildes ) {
+        return NULL;
+    }
+
+    /* Search the specified file */
     e = (void *)INITRAMFS_BASE;
     for ( i = 0; i < 128; i++ ) {
         if ( 0 == kstrcmp(path, e->name) ) {
             /* Found */
-            (void *)INITRAMFS_BASE + e->offset;
-            e->size;
-            /* FIXME */
-            return NULL;
+            fildes->inode = i;
+            fildes->offset = e->offset;
+            fildes->size = e->size;
+            return fildes;
         }
         e++;
     }
+
+    /* Not found */
+    kmem_slab_free(INITRAMFS_FILDES_SLAB, fildes);
 
     return NULL;
 }
@@ -67,18 +100,26 @@ initramfs_open(const char *path, int oflag, ...)
  * close
  */
 int
-initramfs_close(int fildes)
+initramfs_close(void *fildes)
 {
-    return -1;
+    kmem_slab_free(INITRAMFS_FILDES_SLAB, fildes);
+
+    return 0;
 }
 
 /*
  * fstat
  */
 int
-initramfs_fstat(int fildes, struct stat *buf)
+initramfs_fstat(void *fildes, struct stat *buf)
 {
-    return -1;
+    struct initramfs_fildes *spec;
+
+    spec = (struct initramfs_fildes *)fildes;
+    kmemset(buf, 0, sizeof(struct stat));
+    buf->st_size = spec->size;
+
+    return 0;
 }
 
 /*
