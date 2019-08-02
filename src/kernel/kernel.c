@@ -25,6 +25,7 @@
 #include "kernel.h"
 #include "kvar.h"
 #include "memory.h"
+#include "initramfs.h"
 #include <stdint.h>
 #include <sys/syscall.h>
 
@@ -127,6 +128,12 @@ kernel_init(void)
 
     /* Create slab for event */
     ret = kmem_slab_create_cache("timer_event", sizeof(timer_event_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    /* Initialize initramfs */
+    ret = initramfs_init();
     if ( ret < 0 ) {
         return -1;
     }
