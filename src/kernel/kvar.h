@@ -45,6 +45,7 @@ typedef struct {
     task_mgr_t task_mgr;
     uint64_t jiffies;
     timer_event_t *timer;
+    void *rootfs;
     /* Architecture specific data */
     void *arch;
 } kvar_t;

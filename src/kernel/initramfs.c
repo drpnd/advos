@@ -62,6 +62,19 @@ initramfs_init(void)
 }
 
 /*
+ * Mount initramfs
+ */
+int
+initramfs_mount(const char *mp)
+{
+    if ( 0 == kstrcmp(mp, "/") ) {
+        /* Rootfs */
+    }
+
+    return -1;
+}
+
+/*
  * open
  */
 void *
