@@ -24,6 +24,7 @@
 #include "vfs.h"
 #include "kernel.h"
 #include "memory.h"
+#include "kvar.h"
 
 /*
  * initrd
@@ -34,10 +35,20 @@ struct initrd_entry {
     uint64_t size;
 };
 
+/*
+ * File descriptor
+ */
 struct initramfs_fildes {
     int inode;
     uint64_t offset;
     uint64_t size;
+};
+
+/*
+ * File system
+ */
+struct initramfs {
+    void *base;
 };
 
 #define INITRAMFS_BASE          0xc0030000
@@ -67,8 +78,18 @@ initramfs_init(void)
 int
 initramfs_mount(const char *mp)
 {
+    struct initramfs *fs;
+
     if ( 0 == kstrcmp(mp, "/") ) {
         /* Rootfs */
+        fs = kmalloc(sizeof(struct initramfs));
+        if ( NULL == fs ) {
+            return -1;
+        }
+        fs->base = (void *)INITRAMFS_BASE;
+        g_kvar->rootfs = fs;
+    } else {
+        /* ToDo: Search the mount point */
     }
 
     return -1;
