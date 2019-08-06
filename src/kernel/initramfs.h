@@ -25,6 +25,7 @@
 #define _ADVOS_INITRAMFS_H
 
 int initramfs_init(void);
+int initramfs_mount(const char *);
 
 #endif
 

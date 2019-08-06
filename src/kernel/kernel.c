@@ -138,6 +138,12 @@ kernel_init(void)
         return -1;
     }
 
+    /* Mount */
+    ret = initramfs_mount("/");
+    if ( ret < 0 ) {
+        return -1;
+    }
+
     return 0;
 }
 

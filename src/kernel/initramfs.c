@@ -87,12 +87,19 @@ initramfs_mount(const char *mp)
             return -1;
         }
         fs->base = (void *)INITRAMFS_BASE;
+
+        if ( NULL != g_kvar->rootfs ) {
+            /* Already mounted */
+            return -1;
+        }
+
         g_kvar->rootfs = fs;
+
+        return 0;
     } else {
         /* ToDo: Search the mount point */
+        return -1;
     }
-
-    return -1;
 }
 
 /*
