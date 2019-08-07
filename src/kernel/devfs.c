@@ -22,6 +22,44 @@
  */
 
 #include "devfs.h"
+#include "proc.h"
+
+enum devfs_type {
+    DEVFS_CHAR,
+    DEVFS_BLOCK,
+};
+
+/*
+ * File descriptor
+ */
+struct devfs_fildes {
+    struct devfs_entry *entry;
+};
+
+/*
+ * devfs entry
+ */
+struct devfs_entry {
+    /* Name of the entry */
+    char *name;
+    /* Flags */
+    int flags;
+    /* Owner process (driver) */
+    proc_t *proc;
+    /* Pointer to the next entry */
+    struct devfs_entry *next;
+};
+
+/*
+ * devfs
+ */
+struct devfs {
+    struct devfs_entry *head;
+};
+
+#define DEVFS_FILDES_SLAB       "devfs_fildes"
+
+struct devfs devfs;
 
 /*
  * Initialize devfs
@@ -29,7 +67,36 @@
 int
 devfs_init(void)
 {
+    int ret;
+
+    devfs.head = NULL;
+
+    /* Allocate the process slab */
+    ret = kmem_slab_create_cache(DEVFS_FILDES_SLAB,
+                                 sizeof(struct devfs_fildes));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
     return 0;
+}
+
+/*
+ * read
+ */
+ssize_t
+devfs_read(void *fildes, void *buf, size_t nbyte)
+{
+    return -1;
+}
+
+/*
+ * write
+ */
+ssize_t
+devfs_write(void *fildes, const void *buf, size_t nbyte)
+{
+    return -1;
 }
 
 /*

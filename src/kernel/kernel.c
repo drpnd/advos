@@ -26,6 +26,7 @@
 #include "kvar.h"
 #include "memory.h"
 #include "initramfs.h"
+#include "devfs.h"
 #include <stdint.h>
 #include <sys/syscall.h>
 
@@ -140,6 +141,12 @@ kernel_init(void)
 
     /* Mount */
     ret = initramfs_mount("/");
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    /* Initialize devfs */
+    ret = devfs_init();
     if ( ret < 0 ) {
         return -1;
     }

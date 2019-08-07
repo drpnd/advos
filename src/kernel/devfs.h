@@ -24,6 +24,8 @@
 #ifndef _ADVOS_DEVFS_H
 #define _ADVOS_DEVFS_H
 
+int devfs_init(void);
+
 #endif
 
 /*
