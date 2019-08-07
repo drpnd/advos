@@ -21,6 +21,16 @@
  * SOFTWARE.
  */
 
+#include "devfs.h"
+
+/*
+ * Initialize devfs
+ */
+int
+devfs_init(void)
+{
+    return 0;
+}
 
 /*
  * Local variables:
