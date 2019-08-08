@@ -23,11 +23,7 @@
 
 #include "devfs.h"
 #include "proc.h"
-
-enum devfs_type {
-    DEVFS_CHAR,
-    DEVFS_BLOCK,
-};
+#include <mki/driver.h>
 
 /*
  * File descriptor
@@ -44,6 +40,8 @@ struct devfs_entry {
     char *name;
     /* Flags */
     int flags;
+    /* Device */
+    driver_device_t *device;
     /* Owner process (driver) */
     proc_t *proc;
     /* Pointer to the next entry */
@@ -87,6 +85,32 @@ devfs_init(void)
 ssize_t
 devfs_read(void *fildes, void *buf, size_t nbyte)
 {
+    struct devfs_fildes *spec;
+    ssize_t len;
+    int c;
+
+    spec = (struct devfs_fildes *)fildes;
+    switch ( spec->entry->device->type ) {
+    case DRIVER_DEVICE_CHAR:
+        /* Character device */
+        len = 0;
+        while ( len < (ssize_t)nbyte ) {
+            if ( (c = driver_chr_ibuf_getc(spec->entry->device)) < 0 ) {
+                /* No buffer available */
+                break;
+            }
+            *(char *)(buf + len) = c;
+            len++;
+        }
+
+        return len;
+    case DRIVER_DEVICE_BLOCK:
+        /* Block device */
+        break;
+    default:
+        return -1;
+    }
+
     return -1;
 }
 
