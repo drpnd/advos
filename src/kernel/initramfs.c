@@ -154,7 +154,7 @@ initramfs_fstat(fildes_t *fildes, struct stat *buf)
 {
     struct initramfs_fildes *spec;
 
-    spec = (struct initramfs_fildes *)fildes;
+    spec = (struct initramfs_fildes *)&fildes->fsdata;
     kmemset(buf, 0, sizeof(struct stat));
     buf->st_size = spec->size;
 
