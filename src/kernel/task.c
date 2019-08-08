@@ -42,7 +42,7 @@ task_mgr_init(size_t atsize)
     }
 
     /* Allocate the file descriptor slab */
-    ret = kmem_slab_create_cache(SLAB_FILDES, sizeof(proc_t));
+    ret = kmem_slab_create_cache(SLAB_FILDES, sizeof(fildes_t));
     if ( ret < 0 ) {
         return -1;
     }
