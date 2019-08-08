@@ -55,8 +55,6 @@ struct devfs {
     struct devfs_entry *head;
 };
 
-#define DEVFS_FILDES_SLAB       "devfs_fildes"
-
 struct devfs devfs;
 
 /*
@@ -65,14 +63,11 @@ struct devfs devfs;
 int
 devfs_init(void)
 {
-    int ret;
-
     devfs.head = NULL;
 
-    /* Allocate the process slab */
-    ret = kmem_slab_create_cache(DEVFS_FILDES_SLAB,
-                                 sizeof(struct devfs_fildes));
-    if ( ret < 0 ) {
+    /* Ensure the filesystem-specific data structure is smaller than
+       fildes_storage_t */
+    if ( sizeof(fildes_storage_t) < sizeof(struct devfs_fildes) ) {
         return -1;
     }
 
@@ -97,7 +92,7 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
         return -1;
     }
 
-    spec = (struct devfs_fildes *)fildes;
+    spec = (struct devfs_fildes *)&fildes->fsdata;
     switch ( spec->entry->device->type ) {
     case DRIVER_DEVICE_CHAR:
         /* Character device */
@@ -112,7 +107,8 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
                 return -1;
             }
             tle->task = t;
-            tle->next = NULL;
+            tle->next = fildes->head;
+            fildes->head = tle;
 
             /* Switch to another task */
 
