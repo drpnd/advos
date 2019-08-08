@@ -90,6 +90,16 @@ struct _task_list {
 };
 
 /*
+ * Storage for filesystem-specific data structure
+ */
+typedef struct {
+    union {
+        void *ptr;
+        uint8_t storage[96];
+    } u;
+} fildes_storage_t;
+
+/*
  * File descriptor
  */
 typedef struct {
@@ -99,8 +109,8 @@ typedef struct {
     /* Reference counter */
     int refs;
 
-    /* Filesystem-specific */
-    void *fsdata;
+    /* Filesystem-specific data structure */
+    fildes_storage_t fsdata;
 } fildes_t;
 
 /*

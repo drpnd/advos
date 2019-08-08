@@ -52,7 +52,6 @@ struct initramfs {
 };
 
 #define INITRAMFS_BASE          0xc0030000
-#define INITRAMFS_FILDES_SLAB   "initramfs_fildes"
 
 /*
  * Initialize initramfs
@@ -60,12 +59,9 @@ struct initramfs {
 int
 initramfs_init(void)
 {
-    int ret;
-
-    /* Allocate the process slab */
-    ret = kmem_slab_create_cache(INITRAMFS_FILDES_SLAB,
-                                 sizeof(struct initramfs_fildes));
-    if ( ret < 0 ) {
+    /* Ensure the filesystem-specific data structure is smaller than
+       fildes_storage_t */
+    if ( sizeof(fildes_storage_t) < sizeof(struct initramfs_fildes) ) {
         return -1;
     }
 
@@ -118,28 +114,22 @@ initramfs_open(const char *path, int oflag, ...)
     if ( NULL == fildes ) {
         return NULL;
     }
-    spec = kmem_slab_alloc(INITRAMFS_FILDES_SLAB);
-    if ( NULL == spec ) {
-        kmem_slab_free(SLAB_FILDES, fildes);
-        return NULL;
-    }
 
     /* Search the specified file */
     e = (void *)INITRAMFS_BASE;
     for ( i = 0; i < 128; i++ ) {
         if ( 0 == kstrcmp(path, e->name) ) {
             /* Found */
+            spec = (struct initramfs_fildes *)&fildes->fsdata;
             spec->inode = i;
             spec->offset = e->offset;
             spec->size = e->size;
-            fildes->fsdata = spec;
             return fildes;
         }
         e++;
     }
 
     /* Not found */
-    kmem_slab_free(INITRAMFS_FILDES_SLAB, spec);
     kmem_slab_free(SLAB_FILDES, fildes);
 
     return NULL;
@@ -151,7 +141,6 @@ initramfs_open(const char *path, int oflag, ...)
 int
 initramfs_close(fildes_t *fildes)
 {
-    kmem_slab_free(INITRAMFS_FILDES_SLAB, fildes->fsdata);
     kmem_slab_free(SLAB_FILDES, fildes);
 
     return 0;
