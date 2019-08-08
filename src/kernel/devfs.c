@@ -83,7 +83,7 @@ devfs_init(void)
  * read
  */
 ssize_t
-devfs_read(void *fildes, void *buf, size_t nbyte)
+devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
 {
     struct devfs_fildes *spec;
     ssize_t len;
@@ -144,7 +144,7 @@ devfs_read(void *fildes, void *buf, size_t nbyte)
  * write
  */
 ssize_t
-devfs_write(void *fildes, const void *buf, size_t nbyte)
+devfs_write(fildes_t *fildes, const void *buf, size_t nbyte)
 {
     return -1;
 }

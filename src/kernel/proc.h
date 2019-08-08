@@ -26,7 +26,6 @@
 
 #include "kernel.h"
 #include "memory.h"
-#include "vfs.h"
 
 #define SLAB_TASK               "task"
 #define SLAB_TASK_LIST          "task_list"
@@ -99,6 +98,9 @@ typedef struct {
 
     /* Reference counter */
     int refs;
+
+    /* Filesystem-specific */
+    void *fsdata;
 } fildes_t;
 
 /*

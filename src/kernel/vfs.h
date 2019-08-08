@@ -25,17 +25,18 @@
 #define _ADVOS_VFS_H
 
 #include "kernel.h"
+#include "proc.h"
 #include <sys/stat.h>
 
 /*
  * Virtual filesystem interfaces
  */
 typedef struct {
-    void * (*open)(const char *, int, ...);
-    int (*close)(void *);
-    int (*fstat)(void *, struct stat *);
-    ssize_t (*read)(void *, void *, size_t);
-    ssize_t (*write)(void *, const void *, size_t);
+    fildes_t * (*open)(const char *, int, ...);
+    int (*close)(fildes_t *);
+    int (*fstat)(fildes_t *, struct stat *);
+    ssize_t (*read)(fildes_t *, void *, size_t);
+    ssize_t (*write)(fildes_t *, const void *, size_t);
     ssize_t (*readfile)(const char *, char *, size_t, off_t);
 } vfs_interfaces_t;
 

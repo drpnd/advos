@@ -105,16 +105,22 @@ initramfs_mount(const char *mp)
 /*
  * open
  */
-void *
+fildes_t *
 initramfs_open(const char *path, int oflag, ...)
 {
-    struct initramfs_fildes *fildes;
+    fildes_t *fildes;
+    struct initramfs_fildes *spec;
     struct initrd_entry *e;
     int i;
 
     /* Allocate a VFS-specific file descriptor */
-    fildes = kmem_slab_alloc(INITRAMFS_FILDES_SLAB);
+    fildes = kmem_slab_alloc(SLAB_FILDES);
     if ( NULL == fildes ) {
+        return NULL;
+    }
+    spec = kmem_slab_alloc(INITRAMFS_FILDES_SLAB);
+    if ( NULL == spec ) {
+        kmem_slab_free(SLAB_FILDES, fildes);
         return NULL;
     }
 
@@ -123,16 +129,18 @@ initramfs_open(const char *path, int oflag, ...)
     for ( i = 0; i < 128; i++ ) {
         if ( 0 == kstrcmp(path, e->name) ) {
             /* Found */
-            fildes->inode = i;
-            fildes->offset = e->offset;
-            fildes->size = e->size;
+            spec->inode = i;
+            spec->offset = e->offset;
+            spec->size = e->size;
+            fildes->fsdata = spec;
             return fildes;
         }
         e++;
     }
 
     /* Not found */
-    kmem_slab_free(INITRAMFS_FILDES_SLAB, fildes);
+    kmem_slab_free(INITRAMFS_FILDES_SLAB, spec);
+    kmem_slab_free(SLAB_FILDES, fildes);
 
     return NULL;
 }
@@ -141,9 +149,10 @@ initramfs_open(const char *path, int oflag, ...)
  * close
  */
 int
-initramfs_close(void *fildes)
+initramfs_close(fildes_t *fildes)
 {
-    kmem_slab_free(INITRAMFS_FILDES_SLAB, fildes);
+    kmem_slab_free(INITRAMFS_FILDES_SLAB, fildes->fsdata);
+    kmem_slab_free(SLAB_FILDES, fildes);
 
     return 0;
 }
@@ -152,7 +161,7 @@ initramfs_close(void *fildes)
  * fstat
  */
 int
-initramfs_fstat(void *fildes, struct stat *buf)
+initramfs_fstat(fildes_t *fildes, struct stat *buf)
 {
     struct initramfs_fildes *spec;
 
