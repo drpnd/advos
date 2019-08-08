@@ -114,6 +114,8 @@ initramfs_open(const char *path, int oflag, ...)
     if ( NULL == fildes ) {
         return NULL;
     }
+    fildes->head = NULL;
+    fildes->refs = 1;
 
     /* Search the specified file */
     e = (void *)INITRAMFS_BASE;
