@@ -28,6 +28,7 @@
 
 #define SYSDRIVER_MMAP          11
 #define SYSDRIVER_MUNMAP        12
+#define SYSDRIVER_REG_DEV       21
 
 #define SYSDRIVER_IN8           101
 #define SYSDRIVER_IN16          102
@@ -89,6 +90,17 @@ typedef struct {
         struct driver_mapped_device_chr chr;
     } dev;
 } driver_device_t;
+
+/*
+ * Data structure for the device management
+ */
+typedef struct {
+    /* Arguments */
+    const char *name;
+    int flags;
+    /* Return value */
+    driver_device_t *device;
+} sysdriver_devfs_t;
 
 /*
  * Put one character to the input buffer
@@ -168,6 +180,8 @@ int driver_in32(int);
 void driver_out8(int, int);
 void driver_out16(int, int);
 void driver_out32(int, int);
+
+driver_device_t * driver_register_device(const char *, int);
 
 #endif /* _MKI_DRIVER_H */
 

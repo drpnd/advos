@@ -24,7 +24,11 @@
 #ifndef _ADVOS_DEVFS_H
 #define _ADVOS_DEVFS_H
 
+#include <mki/driver.h>
+#include "proc.h"
+
 int devfs_init(void);
+int devfs_register(const char *, int, proc_t *, driver_device_t *);
 
 #endif
 

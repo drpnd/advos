@@ -26,6 +26,7 @@
 #include "kernel.h"
 #include "proc.h"
 #include "kvar.h"
+#include "devfs.h"
 
 /*
  * mmap
@@ -113,6 +114,52 @@ _io(int nr, sysdriver_io_t *io)
 }
 
 /*
+ * Register driver device
+ */
+static int
+_register_device(task_t *t, sysdriver_devfs_t *msg)
+{
+    proc_t *proc;
+    virt_memory_t *vmem;
+    driver_device_t *dev;
+    size_t sz;
+    int ret;
+
+    /* Get the process */
+    proc = t->proc;
+    if ( NULL == proc ) {
+        return -1;
+    }
+
+    /* Virtual memory */
+    vmem = proc->vmem;
+    if ( NULL == vmem ) {
+        /* Invalid virtual memory */
+        return -1;
+    }
+
+    /* Calculate the size to be allocated */
+    sz = sizeof(driver_device_t);
+    sz = (sz + MEMORY_PAGESIZE - 1) / MEMORY_PAGESIZE;
+    dev = virt_memory_alloc_pages(vmem, sz, MEMORY_ZONE_NUMA_AWARE, 0);
+    if ( NULL == dev ) {
+        return -1;
+    }
+
+    /* Register */
+    ret = devfs_register(msg->name, msg->flags, proc, dev);
+    if ( ret < 0 ) {
+        virt_memory_free_pages(vmem, dev);
+        return -1;
+    }
+
+    /* Set the return value */
+    msg->device = dev;
+
+    return 0;
+}
+
+/*
  * Driver-related system call
  */
 int
@@ -131,6 +178,8 @@ sys_driver(int nr, void *args)
         return _mmap(t, args);
     case SYSDRIVER_MUNMAP:
         return _munmap(t, args);
+    case SYSDRIVER_REG_DEV:
+        return _register_device(t, args);
     case SYSDRIVER_IN8:
     case SYSDRIVER_IN16:
     case SYSDRIVER_IN32:

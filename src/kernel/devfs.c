@@ -25,6 +25,8 @@
 #include "proc.h"
 #include <mki/driver.h>
 
+#define SLAB_DEVFS_ENTRY    "devfs_entry"
+
 /*
  * File descriptor
  */
@@ -37,7 +39,7 @@ struct devfs_fildes {
  */
 struct devfs_entry {
     /* Name of the entry */
-    char *name;
+    char name[PATH_MAX];
     /* Flags */
     int flags;
     /* Device */
@@ -63,6 +65,8 @@ struct devfs devfs;
 int
 devfs_init(void)
 {
+    int ret;
+
     devfs.head = NULL;
 
     /* Ensure the filesystem-specific data structure is smaller than
@@ -71,8 +75,38 @@ devfs_init(void)
         return -1;
     }
 
+    /* Prepare devfs slab */
+    ret = kmem_slab_create_cache(SLAB_DEVFS_ENTRY, sizeof(struct devfs_entry));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
     return 0;
 }
+
+/*
+ * Add an entry
+ */
+int
+devfs_register(const char *name, int flags, proc_t *proc, driver_device_t *dev)
+{
+    struct devfs_entry *e;
+
+    /* Allocate an entry */
+    e = kmem_slab_alloc(SLAB_DEVFS_ENTRY);
+    if ( NULL == e ) {
+        return -1;
+    }
+    kstrlcpy(e->name, name, PATH_MAX);
+    e->flags = flags;
+    e->device = dev;
+    e->proc = proc;
+    e->next = devfs.head;
+    devfs.head = e;
+
+    return 0;
+}
+
 
 /*
  * read
