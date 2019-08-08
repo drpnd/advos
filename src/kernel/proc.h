@@ -94,12 +94,6 @@ struct _task_list {
  * File descriptor
  */
 typedef struct {
-    /* Filesystem-specific data */
-    void *fsdata;
-
-    /* Virtual filesystem */
-    vfs_t *vfs;
-
     /* Blocking tasks */
     task_list_t *head;
 
