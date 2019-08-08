@@ -88,11 +88,28 @@ devfs_read(void *fildes, void *buf, size_t nbyte)
     struct devfs_fildes *spec;
     ssize_t len;
     int c;
+    task_t *t;
+
+    /* Get the currently running task */
+    t = this_task();
+    if ( NULL == t ) {
+        return -1;
+    }
 
     spec = (struct devfs_fildes *)fildes;
     switch ( spec->entry->device->type ) {
     case DRIVER_DEVICE_CHAR:
         /* Character device */
+        while ( 0 == driver_chr_ibuf_length(spec->entry->device) ) {
+            /* Empty buffer, then add this task to the blocking task list for
+               this file descriptor and switch to another task. */
+            t->state = TASK_BLOCKED;
+
+            /* Switch to another task */
+
+            /* Will resume from this point */
+        }
+
         len = 0;
         while ( len < (ssize_t)nbyte ) {
             if ( (c = driver_chr_ibuf_getc(spec->entry->device)) < 0 ) {
