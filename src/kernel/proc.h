@@ -29,6 +29,7 @@
 #include "vfs.h"
 
 #define SLAB_TASK               "task"
+#define SLAB_TASK_LIST          "task_list"
 #define SLAB_PROC               "proc"
 #define SLAB_TASK_STACK         "kstack"
 #define SLAB_FILDES             "fildes"
@@ -50,20 +51,6 @@ typedef enum {
 
 typedef struct _task task_t;
 typedef struct _proc proc_t;
-
-/*
- * File descriptor
- */
-typedef struct {
-    /* Filesystem-specific data */
-    void *fsdata;
-
-    /* Virtual filesystem */
-    vfs_t *vfs;
-
-    /* Reference counter */
-    int refs;
-} fildes_t;
 
 /*
  * Task
@@ -93,6 +80,32 @@ struct _task {
     /* Signaled? */
     int signaled;
 };
+
+/*
+ * Task list for file descriptors
+ */
+typedef struct _task_list task_list_t;
+struct _task_list {
+    task_t *task;
+    task_list_t *next;
+};
+
+/*
+ * File descriptor
+ */
+typedef struct {
+    /* Filesystem-specific data */
+    void *fsdata;
+
+    /* Virtual filesystem */
+    vfs_t *vfs;
+
+    /* Blocking tasks */
+    task_list_t *head;
+
+    /* Reference counter */
+    int refs;
+} fildes_t;
 
 /*
  * Process

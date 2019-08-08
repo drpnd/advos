@@ -89,6 +89,7 @@ devfs_read(void *fildes, void *buf, size_t nbyte)
     ssize_t len;
     int c;
     task_t *t;
+    task_list_t *tle;
 
     /* Get the currently running task */
     t = this_task();
@@ -104,6 +105,14 @@ devfs_read(void *fildes, void *buf, size_t nbyte)
             /* Empty buffer, then add this task to the blocking task list for
                this file descriptor and switch to another task. */
             t->state = TASK_BLOCKED;
+
+            /* Set this task to the blocking task list of the file descriptor */
+            tle = kmem_slab_alloc(SLAB_TASK_LIST);
+            if ( NULL == tle ) {
+                return -1;
+            }
+            tle->task = t;
+            tle->next = NULL;
 
             /* Switch to another task */
 

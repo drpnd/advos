@@ -59,6 +59,12 @@ task_mgr_init(size_t atsize)
         return -1;
     }
 
+    /* Allocate the task list */
+    ret = kmem_slab_create_cache(SLAB_TASK_LIST, sizeof(task_list_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
     /* Initialize the process table */
     nr = (sizeof(proc_t *) * PROC_NR + MEMORY_PAGESIZE - 1) / MEMORY_PAGESIZE;
     g_kvar->procs = memory_alloc_pages(&g_kvar->mm, nr, MEMORY_ZONE_KERNEL, 0);
