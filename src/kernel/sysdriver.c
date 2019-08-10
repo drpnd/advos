@@ -39,7 +39,7 @@ _mmap(task_t *t, sysdriver_mmio_t *mmio)
     size_t npg;
     void *ptr;
 
-    /* Process */
+    /* Get the process corresponding to the specified task */
     proc = t->proc;
     if ( NULL == proc ) {
         /* Invalid process */
