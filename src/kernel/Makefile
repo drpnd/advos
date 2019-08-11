@@ -13,7 +13,7 @@ CFLAGS=-g -O3 -fleading-underscore -mcmodel=large -nostdlib -nodefaultlibs -fno-
 
 # kernel
 kernel: arch/x86_64/asm.o \
-	kernel.o memory.o kmem.o physmem.o slab.o kmalloc.o strfmt.o \
+	kernel.o memory.o kmem.o physmem.o slab.o kmalloc.o strfmt.o msg.o \
 	proc.o task.o sched.o tree.o syscall.o sysdriver.o \
 	vfs.o initramfs.o devfs.o \
 	arch/x86_64/trampoline.o arch/x86_64/ap_entry32.o arch/x86_64/ap_entry64.o \
