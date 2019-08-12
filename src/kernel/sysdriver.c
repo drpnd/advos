@@ -160,6 +160,15 @@ _register_device(task_t *t, sysdriver_devfs_t *msg)
 }
 
 /*
+ * Message passing
+ */
+int
+_msg(task_t *t, sysdriver_msg_t *msg)
+{
+    return -1;
+}
+
+/*
  * Driver-related system call
  */
 int
@@ -187,6 +196,8 @@ sys_driver(int nr, void *args)
     case SYSDRIVER_OUT16:
     case SYSDRIVER_OUT32:
         return _io(nr, args);
+    case SYSDRIVER_MSG:
+        return _msg(t, args);
     default:
         return -1;
     }

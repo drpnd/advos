@@ -26,6 +26,8 @@
 
 #include <unistd.h>
 
+#define SYSDRIVER_MSG           1
+
 #define SYSDRIVER_MMAP          11
 #define SYSDRIVER_MUNMAP        12
 #define SYSDRIVER_REG_DEV       21
@@ -54,6 +56,20 @@ typedef struct {
     void *addr;
     size_t size;
 } sysdriver_mmio_t;
+
+/*
+ * Data structure for the character I/O
+ */
+typedef enum {
+    SYSDRIVER_MSG_PUTC,
+    SYSDRIVER_MSG_GETC,
+} sysdriver_msg_type_t;
+typedef struct {
+    sysdriver_msg_type_t type;
+    union {
+        char c;
+    } u;
+} sysdriver_msg_t;
 
 /*
  * Ring buffer
@@ -180,6 +196,8 @@ int driver_in32(int);
 void driver_out8(int, int);
 void driver_out16(int, int);
 void driver_out32(int, int);
+
+int driver_msg(sysdriver_msg_t *);
 
 driver_device_t * driver_register_device(const char *, int);
 
