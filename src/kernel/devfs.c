@@ -107,6 +107,30 @@ devfs_register(const char *name, int flags, proc_t *proc, driver_device_t *dev)
     return 0;
 }
 
+/*
+ * Message handler
+ */
+int
+devfs_recv_msg(const char *name, proc_t *proc)
+{
+    struct devfs_entry *e;
+
+    /* Search the devfs_entry corresponding to the name */
+    e = devfs.head;
+    while ( NULL != e ) {
+        if ( 0 == kstrcmp(e->name, name) ) {
+            /* Found */
+            break;
+        }
+        e = e->next;
+    }
+    if ( NULL == e ) {
+        /* Not found */
+        return -1;
+    }
+
+    return -1;
+}
 
 /*
  * read
