@@ -129,6 +129,12 @@ devfs_recv_msg(const char *name, proc_t *proc)
         return -1;
     }
 
+    /* Check the process */
+    if ( proc != e->proc ) {
+        /* Message from a non-owner process */
+        return -1;
+    }
+
     return -1;
 }
 
