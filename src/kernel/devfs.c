@@ -26,6 +26,30 @@
 #include <mki/driver.h>
 
 #define SLAB_DEVFS_ENTRY    "devfs_entry"
+#define DEVFS_FIFO_BUFSIZE  8192
+
+/*
+ * Ring buffer
+ */
+struct devfs_fifo {
+    uint8_t buf[DEVFS_FIFO_BUFSIZE];
+    volatile off_t head;
+    volatile off_t tail;
+};
+
+/*
+ * Device file
+ */
+struct devfs_device_chr {
+    struct devfs_fifo ibuf;
+    struct devfs_fifo obuf;
+};
+struct devfs_device {
+    int type;
+    union {
+        struct devfs_device_chr chr;        
+    } dev;
+};
 
 /*
  * File descriptor
