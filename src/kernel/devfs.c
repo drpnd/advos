@@ -135,7 +135,7 @@ devfs_register(const char *name, int flags, proc_t *proc, driver_device_t *dev)
  * Message handler
  */
 int
-devfs_recv_msg(const char *name, proc_t *proc)
+devfs_recv_msg(const char *name, proc_t *proc, sysdriver_msg_t *msg)
 {
     struct devfs_entry *e;
 
