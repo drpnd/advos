@@ -23,6 +23,7 @@
 
 #include "devfs.h"
 #include "proc.h"
+#include "msg.h"
 #include <mki/driver.h>
 
 #define SLAB_DEVFS_ENTRY    "devfs_entry"
@@ -135,7 +136,7 @@ devfs_register(const char *name, int flags, proc_t *proc, driver_device_t *dev)
  * Message handler
  */
 int
-devfs_recv_msg(const char *name, proc_t *proc, sysdriver_msg_t *msg)
+devfs_recv_msg(const char *name, proc_t *proc, msg_t *msg)
 {
     struct devfs_entry *e;
 
@@ -156,6 +157,13 @@ devfs_recv_msg(const char *name, proc_t *proc, sysdriver_msg_t *msg)
     /* Check the process */
     if ( proc != e->proc ) {
         /* Message from a non-owner process */
+        return -1;
+    }
+
+    switch ( msg->type ) {
+    case MSG_BYTE:
+        break;
+    default:
         return -1;
     }
 
