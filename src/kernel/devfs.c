@@ -47,7 +47,7 @@ struct devfs_device_chr {
 struct devfs_device {
     int type;
     union {
-        struct devfs_device_chr chr;        
+        struct devfs_device_chr chr;
     } dev;
 };
 
