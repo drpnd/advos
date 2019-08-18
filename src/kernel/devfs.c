@@ -68,7 +68,7 @@ struct devfs_entry {
     /* Flags */
     int flags;
     /* Device */
-    driver_device_t *device;
+    struct devfs_device device;
     /* Owner process (driver) */
     proc_t *proc;
     /* Pointer to the next entry */
@@ -83,6 +83,76 @@ struct devfs {
 };
 
 struct devfs devfs;
+
+/*
+ * Put one character to the input buffer
+ */
+static __inline__ int
+_chr_ibuf_putc(struct devfs_device *dev, int c)
+{
+    off_t cur;
+    off_t next;
+
+    __sync_synchronize();
+
+    cur = dev->dev.chr.ibuf.tail;
+    next = cur + 1 < SYSDRIVER_DEV_BUFSIZE ? cur + 1 : 0;
+
+    if  ( dev->dev.chr.ibuf.head == next ) {
+        /* Buffer is full */
+        return -1;
+    }
+
+    dev->dev.chr.ibuf.buf[cur] = c;
+    dev->dev.chr.ibuf.tail = next;
+
+    __sync_synchronize();
+
+    return c;
+}
+
+/*
+ * Get one character from the input buffer
+ */
+static __inline__ int
+_chr_ibuf_getc(struct devfs_device *dev)
+{
+    int c;
+    off_t cur;
+    off_t next;
+
+    __sync_synchronize();
+
+    if  ( dev->dev.chr.ibuf.head == dev->dev.chr.ibuf.tail ) {
+        /* Buffer is empty */
+        return -1;
+    }
+    cur = dev->dev.chr.ibuf.head;
+    next = cur + 1 < SYSDRIVER_DEV_BUFSIZE ? cur + 1 : 0;
+
+    c = dev->dev.chr.ibuf.buf[cur];
+    dev->dev.chr.ibuf.head = next;
+
+    __sync_synchronize();
+
+    return c;
+}
+
+/*
+ * Get the queued length for the input buffer of a character device
+ */
+static __inline__ int
+_chr_ibuf_length(struct devfs_device *dev)
+{
+    __sync_synchronize();
+
+    if ( dev->dev.chr.ibuf.tail >= dev->dev.chr.ibuf.head ) {
+        return dev->dev.chr.ibuf.tail - dev->dev.chr.ibuf.head;
+    } else {
+        return SYSDRIVER_DEV_BUFSIZE + dev->dev.chr.ibuf.tail
+            - dev->dev.chr.ibuf.head;
+    }
+}
 
 /*
  * Initialize devfs
@@ -124,9 +194,9 @@ devfs_register(const char *name, int flags, proc_t *proc, driver_device_t *dev)
     }
     kstrlcpy(e->name, name, PATH_MAX);
     e->flags = flags;
-    e->device = dev;
     e->proc = proc;
     e->next = devfs.head;
+    e->device.type = dev->type;
     devfs.head = e;
 
     return 0;
@@ -189,10 +259,10 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
     }
 
     spec = (struct devfs_fildes *)&fildes->fsdata;
-    switch ( spec->entry->device->type ) {
+    switch ( spec->entry->device.type ) {
     case DRIVER_DEVICE_CHAR:
         /* Character device */
-        while ( 0 == driver_chr_ibuf_length(spec->entry->device) ) {
+        while ( 0 == _chr_ibuf_length(&spec->entry->device) ) {
             /* Empty buffer, then add this task to the blocking task list for
                this file descriptor and switch to another task. */
             t->state = TASK_BLOCKED;
@@ -213,7 +283,7 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
 
         len = 0;
         while ( len < (ssize_t)nbyte ) {
-            if ( (c = driver_chr_ibuf_getc(spec->entry->device)) < 0 ) {
+            if ( (c = _chr_ibuf_getc(&spec->entry->device)) < 0 ) {
                 /* No buffer available */
                 break;
             }
