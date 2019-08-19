@@ -121,8 +121,6 @@ _register_device(task_t *t, sysdriver_devfs_t *msg)
 {
     proc_t *proc;
     virt_memory_t *vmem;
-    driver_device_t *dev;
-    size_t sz;
     int ret;
 
     /* Get the process */
@@ -138,23 +136,11 @@ _register_device(task_t *t, sysdriver_devfs_t *msg)
         return -1;
     }
 
-    /* Calculate the size to be allocated */
-    sz = sizeof(driver_device_t);
-    sz = (sz + MEMORY_PAGESIZE - 1) / MEMORY_PAGESIZE;
-    dev = virt_memory_alloc_pages(vmem, sz, MEMORY_ZONE_NUMA_AWARE, 0);
-    if ( NULL == dev ) {
-        return -1;
-    }
-
     /* Register */
-    ret = devfs_register(msg->name, msg->flags, proc, dev);
+    ret = devfs_register(msg->name, msg->flags, proc);
     if ( ret < 0 ) {
-        virt_memory_free_pages(vmem, dev);
         return -1;
     }
-
-    /* Set the return value */
-    msg->device = dev;
 
     return 0;
 }

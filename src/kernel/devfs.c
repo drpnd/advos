@@ -183,7 +183,7 @@ devfs_init(void)
  * Add an entry
  */
 int
-devfs_register(const char *name, int flags, proc_t *proc, driver_device_t *dev)
+devfs_register(const char *name, int flags, proc_t *proc)
 {
     struct devfs_entry *e;
 
@@ -196,7 +196,7 @@ devfs_register(const char *name, int flags, proc_t *proc, driver_device_t *dev)
     e->flags = flags;
     e->proc = proc;
     e->next = devfs.head;
-    e->device.type = dev->type;
+    //e->device.type = dev->type;
     devfs.head = e;
 
     return 0;

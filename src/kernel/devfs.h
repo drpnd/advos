@@ -28,7 +28,7 @@
 #include "proc.h"
 
 int devfs_init(void);
-int devfs_register(const char *, int, proc_t *, driver_device_t *);
+int devfs_register(const char *, int, proc_t *);
 
 #endif
 
