@@ -196,7 +196,6 @@ devfs_register(const char *name, int flags, proc_t *proc)
     e->flags = flags;
     e->proc = proc;
     e->next = devfs.head;
-    //e->device.type = dev->type;
     devfs.head = e;
 
     return 0;

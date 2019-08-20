@@ -21,6 +21,7 @@
  * SOFTWARE.
  */
 
+#include <stdlib.h>
 #include <sys/syscall.h>
 #include <mki/driver.h>
 #include <unistd.h>
@@ -101,6 +102,21 @@ driver_out32(int port, int data)
     io.port = port;
     io.data = data;
     syscall(SYS_driver, SYSDRIVER_OUT32, &io);
+}
+
+/*
+ * Driver device registration
+ */
+driver_device_t *
+driver_register_device(const char *name, int flags)
+{
+    sysdriver_devfs_t msg;
+
+    msg.name = name;
+    msg.flags = flags;
+    syscall(SYS_driver, SYSDRIVER_REG_DEV, &msg);
+
+    return msg.device;
 }
 
 /*

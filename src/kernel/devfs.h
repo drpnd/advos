@@ -27,6 +27,9 @@
 #include <mki/driver.h>
 #include "proc.h"
 
+#define DEVFS_CHAR      0
+#define DEVFS_BLOCK     1
+
 int devfs_init(void);
 int devfs_register(const char *, int, proc_t *);
 
