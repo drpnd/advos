@@ -183,9 +183,14 @@ devfs_init(void)
  * Add an entry
  */
 int
-devfs_register(const char *name, int flags, proc_t *proc)
+devfs_register(const char *name, int type, proc_t *proc)
 {
     struct devfs_entry *e;
+
+    /* Check the device type */
+    if ( DEVFS_CHAR != type && DEVFS_BLOCK != type ) {
+        return -1;
+    }
 
     /* Allocate an entry */
     e = kmem_slab_alloc(SLAB_DEVFS_ENTRY);
@@ -193,7 +198,8 @@ devfs_register(const char *name, int flags, proc_t *proc)
         return -1;
     }
     kstrlcpy(e->name, name, PATH_MAX);
-    e->flags = flags;
+    e->device.type = type;
+    e->flags = 0;
     e->proc = proc;
     e->next = devfs.head;
     devfs.head = e;

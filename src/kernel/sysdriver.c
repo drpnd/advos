@@ -122,6 +122,7 @@ _register_device(task_t *t, sysdriver_devfs_t *msg)
     proc_t *proc;
     virt_memory_t *vmem;
     int ret;
+    int type;
 
     /* Get the process */
     proc = t->proc;
@@ -135,9 +136,16 @@ _register_device(task_t *t, sysdriver_devfs_t *msg)
         /* Invalid virtual memory */
         return -1;
     }
+    if ( msg->type == DRIVER_DEVICE_CHAR ) {
+        type = DEVFS_CHAR;
+    } else if ( msg->type == DRIVER_DEVICE_BLOCK ) {
+        type = DEVFS_BLOCK;
+    } else {
+        return -1;
+    }
 
     /* Register */
-    ret = devfs_register(msg->name, msg->flags, proc);
+    ret = devfs_register(msg->name, type, proc);
     if ( ret < 0 ) {
         return -1;
     }
