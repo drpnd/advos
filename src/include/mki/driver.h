@@ -114,8 +114,6 @@ typedef struct {
     /* Arguments */
     const char *name;
     driver_device_type_t type;
-    /* Return value */
-    driver_device_t *device;
 } sysdriver_devfs_t;
 
 /*
@@ -199,7 +197,7 @@ void driver_out32(int, int);
 
 int driver_msg(sysdriver_msg_t *);
 
-driver_device_t * driver_register_device(const char *, driver_device_type_t);
+int driver_register_device(const char *, driver_device_type_t);
 
 #endif /* _MKI_DRIVER_H */
 

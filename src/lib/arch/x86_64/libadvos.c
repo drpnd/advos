@@ -107,8 +107,8 @@ driver_out32(int port, int data)
 /*
  * Driver device registration
  */
-driver_device_t *
-driver_register_device(const char *name, int type)
+int
+driver_register_device(const char *name, driver_device_type_t type)
 {
     sysdriver_devfs_t msg;
 
@@ -116,7 +116,7 @@ driver_register_device(const char *name, int type)
     msg.type = type;
     syscall(SYS_driver, SYSDRIVER_REG_DEV, &msg);
 
-    return msg.device;
+    return 0;
 }
 
 /*
