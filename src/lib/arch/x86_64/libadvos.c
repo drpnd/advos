@@ -111,12 +111,13 @@ int
 driver_register_device(const char *name, driver_device_type_t type)
 {
     sysdriver_devfs_t msg;
+    int ret;
 
     msg.name = name;
     msg.type = type;
-    syscall(SYS_driver, SYSDRIVER_REG_DEV, &msg);
+    ret = syscall(SYS_driver, SYSDRIVER_REG_DEV, &msg);
 
-    return 0;
+    return ret;
 }
 
 /*
