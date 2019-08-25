@@ -4,7 +4,7 @@ MAINTAINER Hirochika Asai <panda@jar.jp>
 
 ## Install build-essentials and qemu
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends build-essential qemu-system
+RUN apt-get install -y --no-install-recommends build-essential qemu-system vim-common
 
 ## Copy source to the workdir
 COPY src /usr/src

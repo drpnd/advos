@@ -4,7 +4,7 @@ MAINTAINER Hirochika Asai <panda@jar.jp>
 
 ## Install build-essentials and qemu
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends build-essential qemu-system isc-dhcp-server iproute2 bridge-utils tftpd-hpa
+RUN apt-get install -y --no-install-recommends build-essential qemu-system vim-common isc-dhcp-server iproute2 bridge-utils tftpd-hpa
 
 ## Copy source to the workdir
 COPY src /usr/src
