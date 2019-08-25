@@ -480,7 +480,7 @@ _init_numa_zones(phys_memory_t *mem, acpi_t *acpi, int nr,
         base = (base + (MEMORY_PAGESIZE - 1)) & ~(MEMORY_PAGESIZE - 1);
         next = next & ~(MEMORY_PAGESIZE - 1);
 
-        if ( base != next ) {
+        if ( base != next && map[i].type == 1 ) {
             /* Add this region to the buddy system */
             _add_region_to_numa_zones(mem, acpi, base, next);
         }
