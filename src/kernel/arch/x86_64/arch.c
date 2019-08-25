@@ -222,12 +222,17 @@ isr_page_fault(uint64_t virtual, uint64_t error, uint64_t rip, uint64_t cs,
 {
     char buf[4096];
     task_t *t;
+    char *pname;
 
     t = this_task();
-    ksnprintf(buf, sizeof(buf), "#PF: task=%llx, virtual=%llx, error=%llx, "
-              "rip=%llx, cs=%llx, rflags=%llx, rsp=%llx", t, virtual,
-              error, rip, cs, rflags,
-              rsp);
+    if ( NULL != t->proc ) {
+        pname = t->proc->name;
+    } else {
+        pname = NULL;
+    }
+    ksnprintf(buf, sizeof(buf), "#PF: task=%llx (%s), virtual=%llx, "
+              "error=%llx, rip=%llx, cs=%llx, rflags=%llx, rsp=%llx", t,
+              pname, virtual, error, rip, cs, rflags, rsp);
     panic(buf);
 }
 
