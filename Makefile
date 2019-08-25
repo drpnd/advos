@@ -23,5 +23,16 @@ test: all
 		-boot a \
 		-display curses
 
+PHONY+=test-single
+test-single: all
+	qemu-system-x86_64 -m 1024 \
+		-smp cores=1,threads=1,sockets=1 \
+		-drive id=disk,format=raw,file=src/advos.img,if=none \
+		-device ahci,id=ahci \
+		-device ide-drive,drive=disk,bus=ahci.0 \
+		-boot a \
+		-display curses
+
+
 .PHONY: $(PHONY)
 
