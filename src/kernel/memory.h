@@ -260,6 +260,9 @@ typedef struct {
 
     /* Copy */
     int (*copy)(void *, uintptr_t, uintptr_t, size_t);
+
+    /* Resolve the physical address from the virtual address */
+    uintptr_t (*v2p)(void *, void *);
 } memory_arch_interfaces_t;
 
 /*

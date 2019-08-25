@@ -54,6 +54,7 @@ int arch_memory_refer(void *, void *, uintptr_t, size_t);
 virt_memory_t * arch_memory_new(void);
 int arch_memory_ctxsw(void *);
 int arch_memory_copy(void *, uintptr_t, uintptr_t, size_t);
+uintptr_t arch_memory_v2p(void *, void *);
 
 static int _prepare_idle_task(int);
 
@@ -384,6 +385,7 @@ _init_kernel_pgt(kvar_t *kvar, size_t nr, memory_sysmap_entry_t *map)
     ifs.new = arch_memory_new;
     ifs.ctxsw = arch_memory_ctxsw;
     ifs.copy = arch_memory_copy;
+    ifs.v2p = arch_memory_v2p;
     ret = memory_init(&kvar->mm, &kvar->phys, pgt, KERNEL_LMAP, &ifs);
     if ( ret < 0 ) {
         panic("Failed to initialize the memory manager.");
@@ -694,6 +696,15 @@ arch_memory_copy(void *arch, uintptr_t dst, uintptr_t src, size_t size)
     kmemcpy((void *)dst + KERNEL_LMAP, (void *)src + KERNEL_LMAP, size);
 
     return 0;
+}
+
+/*
+ * Resolve the physical address corresponding to the virtual address
+ */
+uintptr_t
+arch_memory_v2p(void *arch, void *addr)
+{
+    return (uintptr_t)pgt_v2p((pgt_t *)arch, (uintptr_t)addr);
 }
 
 /*

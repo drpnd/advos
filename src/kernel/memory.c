@@ -80,6 +80,7 @@ memory_init(memory_t *mem, phys_memory_t *phys, void *arch, uintptr_t p2v,
     mem->ifs.new = ifs->new;
     mem->ifs.ctxsw = ifs->ctxsw;
     mem->ifs.copy = ifs->copy;
+    mem->ifs.v2p = ifs->v2p;
 
     return 0;
 }
