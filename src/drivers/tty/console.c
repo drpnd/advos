@@ -52,6 +52,7 @@ console_init(console_t *con, const char *ttyname)
     if ( ret < 0 ) {
         return -1;
     }
+    mmio.addr;
 
     /* Register */
     ret = driver_register_device("console", DRIVER_DEVICE_CHAR);

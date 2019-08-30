@@ -27,6 +27,8 @@
 #include <mki/driver.h>
 #include "proc.h"
 
+#define DEVFS_MAXDEVS   1024
+
 #define DEVFS_CHAR      0
 #define DEVFS_BLOCK     1
 

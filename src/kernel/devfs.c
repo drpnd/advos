@@ -80,6 +80,7 @@ struct devfs_entry {
  */
 struct devfs {
     struct devfs_entry *head;
+    size_t nr;
 };
 
 struct devfs devfs;
@@ -163,6 +164,7 @@ devfs_init(void)
     int ret;
 
     devfs.head = NULL;
+    devfs.nr = 0;
 
     /* Ensure the filesystem-specific data structure is smaller than
        fildes_storage_t */
