@@ -91,6 +91,24 @@ typedef struct {
 } video_t;
 
 /*
+ * Text screen
+ */
+typedef struct {
+    /* Buffer size */
+    size_t size;
+    /* Width */
+    size_t width;
+    /* Height */
+    size_t height;
+    /* Cursor position */
+    off_t cur;
+    /* End of buffer */
+    off_t eob;
+    /* Line buffer marker */
+    off_t lmark;
+} screen_t;
+
+/*
  * Console
  */
 typedef struct {
@@ -98,6 +116,8 @@ typedef struct {
     kbd_t kbd;
     /* Video */
     video_t video;
+    /* Screen */
+    screen_t screen;
 } console_t;
 
 /* in kbd.c */

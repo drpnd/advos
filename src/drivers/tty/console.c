@@ -78,6 +78,13 @@ console_init(console_t *con, const char *ttyname)
     con->video.vram = (uint16_t *)mmio.addr;
     con->video.pos = 0;
 
+    /* Screen */
+    con->screen.width = 80;
+    con->screen.height = 25;
+    con->screen.eob = 0;
+    con->screen.cur = 0;
+    con->screen.lmark = 0;
+
     /* Register */
     ret = driver_register_device("console", DRIVER_DEVICE_CHAR);
     if ( ret < 0 ) {
@@ -86,6 +93,43 @@ console_init(console_t *con, const char *ttyname)
     }
 
     return 0;
+}
+
+/*
+ * Update the cursor
+ */
+static void
+_update_cursor(int pos)
+{
+    uint16_t val;
+
+    /* Move the cursor (low -> high) */
+    val = ((pos & 0xff) << 8) | 0x0f;
+    driver_out16(VIDEO_PORT, val);
+    val = (pos & 0xff00) | 0x0e;
+    driver_out16(VIDEO_PORT, val);
+}
+
+/*
+ * Update line buffer
+ */
+static void
+_update_line_buffer(console_t *con, tty_t *tty)
+{
+    size_t len;
+    ssize_t i;
+
+    len = con->screen.eob - con->screen.lmark;
+    for ( i = 0; i < (ssize_t)len; i++ ) {
+        con->video.vram[con->screen.lmark + i] = 0x0f20;
+    }
+
+    for ( i = 0; i < (ssize_t)tty->lnbuf.len; i++ ) {
+        con->video.vram[con->screen.lmark + i] = 0x0f00 | tty->lnbuf.buf[i];
+    }
+
+    con->screen.eob = con->screen.lmark + tty->lnbuf.len;
+    _update_cursor(con->screen.lmark + tty->lnbuf.cur);
 }
 
 /*
@@ -98,10 +142,11 @@ console_proc(console_t *con, tty_t *tty)
 
     /* Read characters from the keyboard */
     while ( (c = kbd_getchar(&con->kbd)) >= 0 ) {
-        tty_line_buffer_putc(tty, c);
+        tty_line_buffer_putc(&tty->lnbuf, c);
 
         if ( tty->term.c_lflag & ECHO ) {
-            /* Echo is enabled. */
+            /* Echo is enabled, then update the line buffer. */
+            _update_line_buffer(con, tty);
         }
     }
 
