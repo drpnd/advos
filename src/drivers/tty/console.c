@@ -53,6 +53,13 @@ console_init(console_t *con, const char *ttyname)
         return -1;
     }
 
+    /* Register */
+    ret = driver_register_device("console", DRIVER_DEVICE_CHAR);
+    if ( ret < 0 ) {
+        /* Failed to register the device */
+        return -1;
+    }
+
     return 0;
 }
 
