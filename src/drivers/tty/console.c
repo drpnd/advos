@@ -85,9 +85,6 @@ console_init(console_t *con, const char *ttyname)
         return -1;
     }
 
-    char *msg = "Registered.";
-    console_write(con, msg, strlen(msg));
-
     return 0;
 }
 
