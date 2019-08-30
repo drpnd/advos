@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <termios.h>
+#include <time.h>
 #include <mki/driver.h>
 #include <sys/syscall.h>
 #include "tty.h"
@@ -48,6 +49,11 @@ main(int argc, char *argv[])
     sysdriver_io_t io;
     int pos;
     console_t con;
+    struct timespec tm;
+
+    /* 100 ms  */
+    tm.tv_sec = 0;
+    tm.tv_nsec = 100000000;
 
     /* Initialize the tty */
     tty.term.c_iflag = 0;
@@ -79,6 +85,8 @@ main(int argc, char *argv[])
     for ( ;; ) {
         syscall(766, 21, cnt);
         cnt++;
+        console_proc(&con, &tty);
+        nanosleep(&tm, NULL);
     }
 
     return 0;

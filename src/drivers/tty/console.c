@@ -89,6 +89,15 @@ console_init(console_t *con, const char *ttyname)
 }
 
 /*
+ * Process console I/O
+ */
+int
+console_proc(console_t *con, tty_t *tty)
+{
+    return 0;
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4
