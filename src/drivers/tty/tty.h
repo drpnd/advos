@@ -87,6 +87,7 @@ typedef struct {
  */
 typedef struct {
     uint16_t *vram;
+    int pos;
 } video_t;
 
 /*

@@ -29,6 +29,28 @@
 #define VIDEO_RAM   0x000b8000
 #define VIDEO_PORT  0x3d4
 
+/*
+ * console_write
+ */
+ssize_t
+console_write(console_t *con, const void *buf, size_t count)
+{
+    ssize_t n;
+    uint16_t val;
+
+    for ( n = 0; n < (ssize_t)count; n++ ) {
+        *(con->video.vram + con->video.pos + n)
+            = 0x0700 | ((const char *)buf)[n];
+    }
+
+    /* Move the cursor (low -> high) */
+    val = ((con->video.pos & 0xff) << 8) | 0x0f;
+    driver_out16(VIDEO_PORT, val);
+    val = (con->video.pos & 0xff00) | 0x0e;
+    driver_out16(VIDEO_PORT, val);
+
+    return 0;
+}
 
 /*
  * Initialize the console
@@ -52,7 +74,8 @@ console_init(console_t *con, const char *ttyname)
     if ( ret < 0 ) {
         return -1;
     }
-    mmio.addr;
+    con->video.vram = (uint16_t *)mmio.addr;
+    con->video.pos = 0;
 
     /* Register */
     ret = driver_register_device("console", DRIVER_DEVICE_CHAR);
@@ -60,6 +83,9 @@ console_init(console_t *con, const char *ttyname)
         /* Failed to register the device */
         return -1;
     }
+
+    char *msg = "Registered.";
+    console_write(con, msg, 11);
 
     return 0;
 }
