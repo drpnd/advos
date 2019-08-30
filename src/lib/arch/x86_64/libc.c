@@ -67,23 +67,6 @@ nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 }
 
 /*
- * strlen
- */
-size_t
-strlen(const char *s)
-{
-    size_t n;
-
-    n = 0;
-    while ( '\0' != *s ) {
-        n++;
-        s++;
-    }
-
-    return n;
-}
-
-/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4

@@ -13,7 +13,8 @@ all: initrd
 	$(MAKE) -C boot pxeboot
 
 # libc
-LIBCOBJS=lib/arch/x86_64/libc.o lib/arch/x86_64/libcasm.o lib/arch/x86_64/libadvos.o
+LIBCOBJS=lib/string.o lib/arch/x86_64/libc.o lib/arch/x86_64/libcasm.o \
+	lib/arch/x86_64/libadvos.o
 CFLAGS=-g -O3 -fleading-underscore -mcmodel=large -nostdlib -nodefaultlibs -fno-builtin -fno-stack-protector -fno-pie -mno-avx -I./include
 
 initrd: $(LIBCOBJS) lib/crt0.o
