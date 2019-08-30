@@ -66,6 +66,35 @@
 #define KBD_CTRL_STAT_SELFTEST_OK   0x55
 #define KBD_CTRL_STAT_SELFTEST_NG   0xfc
 
+/* Special scan codes */
+#define KBD_KEY_CTRL_LEFT       0x1d
+#define KBD_KEY_SHIFT_LEFT      0x2a
+#define KBD_KEY_SHIFT_RIGHT     0x36
+#define KBD_KEY_CAPS_LOCK       0x3a
+#define KBD_KEY_CTRL_RIGHT      0x5a
+#define KBD_KEY_UP              0x48
+#define KBD_KEY_LEFT            0x4b
+#define KBD_KEY_RIGHT           0x4d
+#define KBD_KEY_DOWN            0x50
+#define KBD_KEY_F1              0x3b
+#define KBD_KEY_F2              0x3c
+#define KBD_KEY_F3              0x3d
+#define KBD_KEY_F4              0x3e
+#define KBD_KEY_F5              0x3f
+#define KBD_KEY_F6              0x40
+#define KBD_KEY_F7              0x41
+#define KBD_KEY_F8              0x42
+#define KBD_KEY_F9              0x43
+#define KBD_KEY_F10             0x44
+#define KBD_KEY_F11             0x57
+#define KBD_KEY_F12             0x58
+
+/* Ascii code for special scan codes */
+#define KBD_ASCII_UP            0x86
+#define KBD_ASCII_LEFT          0x83
+#define KBD_ASCII_RIGHT         0x84
+#define KBD_ASCII_DOWN          0x85
+
 /* Default keymap */
 static unsigned char keymap_base[] =
     "  1234567890-=\x08\t"      /* 0x00-0x0f */
@@ -162,6 +191,80 @@ _wait_until_outbuf_full(void)
 }
 
 /*
+ * Parse the scan code and convert it to an ascii code
+ */
+static int
+_parse_scan_code(kbd_t *kbd, int scan_code)
+{
+    int ascii;
+
+    ascii = -1;
+    if ( scan_code & 0x80 ) {
+        /* Release */
+        switch ( scan_code & 0x7f ) {
+        case KBD_KEY_CTRL_LEFT:
+            kbd->state.lctrl = 0;
+            break;
+        case KBD_KEY_CTRL_RIGHT:
+            kbd->state.rctrl = 0;
+            break;
+        case KBD_KEY_SHIFT_LEFT:
+            kbd->state.lshift = 0;
+            break;
+        case KBD_KEY_SHIFT_RIGHT:
+            kbd->state.rshift = 0;
+            break;
+        case KBD_KEY_CAPS_LOCK:
+            kbd->state.capslock = 0;
+            break;
+        default:
+            ;
+        }
+    } else {
+        /* Pressed */
+        switch ( scan_code ) {
+        case KBD_KEY_CTRL_LEFT:
+            kbd->state.lctrl = 1;
+            break;
+        case KBD_KEY_CTRL_RIGHT:
+            kbd->state.rctrl = 1;
+            break;
+        case KBD_KEY_SHIFT_LEFT:
+            kbd->state.lshift = 1;
+            break;
+        case KBD_KEY_SHIFT_RIGHT:
+            kbd->state.rshift = 1;
+            break;
+        case KBD_KEY_CAPS_LOCK:
+            kbd->state.capslock = 1;
+            break;
+        case KBD_KEY_UP:
+            ascii = KBD_ASCII_UP;
+            break;
+        case KBD_KEY_LEFT:
+            ascii = KBD_ASCII_LEFT;
+            break;
+        case KBD_KEY_RIGHT:
+            ascii = KBD_ASCII_RIGHT;
+            break;
+        case KBD_KEY_DOWN:
+            ascii = KBD_ASCII_DOWN;
+            break;
+        default:
+            if ( (kbd->state.lshift || kbd->state.rshift) ) {
+                /* w/ shift */
+                ascii = keymap_shift[scan_code];
+            } else {
+                /* w/o shift */
+                ascii = keymap_base[scan_code];
+            }
+        }
+    }
+
+    return ascii;
+}
+
+/*
  * Initialize the keyboard
  */
 int
@@ -245,6 +348,61 @@ kbd_selftest(void)
     }
 
     return KBD_ERROR;
+}
+
+/*
+ * Get a character from the keyboard
+ */
+int
+kbd_getchar(kbd_t *kbd)
+{
+    int ret;
+    int ascii;
+    unsigned char scan_code;
+
+    /* Read the status of the keyboard */
+    ret = driver_in8(KBD_CTRL_STAT);
+    if ( !(ret & 1) ) {
+        /* Not ready */
+        return -1;
+    }
+
+    /* Read a scan code from the buffer of the keyboard controller */
+    scan_code = _enc_read_buf();
+    /* Convert the scan code to an ascii code */
+    ascii = _parse_scan_code(kbd, scan_code);
+
+    if ( ascii >= 0 ) {
+        /* Valid ascii code, then enqueue it to the buffer of the
+           character device. */
+        if ( kbd->state.lctrl || kbd->state.rctrl ) {
+            switch ( ascii ) {
+            case 'h':
+            case 'H':
+                /* Backspace */
+                ascii = '\x8';
+                break;
+            case 'b':
+            case 'B':
+                /* Backword */
+                ascii = KBD_ASCII_LEFT;
+                break;
+            case 'f':
+            case 'F':
+                /* Forward */
+                ascii = KBD_ASCII_RIGHT;
+                break;
+            default:
+                ;
+            }
+        }
+
+        if ( '\r' == ascii ) {
+            ascii = '\n';
+        }
+    }
+
+    return ascii;
 }
 
 /*

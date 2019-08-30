@@ -94,6 +94,17 @@ console_init(console_t *con, const char *ttyname)
 int
 console_proc(console_t *con, tty_t *tty)
 {
+    int c;
+
+    /* Read characters from the keyboard */
+    while ( (c = kbd_getchar(&con->kbd)) >= 0 ) {
+        tty_line_buffer_putc(tty, c);
+
+        if ( tty->term.c_lflag & ECHO ) {
+            /* Echo is enabled. */
+        }
+    }
+
     return 0;
 }
 

@@ -103,6 +103,7 @@ typedef struct {
 /* in kbd.c */
 int kbd_init(kbd_t *);
 int kbd_set_led(kbd_t *);
+int kbd_getchar(kbd_t *);
 
 /* in console.c */
 int console_init(console_t *, const char *);
