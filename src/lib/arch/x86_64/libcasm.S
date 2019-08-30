@@ -26,6 +26,7 @@
 	.globl	_syscall
 	.globl	_memcpy
 	.globl	_memmove
+	.globl	_memset
 
 /* int syscall(arg0, ..., arg5) */
 _syscall:
@@ -61,4 +62,15 @@ _memmove:
 	addq	%rcx,%rsi
 	rep	movsb		/* Copy byte at (%rsi) to (%rdi), backwards */
 	cld			/* Reset DF flag */
+	ret
+
+/* void * memset(void *b, int c, size_t len) */
+_kmemset:
+	pushq	%rdi
+	movl	%esi,%eax	/* c */
+	movq	%rdx,%rcx	/* len */
+	cld			/* Ensure the DF cleared */
+	rep	stosb		/* Set %al to (%rdi)-(%rdi+%rcx) */
+	popq	%rdi
+	movq	%rdi,%rax	/* Restore for the return value */
 	ret

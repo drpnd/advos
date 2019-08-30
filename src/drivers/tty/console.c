@@ -133,6 +133,58 @@ _update_line_buffer(console_t *con, tty_t *tty)
 }
 
 /*
+ * Put a character to the console
+ */
+static void
+_putc(console_t *con, int c)
+{
+    off_t line;
+    off_t col;
+    size_t n;
+
+    if ( '\n' == c ) {
+        /* New line */
+        line = con->screen.eob / con->screen.width;
+        col = con->screen.eob % con->screen.width;
+        /* # of characters to put */
+        n = con->screen.width - col;
+        if ( line + 1 == (off_t)con->screen.height ) {
+            /* Need to scroll the buffer */
+            memmove(con->video.vram, con->video.vram + con->screen.width,
+                    con->screen.width * (con->screen.height - 1) * 2);
+            /* Clear the last line */
+            memset(con->video.vram + con->screen.width
+                   * (con->screen.height - 1), 0x00, con->screen.width * 2);
+            con->screen.eob -= col;
+        } else {
+            con->screen.eob += n;
+        }
+        con->screen.lmark = con->screen.eob;
+        _update_cursor(con->screen.eob);
+        return;
+    } else if ( '\x8' == c ) {
+        /* Backspace */
+        if ( con->screen.eob > 0 ) {
+            con->screen.eob--;
+            con->video.vram[con->screen.eob] = 0x0f20;
+            _update_cursor(con->screen.eob);
+        }
+        con->screen.lmark = con->screen.eob;
+        return;
+    }
+
+    if ( 't' == c ) {
+        /* Convert a tab to a white space */
+        c = ' ';
+    }
+
+    con->video.vram[con->screen.eob] = 0x0f | c;
+    con->screen.eob++;
+    con->screen.lmark = con->screen.eob;
+    _update_cursor(con->screen.eob);
+}
+
+/*
  * Process console I/O
  */
 int
@@ -147,6 +199,9 @@ console_proc(console_t *con, tty_t *tty)
         if ( tty->term.c_lflag & ECHO ) {
             /* Echo is enabled, then update the line buffer. */
             _update_line_buffer(con, tty);
+        }
+        if ( '\n' == c ) {
+
         }
     }
 
