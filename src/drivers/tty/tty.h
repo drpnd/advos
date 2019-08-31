@@ -118,6 +118,8 @@ typedef struct {
     video_t video;
     /* Screen */
     screen_t screen;
+    /* Console device */
+    int dev;
 } console_t;
 
 /* in kbd.c */

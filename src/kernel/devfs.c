@@ -219,7 +219,7 @@ devfs_register(const char *name, int type, proc_t *proc)
     e->proc = proc;
     devfs.entries[i] = e;
 
-    return 0;
+    return i;
 }
 
 /*

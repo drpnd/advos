@@ -61,6 +61,7 @@ console_init(console_t *con, const char *ttyname)
 {
     sysdriver_mmio_t mmio;
     int ret;
+    int i;
 
     /* Initialzie the keyboard */
     ret = kbd_init(&con->kbd);
@@ -85,12 +86,18 @@ console_init(console_t *con, const char *ttyname)
     con->screen.cur = 0;
     con->screen.lmark = 0;
 
+    /* Reset the video */
+    for ( i = 0; i < 80 * 25; i++ ) {
+        con->video.vram[i] = 0x0f20;
+    }
+
     /* Register */
-    ret = driver_register_device("console", DRIVER_DEVICE_CHAR);
+    ret = driver_register_device(ttyname, DRIVER_DEVICE_CHAR);
     if ( ret < 0 ) {
         /* Failed to register the device */
         return -1;
     }
+    con->dev = ret;
 
     return 0;
 }
@@ -191,6 +198,7 @@ int
 console_proc(console_t *con, tty_t *tty)
 {
     int c;
+    ssize_t i;
 
     /* Read characters from the keyboard */
     while ( (c = kbd_getchar(&con->kbd)) >= 0 ) {
@@ -201,9 +209,17 @@ console_proc(console_t *con, tty_t *tty)
             _update_line_buffer(con, tty);
         }
         if ( '\n' == c ) {
+            _putc(con, c);
 
+            /* Put the line into the input buffer */
+            for ( i = 0; i < (ssize_t)tty->lnbuf.len; i++ ) {
+                /* ToDo */
+            }
+            tty->lnbuf.len = 0;
         }
     }
+
+    /* Write characters to the video while reading from the character device */
 
     return 0;
 }
