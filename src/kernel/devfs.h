@@ -34,6 +34,7 @@
 
 int devfs_init(void);
 int devfs_register(const char *, int, proc_t *);
+int devfs_unregister(int , proc_t *);
 
 #endif
 

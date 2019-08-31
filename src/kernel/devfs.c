@@ -223,6 +223,29 @@ devfs_register(const char *name, int type, proc_t *proc)
 }
 
 /*
+ * Remove an entry
+ */
+int
+devfs_unregister(int index, proc_t *proc)
+{
+    struct devfs_entry *e;
+
+    e = devfs.entries[index];
+    if ( NULL == e ) {
+        return -1;
+    }
+    if ( proc != e->proc ) {
+        return -1;
+    }
+
+    kmem_slab_free(SLAB_DEVFS_ENTRY, e);
+    devfs.entries[index] = NULL;
+
+    return 0;
+}
+
+
+/*
  * Message handler
  */
 int
