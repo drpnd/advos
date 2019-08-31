@@ -65,7 +65,7 @@ _memmove:
 	ret
 
 /* void * memset(void *b, int c, size_t len) */
-_kmemset:
+_memset:
 	pushq	%rdi
 	movl	%esi,%eax	/* c */
 	movq	%rdx,%rcx	/* len */
