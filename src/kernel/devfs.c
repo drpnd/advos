@@ -71,8 +71,6 @@ struct devfs_entry {
     struct devfs_device device;
     /* Owner process (driver) */
     proc_t *proc;
-    /* Pointer to the next entry */
-    struct devfs_entry *next;
 };
 
 /*
@@ -80,6 +78,7 @@ struct devfs_entry {
  */
 struct devfs {
     struct devfs_entry *head;
+    struct devfs_entry *entries[DEVFS_MAXDEVS];
     size_t nr;
 };
 
@@ -162,8 +161,11 @@ int
 devfs_init(void)
 {
     int ret;
+    int i;
 
-    devfs.head = NULL;
+    for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
+        devfs.entries[i] = NULL;
+    }
     devfs.nr = 0;
 
     /* Ensure the filesystem-specific data structure is smaller than
@@ -188,9 +190,21 @@ int
 devfs_register(const char *name, int type, proc_t *proc)
 {
     struct devfs_entry *e;
+    int i;
 
     /* Check the device type */
     if ( DEVFS_CHAR != type && DEVFS_BLOCK != type ) {
+        return -1;
+    }
+
+    for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
+        if ( NULL == devfs.entries[i] ) {
+            /* Available */
+            break;
+        }
+    }
+    if ( i >= DEVFS_MAXDEVS ) {
+        /* No available entry */
         return -1;
     }
 
@@ -203,8 +217,7 @@ devfs_register(const char *name, int type, proc_t *proc)
     e->device.type = type;
     e->flags = 0;
     e->proc = proc;
-    e->next = devfs.head;
-    devfs.head = e;
+    devfs.entries[i] = e;
 
     return 0;
 }
@@ -213,19 +226,12 @@ devfs_register(const char *name, int type, proc_t *proc)
  * Message handler
  */
 int
-devfs_recv_msg(const char *name, proc_t *proc, msg_t *msg)
+devfs_recv_msg(int index, proc_t *proc, msg_t *msg)
 {
     struct devfs_entry *e;
 
     /* Search the devfs_entry corresponding to the name */
-    e = devfs.head;
-    while ( NULL != e ) {
-        if ( 0 == kstrcmp(e->name, name) ) {
-            /* Found */
-            break;
-        }
-        e = e->next;
-    }
+    e = devfs.entries[index];
     if ( NULL == e ) {
         /* Not found */
         return -1;
