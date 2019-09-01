@@ -79,7 +79,6 @@ struct devfs_entry {
 struct devfs {
     struct devfs_entry *head;
     struct devfs_entry *entries[DEVFS_MAXDEVS];
-    size_t nr;
 };
 
 struct devfs devfs;
@@ -166,7 +165,6 @@ devfs_init(void)
     for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
         devfs.entries[i] = NULL;
     }
-    devfs.nr = 0;
 
     /* Ensure the filesystem-specific data structure is smaller than
        fildes_storage_t */
