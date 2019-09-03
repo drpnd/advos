@@ -228,6 +228,11 @@ devfs_unregister(int index, proc_t *proc)
 {
     struct devfs_entry *e;
 
+    /* Range check */
+    if ( index >= DEVFS_MAXDEVS ) {
+        return -1;
+    }
+
     e = devfs.entries[index];
     if ( NULL == e ) {
         return -1;
@@ -250,6 +255,11 @@ int
 devfs_recv_msg(int index, proc_t *proc, msg_t *msg)
 {
     struct devfs_entry *e;
+
+    /* Range check */
+    if ( index >= DEVFS_MAXDEVS ) {
+        return -1;
+    }
 
     /* Search the devfs_entry corresponding to the name */
     e = devfs.entries[index];
@@ -291,7 +301,7 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
     if ( NULL == t ) {
         return -1;
     }
-
+    
     spec = (struct devfs_fildes *)&fildes->fsdata;
     switch ( spec->entry->device.type ) {
     case DRIVER_DEVICE_CHAR:
