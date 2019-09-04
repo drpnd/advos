@@ -301,7 +301,7 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
     if ( NULL == t ) {
         return -1;
     }
-    
+
     spec = (struct devfs_fildes *)&fildes->fsdata;
     switch ( spec->entry->device.type ) {
     case DRIVER_DEVICE_CHAR:
@@ -321,6 +321,7 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
             fildes->head = tle;
 
             /* Switch to another task */
+            task_switch();
 
             /* Will resume from this point */
         }
