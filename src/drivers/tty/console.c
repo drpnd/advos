@@ -211,15 +211,19 @@ console_proc(console_t *con, tty_t *tty)
         if ( '\n' == c ) {
             _putc(con, c);
 
-            /* Put the line into the input buffer */
+            /* Put the line into the input buffer of the console device */
             for ( i = 0; i < (ssize_t)tty->lnbuf.len; i++ ) {
-                /* ToDo */
+                driver_putc(con->dev, tty->lnbuf.buf[i]);
             }
+            driver_putc(con->dev, '\n');
             tty->lnbuf.len = 0;
         }
     }
 
     /* Write characters to the video while reading from the character device */
+    while ( (c = driver_getc(con->dev)) >= 0 ) {
+        _putc(con, c);
+    }
 
     return 0;
 }

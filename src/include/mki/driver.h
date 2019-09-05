@@ -63,11 +63,19 @@ typedef struct {
 typedef enum {
     SYSDRIVER_MSG_PUTC,
     SYSDRIVER_MSG_GETC,
+    SYSDRIVER_MSG_READ,
+    SYSDRIVER_MSG_WRITE,
 } sysdriver_msg_type_t;
 typedef struct {
+    char *buf;
+    size_t nbytes;
+} sysdriver_msg_buf_t;
+typedef struct {
     sysdriver_msg_type_t type;
+    int dev;
     union {
         char c;
+        sysdriver_msg_buf_t buf;
     } u;
 } sysdriver_msg_t;
 
@@ -116,76 +124,6 @@ typedef struct {
     driver_device_type_t type;
 } sysdriver_devfs_t;
 
-/*
- * Put one character to the input buffer
- */
-static __inline__ int
-driver_chr_ibuf_putc(driver_device_t *dev, int c)
-{
-    off_t cur;
-    off_t next;
-
-    __sync_synchronize();
-
-    cur = dev->dev.chr.ibuf.tail;
-    next = cur + 1 < SYSDRIVER_DEV_BUFSIZE ? cur + 1 : 0;
-
-    if  ( dev->dev.chr.ibuf.head == next ) {
-        /* Buffer is full */
-        return -1;
-    }
-
-    dev->dev.chr.ibuf.buf[cur] = c;
-    dev->dev.chr.ibuf.tail = next;
-
-    __sync_synchronize();
-
-    return c;
-}
-
-/*
- * Get one character from the input buffer
- */
-static __inline__ int
-driver_chr_ibuf_getc(driver_device_t *dev)
-{
-    int c;
-    off_t cur;
-    off_t next;
-
-    __sync_synchronize();
-
-    if  ( dev->dev.chr.ibuf.head == dev->dev.chr.ibuf.tail ) {
-        /* Buffer is empty */
-        return -1;
-    }
-    cur = dev->dev.chr.ibuf.head;
-    next = cur + 1 < SYSDRIVER_DEV_BUFSIZE ? cur + 1 : 0;
-
-    c = dev->dev.chr.ibuf.buf[cur];
-    dev->dev.chr.ibuf.head = next;
-
-    __sync_synchronize();
-
-    return c;
-}
-
-/*
- * Get the queued length for the input buffer of a character device
- */
-static __inline__ int
-driver_chr_ibuf_length(driver_device_t *dev)
-{
-    __sync_synchronize();
-
-    if ( dev->dev.chr.ibuf.tail >= dev->dev.chr.ibuf.head ) {
-        return dev->dev.chr.ibuf.tail - dev->dev.chr.ibuf.head;
-    } else {
-        return SYSDRIVER_DEV_BUFSIZE + dev->dev.chr.ibuf.tail
-            - dev->dev.chr.ibuf.head;
-    }
-}
-
 /* Defined in the user library */
 int driver_mmap(sysdriver_mmio_t *);
 int driver_in8(int);
@@ -195,7 +133,9 @@ void driver_out8(int, int);
 void driver_out16(int, int);
 void driver_out32(int, int);
 
-int driver_msg(sysdriver_msg_t *);
+int driver_putc(int, int);
+int driver_write(int, char *, size_t);
+int driver_getc(int);
 
 int driver_register_device(const char *, driver_device_type_t);
 

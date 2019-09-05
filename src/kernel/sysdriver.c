@@ -159,7 +159,32 @@ _register_device(task_t *t, sysdriver_devfs_t *msg)
 int
 _msg(task_t *t, sysdriver_msg_t *msg)
 {
-    return -1;
+    proc_t *proc;
+    int ret;
+    ssize_t i;
+
+    /* Get the process */
+    proc = t->proc;
+    if ( NULL == proc ) {
+        return -1;
+    }
+
+    switch ( msg->type ) {
+    case SYSDRIVER_MSG_PUTC:
+        ret = devfs_driver_putc(msg->dev, proc, msg->u.c);
+        break;
+    case SYSDRIVER_MSG_WRITE:
+        ret = devfs_driver_write(msg->dev, proc, msg->u.buf.buf,
+                                 msg->u.buf.nbytes);
+        break;
+    case SYSDRIVER_MSG_GETC:
+        ret = devfs_driver_getc(msg->dev, proc);
+        break;
+    default:
+        ret = -1;
+    }
+
+    return ret;
 }
 
 /*

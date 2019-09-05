@@ -153,6 +153,62 @@ _chr_ibuf_length(struct devfs_device *dev)
     }
 }
 
+
+/*
+ * Put one character to the output buffer
+ */
+static __inline__ int
+_chr_obuf_putc(struct devfs_device *dev, int c)
+{
+    off_t cur;
+    off_t next;
+
+    __sync_synchronize();
+
+    cur = dev->dev.chr.obuf.tail;
+    next = cur + 1 < SYSDRIVER_DEV_BUFSIZE ? cur + 1 : 0;
+
+    if  ( dev->dev.chr.obuf.head == next ) {
+        /* Buffer is full */
+        return -1;
+    }
+
+    dev->dev.chr.obuf.buf[cur] = c;
+    dev->dev.chr.obuf.tail = next;
+
+    __sync_synchronize();
+
+    return c;
+}
+
+/*
+ * Get one character from the output buffer
+ */
+static __inline__ int
+_chr_obuf_getc(struct devfs_device *dev)
+{
+    int c;
+    off_t cur;
+    off_t next;
+
+    __sync_synchronize();
+
+    if  ( dev->dev.chr.obuf.head == dev->dev.chr.obuf.tail ) {
+        /* Buffer is empty */
+        return -1;
+    }
+    cur = dev->dev.chr.obuf.head;
+    next = cur + 1 < SYSDRIVER_DEV_BUFSIZE ? cur + 1 : 0;
+
+    c = dev->dev.chr.obuf.buf[cur];
+    dev->dev.chr.obuf.head = next;
+
+    __sync_synchronize();
+
+    return c;
+}
+
+
 /*
  * Initialize devfs
  */
@@ -247,6 +303,109 @@ devfs_unregister(int index, proc_t *proc)
     return 0;
 }
 
+/*
+ * putc
+ */
+int
+devfs_driver_putc(int index, proc_t *proc, char c)
+{
+    struct devfs_entry *e;
+    int ret;
+
+    /* Range check */
+    if ( index >= DEVFS_MAXDEVS ) {
+        return -1;
+    }
+
+    /* Search the devfs_entry corresponding to the name */
+    e = devfs.entries[index];
+    if ( NULL == e ) {
+        /* Not found */
+        return -1;
+    }
+
+    /* Check the process */
+    if ( proc != e->proc ) {
+        /* Message from a non-owner process */
+        return -1;
+    }
+
+    ret = _chr_ibuf_putc(&e->device, c);
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
+ * write
+ */
+ssize_t
+devfs_driver_write(int index, proc_t *proc, char *buf, size_t n)
+{
+    struct devfs_entry *e;
+    int ret;
+    ssize_t i;
+
+    /* Range check */
+    if ( index >= DEVFS_MAXDEVS ) {
+        return -1;
+    }
+
+    /* Search the devfs_entry corresponding to the name */
+    e = devfs.entries[index];
+    if ( NULL == e ) {
+        /* Not found */
+        return -1;
+    }
+
+    /* Check the process */
+    if ( proc != e->proc ) {
+        /* Message from a non-owner process */
+        return -1;
+    }
+
+    for ( i = 0; i < (ssize_t)n; i++ ) {
+        ret = _chr_ibuf_putc(&e->device, buf[i]);
+        if ( ret < 0 ) {
+            return i;
+        }
+    }
+
+    return i;
+}
+
+/*
+ * getc
+ */
+int
+devfs_driver_getc(int index, proc_t *proc)
+{
+    struct devfs_entry *e;
+    int ret;
+
+    /* Range check */
+    if ( index >= DEVFS_MAXDEVS ) {
+        return -1;
+    }
+
+    /* Search the devfs_entry corresponding to the name */
+    e = devfs.entries[index];
+    if ( NULL == e ) {
+        /* Not found */
+        return -1;
+    }
+
+    /* Check the process */
+    if ( proc != e->proc ) {
+        /* Message from a non-owner process */
+        return -1;
+    }
+
+    ret = _chr_obuf_getc(&e->device);
+    return ret;
+}
 
 /*
  * Message handler

@@ -121,6 +121,57 @@ driver_register_device(const char *name, driver_device_type_t type)
 }
 
 /*
+ * Put a character to devfs
+ */
+int
+driver_putc(int dev, int c)
+{
+    sysdriver_msg_t msg;
+    int ret;
+
+    msg.type = SYSDRIVER_MSG_PUTC;
+    msg.dev = dev;
+    msg.u.c = c;
+    ret = syscall(SYS_driver, SYSDRIVER_MSG, &msg);
+
+    return ret;
+}
+
+/*
+ * Write buffer to devfs
+ */
+int
+driver_write(int dev, char *buf, size_t nr)
+{
+    sysdriver_msg_t msg;
+    int ret;
+
+    msg.type = SYSDRIVER_MSG_WRITE;
+    msg.dev = dev;
+    msg.u.buf.buf = buf;
+    msg.u.buf.nbytes = nr;
+    ret = syscall(SYS_driver, SYSDRIVER_MSG, &msg);
+
+    return ret;
+}
+
+/*
+ * Get a character from devfs
+ */
+int
+driver_getc(int dev)
+{
+    sysdriver_msg_t msg;
+    int ret;
+
+    msg.type = SYSDRIVER_MSG_GETC;
+    msg.dev = dev;
+    ret = syscall(SYS_driver, SYSDRIVER_MSG, &msg);
+
+    return ret;
+}
+
+/*
  * Local variables:
  * tab-width: 4
  * c-basic-offset: 4

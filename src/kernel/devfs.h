@@ -35,6 +35,9 @@
 int devfs_init(void);
 int devfs_register(const char *, int, proc_t *);
 int devfs_unregister(int , proc_t *);
+int devfs_driver_putc(int, proc_t *, char);
+ssize_t devfs_driver_write(int, proc_t *, char *, size_t);
+int devfs_driver_getc(int, proc_t *);
 
 #endif
 
