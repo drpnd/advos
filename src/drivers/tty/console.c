@@ -180,7 +180,7 @@ _putc(console_t *con, int c)
         return;
     }
 
-    if ( 't' == c ) {
+    if ( '\t' == c ) {
         /* Convert a tab to a white space */
         c = ' ';
     }
