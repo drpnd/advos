@@ -79,7 +79,7 @@ int kmemmove(void *, void *, size_t);
 int kvar_init(void *, size_t, size_t);
 int kernel_init(void);
 int kprintf(const char *, ...);
-size_t strlen(const char *);
+size_t kstrlen(const char *);
 int kstrcmp(const char *, const char *);
 int kstrncmp(const char *, const char *, size_t);
 char * kstrcpy(char *, const char *);
