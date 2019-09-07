@@ -208,6 +208,30 @@ _chr_obuf_getc(struct devfs_device *dev)
     return c;
 }
 
+/*
+ * Get the queued length for the output buffer of a character device
+ */
+static __inline__ int
+_chr_obuf_length(struct devfs_device *dev)
+{
+    __sync_synchronize();
+
+    if ( dev->dev.chr.obuf.tail >= dev->dev.chr.obuf.head ) {
+        return dev->dev.chr.obuf.tail - dev->dev.chr.obuf.head;
+    } else {
+        return SYSDRIVER_DEV_BUFSIZE + dev->dev.chr.obuf.tail
+            - dev->dev.chr.obuf.head;
+    }
+}
+static __inline__ int
+_chr_obuf_available(struct devfs_device *dev)
+{
+    if ( _chr_obuf_length(dev) >= SYSDRIVER_DEV_BUFSIZE - 1 ) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
 
 /*
  * Initialize devfs
@@ -463,7 +487,7 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
 
     spec = (struct devfs_fildes *)&fildes->fsdata;
     switch ( spec->entry->device.type ) {
-    case DRIVER_DEVICE_CHAR:
+    case DEVFS_CHAR:
         /* Character device */
         while ( 0 == _chr_ibuf_length(&spec->entry->device) ) {
             /* Empty buffer, then add this task to the blocking task list for
@@ -496,7 +520,7 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
         }
 
         return len;
-    case DRIVER_DEVICE_BLOCK:
+    case DEVFS_BLOCK:
         /* Block device */
         break;
     default:
@@ -512,6 +536,45 @@ devfs_read(fildes_t *fildes, void *buf, size_t nbyte)
 ssize_t
 devfs_write(fildes_t *fildes, const void *buf, size_t nbyte)
 {
+    struct devfs_fildes *spec;
+    task_t *t;
+    task_t *tmp;
+    ssize_t len;
+    int c;
+
+    /* Get the currently running task */
+    t = this_task();
+    if ( NULL == t ) {
+        return -1;
+    }
+
+    spec = (struct devfs_fildes *)&fildes->fsdata;
+    switch ( spec->entry->device.type ) {
+    case DEVFS_CHAR:
+        /* Character device */
+        if ( !_chr_obuf_available(&spec->entry->device) ) {
+            /* Buffer is full.  FIXME: Implement blocking here */
+            return 0;
+        }
+        len = 0;
+        while ( len < (ssize_t)nbyte ) {
+            c = *(const char *)(buf + len);
+            if ( _chr_obuf_putc(&spec->entry->device, c) < 0 ) {
+                /* Buffer becomes full, then exit from the loop. */
+                break;
+            }
+            len++;
+        }
+        /* Wake up the driver process */
+        tmp = spec->entry->proc->task;
+        tmp->state = TASK_READY;
+        return len;
+    case DEVFS_BLOCK:
+        break;
+    default:
+        return -1;
+    }
+
     return -1;
 }
 
