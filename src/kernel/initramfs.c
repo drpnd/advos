@@ -51,6 +51,7 @@ struct initramfs {
     void *base;
 };
 
+#define INITRAMFS_TYPE          "initramfs"
 #define INITRAMFS_BASE          0xc0030000
 
 /*

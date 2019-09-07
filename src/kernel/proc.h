@@ -50,6 +50,7 @@ typedef enum {
 
 typedef struct _task task_t;
 typedef struct _proc proc_t;
+typedef struct _fildes fildes_t;
 
 /*
  * Task
@@ -102,7 +103,7 @@ typedef struct {
 /*
  * File descriptor
  */
-typedef struct {
+struct _fildes {
     /* Blocking tasks */
     task_list_t *head;
 
@@ -111,7 +112,7 @@ typedef struct {
 
     /* Filesystem-specific data structure */
     fildes_storage_t fsdata;
-} fildes_t;
+};
 
 /*
  * Process

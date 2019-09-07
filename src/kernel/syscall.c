@@ -348,6 +348,27 @@ sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
     return 0;
 }
 
+/*
+ * Mount a filesystem
+ *
+ * SYNOPSIS
+ *      The mount() function grafts a filesystem object onto the system file
+ *      tree at the point dir.  The argument data describes the filesystem
+ *      object to be mounted.  The argument type tells the kernel how to
+ *      interpret data.  The contents of the filesystem become available through
+ *      the new mount point dir.  Any files in dir at the time of successful
+ *      mount are swept under the carpet so to speak, and are unavailable until
+ *      the filesystem is unmounted.
+ *
+ * RETURN VALUES
+ *      The mount() returns the value 0 if the mount was successful, otherwise
+ *      -1 is returned.
+ */
+int
+sys_mount(const char *type, const char *dir, int flags, void *data)
+{
+    return -1;
+}
 
 /*
  * Get file status

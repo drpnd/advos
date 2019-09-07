@@ -22,10 +22,12 @@
  */
 
 #include "devfs.h"
+#include "vfs.h"
 #include "proc.h"
 #include "msg.h"
 #include <mki/driver.h>
 
+#define DEVFS_TYPE          "devfs"
 #define SLAB_DEVFS_ENTRY    "devfs_entry"
 #define DEVFS_FIFO_BUFSIZE  8192
 
@@ -262,6 +264,15 @@ devfs_init(void)
 }
 
 /*
+ * Mount devfs
+ */
+int
+devfs_mount(const char *type, const char *dir, int flags, void *data)
+{
+    return -1;
+}
+
+/*
  * Add an entry
  */
 int
@@ -468,6 +479,20 @@ devfs_recv_msg(int index, proc_t *proc, msg_t *msg)
 }
 
 /*
+ * open
+ */
+int
+devfs_open(fildes_t *fildes, const char *path, int oflag, ...)
+{
+    /* This should be already checked in the devfs_init() function. */
+    if ( sizeof(fildes_storage_t) < sizeof(struct devfs_fildes) ) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
  * read
  */
 ssize_t
@@ -577,6 +602,12 @@ devfs_write(fildes_t *fildes, const void *buf, size_t nbyte)
 
     return -1;
 }
+
+vfs_interfaces_t devfsifs = {
+    .open = devfs_open,
+    .close = NULL,
+    .fstat = NULL,
+};
 
 /*
  * Local variables:

@@ -39,6 +39,9 @@ int devfs_driver_putc(int, proc_t *, char);
 ssize_t devfs_driver_write(int, proc_t *, char *, size_t);
 int devfs_driver_getc(int, proc_t *);
 
+ssize_t devfs_read(fildes_t *, void *, size_t);
+ssize_t devfs_write(fildes_t *, const void *, size_t);
+
 #endif
 
 /*
