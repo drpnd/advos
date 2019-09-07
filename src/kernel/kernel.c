@@ -180,6 +180,23 @@ kprintf(const char *format, ...)
 }
 
 /*
+ * kstrlen
+ */
+size_t
+kstrlen(const char *s)
+{
+    size_t n;
+
+    n = 0;
+    while ( '\0' != *s ) {
+        n++;
+        s++;
+    }
+
+    return n;
+}
+
+/*
  * kstrcmp
  */
 int
