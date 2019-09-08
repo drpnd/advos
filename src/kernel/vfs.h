@@ -28,6 +28,8 @@
 #include "proc.h"
 #include <sys/stat.h>
 
+#define VFS_MAXTYPE     64
+
 /*
  * Virtual filesystem interfaces
  */
@@ -45,8 +47,9 @@ typedef struct {
  */
 typedef struct {
     void *spec;
+    char type[VFS_MAXTYPE];
     vfs_interfaces_t *vfs;
-} vfs_t;
+} vfs_entry_t;
 
 #endif
 

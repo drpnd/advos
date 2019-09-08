@@ -21,7 +21,26 @@
  * SOFTWARE.
  */
 
+#include "kernel.h"
 #include "vfs.h"
+
+#define SLAB_VFS_ENTRY      "vfs_entry"
+
+/*
+ * Initialize the vfs
+ */
+int
+vfs_init(void)
+{
+    int ret;
+
+    ret = kmem_slab_create_cache(SLAB_VFS_ENTRY, sizeof(vfs_entry_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    return 0;
+}
 
 /*
  * Get directory
@@ -42,6 +61,27 @@ vfs_open(const char *path)
     }
 
     return NULL;
+}
+
+/*
+ * Register filesystem
+ */
+int
+vfs_register(const char *type, vfs_interfaces_t *ifs)
+{
+    vfs_entry_t *e;
+
+    if ( kstrlen(type) >= VFS_MAXTYPE ) {
+        return -1;
+    }
+
+    /* Allocate a vfs entry */
+    e = kmem_slab_alloc(SLAB_VFS_ENTRY);
+    if ( NULL == e ) {
+        return -1;
+    }
+
+    return -1;
 }
 
 /*
