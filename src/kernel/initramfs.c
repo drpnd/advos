@@ -73,7 +73,7 @@ initramfs_init(void)
  * Mount initramfs
  */
 int
-initramfs_mount(const char *mp)
+initramfs_mount(const char *type, const char *mp, int flags, void *data)
 {
     struct initramfs *fs;
 

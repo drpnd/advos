@@ -140,7 +140,7 @@ kernel_init(void)
     }
 
     /* Mount */
-    ret = initramfs_mount("/");
+    ret = initramfs_mount("initramfs", "/", 0, NULL);
     if ( ret < 0 ) {
         return -1;
     }
