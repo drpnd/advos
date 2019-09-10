@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 
 #define VFS_MAXTYPE     64
+#define VFS_MAXFS       32
 
 /*
  * Virtual filesystem interfaces
@@ -40,16 +41,29 @@ typedef struct {
     ssize_t (*read)(fildes_t *, void *, size_t);
     ssize_t (*write)(fildes_t *, const void *, size_t);
     ssize_t (*readfile)(const char *, char *, size_t, off_t);
+    int (*mount)(void *, const char *, int, void *);
 } vfs_interfaces_t;
+
+/*
+ * Virtual filesystem entry
+ */
+typedef struct {
+    void *spec;
+    char type[VFS_MAXTYPE];
+    vfs_interfaces_t ifs;
+} vfs_entry_t;
 
 /*
  * Virtual filesystem
  */
 typedef struct {
-    void *spec;
-    char type[VFS_MAXTYPE];
-    vfs_interfaces_t *vfs;
-} vfs_entry_t;
+    vfs_entry_t *entries[VFS_MAXFS];
+} vfs_t;
+
+/* Prototype declarations */
+int vfs_init(void);
+int vfs_register(const char *, vfs_interfaces_t *, void *);
+int vfs_mount(const char *, const char *, int, void *);
 
 #endif
 

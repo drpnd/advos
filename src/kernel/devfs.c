@@ -85,6 +85,9 @@ struct devfs {
 
 struct devfs devfs;
 
+/* Prototype declaration */
+int devfs_mount(void *, const char *, int, void *);
+
 /*
  * Put one character to the input buffer
  */
@@ -243,6 +246,7 @@ devfs_init(void)
 {
     int ret;
     int i;
+    vfs_interfaces_t ifs;
 
     for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
         devfs.entries[i] = NULL;
@@ -260,6 +264,14 @@ devfs_init(void)
         return -1;
     }
 
+    /* Register devfs to the virtual filesystem management */
+    kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
+    ifs.mount = devfs_mount;
+    ret = vfs_register("devfs", &ifs, NULL);
+    if ( ret < 0 ) {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -267,7 +279,7 @@ devfs_init(void)
  * Mount devfs
  */
 int
-devfs_mount(const char *type, const char *dir, int flags, void *data)
+devfs_mount(void *spec, const char *dir, int flags, void *data)
 {
     return -1;
 }

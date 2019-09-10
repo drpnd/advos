@@ -54,15 +54,28 @@ struct initramfs {
 #define INITRAMFS_TYPE          "initramfs"
 #define INITRAMFS_BASE          0xc0030000
 
+int initramfs_mount(void *, const char *, int , void *);
+
 /*
  * Initialize initramfs
  */
 int
 initramfs_init(void)
 {
+    int ret;
+    vfs_interfaces_t ifs;
+
     /* Ensure the filesystem-specific data structure is smaller than
        fildes_storage_t */
     if ( sizeof(fildes_storage_t) < sizeof(struct initramfs_fildes) ) {
+        return -1;
+    }
+
+    /* Register initramfs to the virtual filesystem management */
+    kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
+    ifs.mount = initramfs_mount;
+    ret = vfs_register("initramfs", &ifs, NULL);
+    if ( ret < 0 ) {
         return -1;
     }
 
@@ -73,7 +86,7 @@ initramfs_init(void)
  * Mount initramfs
  */
 int
-initramfs_mount(const char *type, const char *mp, int flags, void *data)
+initramfs_mount(void *spec, const char *mp, int flags, void *data)
 {
     struct initramfs *fs;
 

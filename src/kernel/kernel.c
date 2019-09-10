@@ -25,6 +25,7 @@
 #include "kernel.h"
 #include "kvar.h"
 #include "memory.h"
+#include "vfs.h"
 #include "initramfs.h"
 #include "devfs.h"
 #include <stdint.h>
@@ -133,6 +134,12 @@ kernel_init(void)
         return -1;
     }
 
+    /* Initialize virtual filesystem */
+    ret = vfs_init();
+    if ( ret < 0 ) {
+        return -1;
+    }
+
     /* Initialize initramfs */
     ret = initramfs_init();
     if ( ret < 0 ) {
@@ -140,7 +147,7 @@ kernel_init(void)
     }
 
     /* Mount */
-    ret = initramfs_mount("initramfs", "/", 0, NULL);
+    ret = vfs_mount("initramfs", "/", 0, NULL);
     if ( ret < 0 ) {
         return -1;
     }

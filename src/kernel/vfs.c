@@ -26,13 +26,20 @@
 
 #define SLAB_VFS_ENTRY      "vfs_entry"
 
+vfs_t vfs;
+
 /*
  * Initialize the vfs
  */
 int
 vfs_init(void)
 {
+    int i;
     int ret;
+
+    for ( i = 0; i < VFS_MAXFS; i++ ) {
+        vfs.entries[i] = NULL;
+    }
 
     ret = kmem_slab_create_cache(SLAB_VFS_ENTRY, sizeof(vfs_entry_t));
     if ( ret < 0 ) {
@@ -67,10 +74,22 @@ vfs_open(const char *path)
  * Register filesystem
  */
 int
-vfs_register(const char *type, vfs_interfaces_t *ifs)
+vfs_register(const char *type, vfs_interfaces_t *ifs, void *spec)
 {
+    int pos;
     vfs_entry_t *e;
 
+    /* Find the position to insert */
+    for ( pos = 0; pos < VFS_MAXFS; pos++ ) {
+        if ( NULL == vfs.entries[pos] ) {
+            break;
+        }
+    }
+    if ( pos >= VFS_MAXFS ) {
+        return -1;
+    }
+
+    /* Check the length of the type */
     if ( kstrlen(type) >= VFS_MAXTYPE ) {
         return -1;
     }
@@ -80,8 +99,37 @@ vfs_register(const char *type, vfs_interfaces_t *ifs)
     if ( NULL == e ) {
         return -1;
     }
+    e->spec = spec;
+    kstrcpy(e->type, type);
+    kmemcpy(&e->ifs, ifs, sizeof(vfs_interfaces_t));
 
-    return -1;
+    /* Set the entry */
+    vfs.entries[pos] = e;
+
+    return 0;
+}
+
+/*
+ * vfs_mount
+ */
+int
+vfs_mount(const char *type, const char *dir, int flags, void *data)
+{
+    int i;
+    vfs_entry_t *e;
+
+    e = NULL;
+    for ( i = 0; i < VFS_MAXFS; i++ ) {
+        if ( NULL != vfs.entries[i]
+             && 0 == kstrcmp(vfs.entries[i]->type, type) ) {
+            e = vfs.entries[i];
+        }
+    }
+    if ( NULL == e ) {
+        return -1;
+    }
+
+    return e->ifs.mount(e->spec, dir, flags, data);
 }
 
 /*
