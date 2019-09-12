@@ -110,6 +110,9 @@ struct _fildes {
     /* Reference counter */
     int refs;
 
+    /* Filesystem */
+    void *vfs;
+
     /* Filesystem-specific data structure */
     fildes_storage_t fsdata;
 };

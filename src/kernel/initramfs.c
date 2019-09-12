@@ -115,14 +115,14 @@ initramfs_mount(void *spec, const char *mp, int flags, void *data)
 /*
  * open
  */
-fildes_t *
-initramfs_open(const char *path, int oflag, ...)
+int
+initramfs_open(fildes_t *fildes, const char *path, int oflag, ...)
 {
-    fildes_t *fildes;
     struct initramfs_fildes *spec;
     struct initrd_entry *e;
     int i;
 
+#if 0
     /* Allocate a VFS-specific file descriptor */
     fildes = kmem_slab_alloc(SLAB_FILDES);
     if ( NULL == fildes ) {
@@ -130,6 +130,7 @@ initramfs_open(const char *path, int oflag, ...)
     }
     fildes->head = NULL;
     fildes->refs = 1;
+#endif
 
     /* Search the specified file */
     e = (void *)INITRAMFS_BASE;
@@ -140,7 +141,7 @@ initramfs_open(const char *path, int oflag, ...)
             spec->inode = i;
             spec->offset = e->offset;
             spec->size = e->size;
-            return fildes;
+            return 0;
         }
         e++;
     }
@@ -148,7 +149,7 @@ initramfs_open(const char *path, int oflag, ...)
     /* Not found */
     kmem_slab_free(SLAB_FILDES, fildes);
 
-    return NULL;
+    return -1;
 }
 
 /*

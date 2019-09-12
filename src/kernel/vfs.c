@@ -50,10 +50,10 @@ vfs_init(void)
 }
 
 /*
- * Get directory
+ * open
  */
-char *
-vfs_open(const char *path)
+int
+vfs_open(const char *path, int oflag, ...)
 {
     const char *dir;
 
@@ -67,7 +67,7 @@ vfs_open(const char *path)
         path++;
     }
 
-    return NULL;
+    return -1;
 }
 
 /*
@@ -127,6 +127,17 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     }
     if ( NULL == e ) {
         return -1;
+    }
+
+    if ( NULL == e->ifs.mount ) {
+        return -1;
+    }
+
+    /* Search the mount point */
+    if ( 0 == kstrcmp(dir, "/") ) {
+        /* Rootfs */
+    } else {
+        
     }
 
     return e->ifs.mount(e->spec, dir, flags, data);

@@ -35,7 +35,7 @@
  * Virtual filesystem interfaces
  */
 typedef struct {
-    fildes_t * (*open)(const char *, int, ...);
+    int (*open)(fildes_t *, const char *, int, ...);
     int (*close)(fildes_t *);
     int (*fstat)(fildes_t *, struct stat *);
     ssize_t (*read)(fildes_t *, void *, size_t);
