@@ -51,13 +51,13 @@ typedef struct {
     void *spec;
     char type[VFS_MAXTYPE];
     vfs_interfaces_t ifs;
-} vfs_entry_t;
+} vfs_module_t;
 
 /*
  * Virtual filesystem
  */
 typedef struct {
-    vfs_entry_t *entries[VFS_MAXFS];
+    vfs_module_t *modules[VFS_MAXFS];
 } vfs_t;
 
 /* Prototype declarations */
