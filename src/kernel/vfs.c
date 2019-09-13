@@ -137,7 +137,6 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     if ( 0 == kstrcmp(dir, "/") ) {
         /* Rootfs */
     } else {
-        
     }
 
     return e->ifs.mount(e->spec, dir, flags, data);

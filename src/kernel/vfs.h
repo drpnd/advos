@@ -45,13 +45,20 @@ typedef struct {
 } vfs_interfaces_t;
 
 /*
- * Virtual filesystem entry
+ * Virtual filesystem module
  */
 typedef struct {
     void *spec;
     char type[VFS_MAXTYPE];
     vfs_interfaces_t ifs;
 } vfs_module_t;
+
+/*
+ * Virtual filesystem mount point
+ */
+typedef struct {
+    vfs_module_t *module;
+} vfs_mount_t;
 
 /*
  * Virtual filesystem
