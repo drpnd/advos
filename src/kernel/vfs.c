@@ -110,6 +110,15 @@ vfs_register(const char *type, vfs_interfaces_t *ifs, void *spec)
 }
 
 /*
+ * Search the corresponding inode object
+ */
+static vfs_vnode_t *
+_search_vnode(const char *dir)
+{
+    return NULL;
+}
+
+/*
  * vfs_mount
  */
 int

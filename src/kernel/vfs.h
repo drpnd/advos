@@ -61,6 +61,12 @@ typedef struct {
 } vfs_mount_t;
 
 /*
+ * vnode
+ */
+typedef struct {
+} vfs_vnode_t;
+
+/*
  * Virtual filesystem
  */
 typedef struct {
