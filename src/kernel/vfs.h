@@ -31,6 +31,8 @@
 #define VFS_MAXTYPE     64
 #define VFS_MAXFS       32
 
+typedef struct _vfs_vnode vfs_vnode_t;
+
 /*
  * Virtual filesystem interfaces
  */
@@ -45,7 +47,7 @@ typedef struct {
 } vfs_interfaces_t;
 
 /*
- * Virtual filesystem module
+ * Virtual filesystem module (filesystem-specific information)
  */
 typedef struct {
     void *spec;
@@ -57,14 +59,21 @@ typedef struct {
  * Virtual filesystem mount point
  */
 typedef struct {
+    /* Vnode of the mount point */
+    vfs_vnode_t *vnode;
+    /* Filesystem specific information */
     vfs_module_t *module;
 } vfs_mount_t;
 
 /*
  * vnode
  */
-typedef struct {
-} vfs_vnode_t;
+struct _vfs_vnode {
+    /* Inode information */
+    void *inode;
+    /* Mount data structure if this vnode is a mount point */
+    vfs_mount_t *mount;
+};
 
 /*
  * Virtual filesystem
