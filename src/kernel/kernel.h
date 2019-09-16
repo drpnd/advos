@@ -72,7 +72,7 @@ void out32(uint16_t, uint32_t);
 /* Defined in arch/x86_64/asm.S */
 void * kmemset(void *, int, size_t);
 int kmemcmp(void *, void *, size_t);
-int kmemcpy(void *__restrict, void *__restrict, size_t);
+int kmemcpy(void *__restrict, const void *__restrict, size_t);
 int kmemmove(void *, void *, size_t);
 
 /* Defined in kernel.c */
