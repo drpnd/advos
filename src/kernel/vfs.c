@@ -22,9 +22,13 @@
  */
 
 #include "kernel.h"
+#include "kvar.h"
 #include "vfs.h"
 
 #define SLAB_VFS_MODULE     "vfs_module"
+#define SLAB_VFS_MOUNT      "vfs_mount"
+#define SLAB_VNODE          "vnode"
+#define VFS_DIR_DELIMITER   '/'
 
 vfs_t vfs;
 
@@ -37,11 +41,25 @@ vfs_init(void)
     int i;
     int ret;
 
+    /* Initialize the modules */
     for ( i = 0; i < VFS_MAXFS; i++ ) {
         vfs.modules[i] = NULL;
     }
 
+    /* Create a slab cache for filesystem modules */
     ret = kmem_slab_create_cache(SLAB_VFS_MODULE, sizeof(vfs_module_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    /* Create a slab cache for the mount data structure */
+    ret = kmem_slab_create_cache(SLAB_VFS_MOUNT, sizeof(vfs_mount_t));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    /* Create a slab cache for vnodes */
+    ret = kmem_slab_create_cache(SLAB_VNODE, sizeof(vfs_vnode_t));
     if ( ret < 0 ) {
         return -1;
     }
@@ -113,8 +131,25 @@ vfs_register(const char *type, vfs_interfaces_t *ifs, void *spec)
  * Search the corresponding inode object
  */
 static vfs_vnode_t *
-_search_vnode(const char *dir)
+_search_vnode(const char *path)
 {
+    vfs_vnode_t *vnode;
+
+    /* Rootfs */
+    if ( NULL == g_kvar->rootfs ) {
+        /* Create a cache for the root directory */
+        vnode = kmem_slab_alloc(SLAB_VNODE);
+        if ( NULL == vnode ) {
+            return NULL;
+        }
+        kmemset(vnode, 0, sizeof(vfs_vnode_t));
+        g_kvar->rootfs = vnode;
+    }
+
+    if ( 0 == kstrcmp(path, "/") ) {
+        return g_kvar->rootfs;
+    }
+
     return NULL;
 }
 
@@ -126,6 +161,8 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
 {
     int i;
     vfs_module_t *e;
+    vfs_mount_t *mount;
+    vfs_vnode_t *vnode;
 
     e = NULL;
     for ( i = 0; i < VFS_MAXFS; i++ ) {
@@ -141,13 +178,20 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     if ( NULL == e->ifs.mount ) {
         return -1;
     }
-
+#if 0
     /* Search the mount point */
-    if ( 0 == kstrcmp(dir, "/") ) {
-        /* Rootfs */
-    } else {
+    vnode = _search_vnode(dir);
+    if ( NULL != vnode->mount ) {
+        /* Already mounted */
+        return -1;
     }
 
+    /* Allocate mount data structure */
+    mount = kmem_slab_alloc(SLAB_VFS_MOUNT);
+    if ( NULL == mount ) {
+        return -1;
+    }
+#endif
     return e->ifs.mount(e->spec, dir, flags, data);
 }
 

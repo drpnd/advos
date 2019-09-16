@@ -63,6 +63,8 @@ typedef struct {
     vfs_vnode_t *vnode;
     /* Filesystem specific information */
     vfs_module_t *module;
+    /* Cache */
+    vfs_vnode_t *vnode_cache;
 } vfs_mount_t;
 
 /*
@@ -73,6 +75,8 @@ struct _vfs_vnode {
     void *inode;
     /* Mount data structure if this vnode is a mount point */
     vfs_mount_t *mount;
+    /* Linked list */
+    vfs_vnode_t *next;
 };
 
 /*

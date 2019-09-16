@@ -102,9 +102,9 @@ initramfs_mount(void *spec, const char *mp, int flags, void *data)
             /* Already mounted */
             return -1;
         }
-
+#if 0
         g_kvar->rootfs = fs;
-
+#endif
         return 0;
     } else {
         /* ToDo: Search the mount point */
