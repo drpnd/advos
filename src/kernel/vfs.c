@@ -128,12 +128,24 @@ vfs_register(const char *type, vfs_interfaces_t *ifs, void *spec)
 }
 
 /*
- * Search the corresponding inode object
+ * Search the vnode corresponding to the specified directory name
+ */
+static vfs_vnode_t *
+_search_vnode_rec(vfs_module_t *module, vfs_vnode_t *vnode, const char *dirname)
+{
+    return NULL;
+}
+
+/*
+ * Search the vnode corresponding to the specified path
  */
 static vfs_vnode_t *
 _search_vnode(const char *path)
 {
+    vfs_mount_t *mount;
     vfs_vnode_t *vnode;
+    const char *dir;
+    char name[PATH_MAX];
 
     /* Rootfs */
     if ( NULL == g_kvar->rootfs ) {
@@ -145,12 +157,29 @@ _search_vnode(const char *path)
         kmemset(vnode, 0, sizeof(vfs_vnode_t));
         g_kvar->rootfs = vnode;
     }
+    vnode = g_kvar->rootfs;
+    mount = vnode->mount;
 
-    if ( 0 == kstrcmp(path, "/") ) {
-        return g_kvar->rootfs;
+    /* Resolve the filesystem */
+    dir = path;
+    while ( '\0' != *path ) {
+        if ( VFS_DIR_DELIMITER == *path ) {
+            /* Delimiter */
+            if ( path - dir >= 1 ) {
+                kmemcpy(name, (void *)dir, path - dir);
+                name[path - dir] = '\0';
+                vnode = _search_vnode_rec(mount->module, vnode, name);
+                panic("FIXME: Implement vnode search %s", name);
+            }
+            /* Skip the delimiter */
+            path++;
+            dir = path;
+        } else {
+            path++;
+        }
     }
 
-    return NULL;
+    return vnode;
 }
 
 /*
@@ -178,9 +207,12 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     if ( NULL == e->ifs.mount ) {
         return -1;
     }
-#if 0
+
     /* Search the mount point */
     vnode = _search_vnode(dir);
+    if ( NULL == vnode ) {
+        return -1;
+    }
     if ( NULL != vnode->mount ) {
         /* Already mounted */
         return -1;
@@ -191,7 +223,7 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     if ( NULL == mount ) {
         return -1;
     }
-#endif
+
     return e->ifs.mount(e->spec, dir, flags, data);
 }
 
