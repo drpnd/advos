@@ -214,13 +214,6 @@ initramfs_readfile(const char *path, char *buf, size_t size, off_t off)
     return -1;
 }
 
-vfs_interfaces_t initramfs = {
-    .open = initramfs_open,
-    .close = initramfs_close,
-    .fstat = initramfs_fstat,
-    .readfile = initramfs_readfile,
-};
-
 /*
  * Local variables:
  * tab-width: 4

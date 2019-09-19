@@ -619,12 +619,6 @@ devfs_write(fildes_t *fildes, const void *buf, size_t nbyte)
     return -1;
 }
 
-vfs_interfaces_t devfsifs = {
-    .open = devfs_open,
-    .close = NULL,
-    .fstat = NULL,
-};
-
 /*
  * Local variables:
  * tab-width: 4
