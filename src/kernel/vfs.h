@@ -43,6 +43,7 @@ typedef struct {
     ssize_t (*read)(fildes_t *, void *, size_t);
     ssize_t (*write)(fildes_t *, const void *, size_t);
     ssize_t (*readfile)(const char *, char *, size_t, off_t);
+    vfs_vnode_t * (*find)(void *, const char *);
     int (*mount)(void *, const char *, int, void *);
 } vfs_interfaces_t;
 
