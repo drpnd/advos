@@ -113,6 +113,15 @@ initramfs_mount(void *spec, const char *mp, int flags, void *data)
 }
 
 /*
+ * Find an entry
+ */
+vfs_vnode_t *
+initramfs_find(void *spec, const char *name)
+{
+    return NULL;
+}
+
+/*
  * open
  */
 int
