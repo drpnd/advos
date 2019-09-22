@@ -115,10 +115,23 @@ initramfs_mount(void *spec, const char *mp, int flags, void *data)
 /*
  * Find an entry
  */
-vfs_vnode_t *
-initramfs_find(void *spec, const char *name)
+int
+initramfs_find(void *spec, vfs_inode_storage_t *inode, const char *name)
 {
-    return NULL;
+    struct initrd_entry *e;
+    int i;
+
+    /* Search the specified file */
+    e = (void *)INITRAMFS_BASE;
+    for ( i = 0; i < 128; i++ ) {
+        if ( 0 == kstrcmp(name, e->name) ) {
+            /* Found, then create an inode data structure */
+            return 0;
+        }
+        e++;
+    }
+
+    return -1;
 }
 
 /*

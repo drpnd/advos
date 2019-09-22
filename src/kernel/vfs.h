@@ -32,6 +32,7 @@
 #define VFS_MAXFS       32
 
 typedef struct _vfs_vnode vfs_vnode_t;
+typedef struct _vfs_inode_storage vfs_inode_storage_t;
 
 /*
  * Virtual filesystem interfaces
@@ -43,7 +44,7 @@ typedef struct {
     ssize_t (*read)(fildes_t *, void *, size_t);
     ssize_t (*write)(fildes_t *, const void *, size_t);
     ssize_t (*readfile)(const char *, char *, size_t, off_t);
-    vfs_vnode_t * (*find)(void *, const char *);
+    int (*find)(void *, vfs_inode_storage_t *, const char *);
     int (*mount)(void *, const char *, int, void *);
 } vfs_interfaces_t;
 
@@ -69,11 +70,21 @@ typedef struct {
 } vfs_mount_t;
 
 /*
+ * Inode storage
+ */
+struct _vfs_inode_storage {
+    union {
+        void *ptr;
+        uint8_t storage[96];
+    } u;
+};
+
+/*
  * vnode
  */
 struct _vfs_vnode {
     /* Inode information */
-    void *inode;
+    vfs_inode_storage_t inode;;
     /* Mount data structure if this vnode is a mount point */
     vfs_mount_t *mount;
     /* Linked list */
