@@ -30,7 +30,8 @@
  * initrd
  */
 struct initrd_entry {
-    char name[16];
+    char name[15];
+    uint8_t attr;
     uint64_t offset;
     uint64_t size;
 };
