@@ -40,6 +40,10 @@ typedef __builtin_va_list va_list;
 #define NULL    ((void *)0)
 #endif
 
+#ifndef __BYTE_ORDER__
+#error "__BYTE_ORDER__ is not defined."
+#endif
+
 #define HZ      100
 
 /* Maximum bytes in the path name */
