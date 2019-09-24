@@ -32,8 +32,16 @@
 struct initrd_entry {
     char name[15];
     uint8_t attr;
-    uint64_t offset;
-    uint64_t size;
+    union {
+        struct {
+            uint64_t offset;
+            uint64_t size;
+        } file;
+        struct {
+            uint64_t offset;
+            uint64_t reserved;
+        } dir;
+    } u;
 };
 
 /*
@@ -162,8 +170,8 @@ initramfs_open(fildes_t *fildes, const char *path, int oflag, ...)
             /* Found */
             spec = (struct initramfs_fildes *)&fildes->fsdata;
             spec->inode = i;
-            spec->offset = e->offset;
-            spec->size = e->size;
+            spec->offset = e->u.file.offset;
+            spec->size = e->u.file.size;
             return 0;
         }
         e++;
@@ -215,19 +223,19 @@ initramfs_readfile(const char *path, char *buf, size_t size, off_t off)
     for ( i = 0; i < 128; i++ ) {
         if ( 0 == kstrcmp(path, e->name) ) {
             /* Found */
-            ptr = (void *)INITRAMFS_BASE + e->offset;
-            if ( (off_t)e->size <= off ) {
+            ptr = (void *)INITRAMFS_BASE + e->u.file.offset;
+            if ( (off_t)e->u.file.size <= off ) {
                 /* No data to copy */
                 return 0;
             }
-            if ( e->size - off > size ) {
+            if ( e->u.file.size - off > size ) {
                 /* Exceed the buffer size, then copy the buffer-size data */
                 kmemcpy(buf, ptr + off, size);
                 return size;
             } else {
                 /* Copy  */
-                kmemcpy(buf, ptr + off, e->size - off);
-                return e->size - off;
+                kmemcpy(buf, ptr + off, e->u.file.size - off);
+                return e->u.file.size - off;
             }
         }
         e++;
