@@ -53,6 +53,10 @@ struct initramfs_fildes {
     uint64_t size;
 };
 
+struct initramfs_inode {
+    uint64_t offset;
+};
+
 /*
  * File system
  */
@@ -128,6 +132,7 @@ int
 initramfs_find(void *spec, vfs_inode_storage_t *inode, const char *name)
 {
     struct initrd_entry *e;
+    struct initramfs_inode *in;
     int i;
 
     /* Search the specified file */
@@ -135,6 +140,8 @@ initramfs_find(void *spec, vfs_inode_storage_t *inode, const char *name)
     for ( i = 0; i < 128; i++ ) {
         if ( 0 == kstrcmp(name, e->name) ) {
             /* Found, then create an inode data structure */
+            in = (struct initramfs_inode *)inode;
+            in->offset = e->u.file.offset;
             return 0;
         }
         e++;
