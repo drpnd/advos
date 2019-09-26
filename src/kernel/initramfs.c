@@ -70,6 +70,7 @@ struct initramfs {
 #define INITRAMFS_ATTR_DIR      0x01
 
 int initramfs_mount(void *, const char *, int , void *);
+int initramfs_find(void *, vfs_inode_storage_t *, const char *);
 
 /*
  * Initialize initramfs
@@ -89,6 +90,7 @@ initramfs_init(void)
     /* Register initramfs to the virtual filesystem management */
     kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
     ifs.mount = initramfs_mount;
+    ifs.find = initramfs_find;
     ret = vfs_register("initramfs", &ifs, NULL);
     if ( ret < 0 ) {
         return -1;
