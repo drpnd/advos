@@ -67,6 +67,8 @@ struct initramfs {
 #define INITRAMFS_TYPE          "initramfs"
 #define INITRAMFS_BASE          0xc0030000
 
+#define INITRAMFS_ATTR_DIR      0x01
+
 int initramfs_mount(void *, const char *, int , void *);
 
 /*
@@ -142,7 +144,12 @@ initramfs_find(void *spec, vfs_inode_storage_t *inode, const char *name)
             /* Found, then create an inode data structure */
             in = (struct initramfs_inode *)inode;
             in->offset = e->u.file.offset;
-            return 0;
+            if ( e->attr & INITRAMFS_ATTR_DIR ) {
+                /* Directory */
+                return VFS_DIR;
+            } else {
+                return VFS_FILE;
+            }
         }
         e++;
     }

@@ -31,6 +31,9 @@
 #define VFS_MAXTYPE     64
 #define VFS_MAXFS       32
 
+#define VFS_FILE        0
+#define VFS_DIR         1
+
 typedef struct _vfs_vnode vfs_vnode_t;
 typedef struct _vfs_inode_storage vfs_inode_storage_t;
 
