@@ -87,7 +87,7 @@ struct _vfs_inode_storage {
  */
 struct _vfs_vnode {
     /* Inode information */
-    vfs_inode_storage_t inode;;
+    vfs_inode_storage_t inode;
     /* Mount data structure if this vnode is a mount point */
     vfs_mount_t *mount;
     /* Linked list */

@@ -192,12 +192,14 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     vfs_module_t *e;
     vfs_mount_t *mount;
     vfs_vnode_t *vnode;
+    int ret;
 
     e = NULL;
     for ( i = 0; i < VFS_MAXFS; i++ ) {
         if ( NULL != vfs.modules[i]
              && 0 == kstrcmp(vfs.modules[i]->type, type) ) {
             e = vfs.modules[i];
+            break;
         }
     }
     if ( NULL == e ) {
@@ -224,7 +226,18 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
         return -1;
     }
 
-    return e->ifs.mount(e->spec, dir, flags, data);
+    /* Perform mount to the module */
+    ret = e->ifs.mount(e->spec, dir, flags, data);
+    if ( ret < 0 ) {
+        /* Failed to mount */
+        return -1;
+    }
+    mount->vnode = vnode;
+    mount->module = e;
+    mount->vnode_cache = NULL;
+    vnode->mount = mount;
+
+    return 0;
 }
 
 /*
