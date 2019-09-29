@@ -40,6 +40,7 @@ vfs_init(void)
 {
     int i;
     int ret;
+    vfs_vnode_t *vnode;
 
     /* Initialize the modules */
     for ( i = 0; i < VFS_MAXFS; i++ ) {
@@ -63,6 +64,14 @@ vfs_init(void)
     if ( ret < 0 ) {
         return -1;
     }
+
+    /* Prepare the rootfs vnode */
+    vnode = kmem_slab_alloc(SLAB_VNODE);
+    if ( NULL == vnode ) {
+        return -1;
+    }
+    kmemset(vnode, 0, sizeof(vfs_vnode_t));
+    g_kvar->rootfs = vnode;
 
     return 0;
 }

@@ -128,9 +128,12 @@ initramfs_mount(void *spec, const char *mp, int flags, void *data)
 int
 initramfs_find(void *spec, vfs_inode_storage_t *inode, const char *name)
 {
+    struct initramfs *fs;
     struct initrd_entry *e;
     struct initramfs_inode *in;
     int i;
+
+    fs = (struct initramfs *)spec;
 
     /* Search the specified file */
     e = (void *)INITRAMFS_BASE;
@@ -143,6 +146,7 @@ initramfs_find(void *spec, vfs_inode_storage_t *inode, const char *name)
                 /* Directory */
                 return VFS_DIR;
             } else {
+                /* File */
                 return VFS_FILE;
             }
         }
