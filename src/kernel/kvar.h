@@ -28,6 +28,7 @@
 #include "memory.h"
 #include "console.h"
 #include "proc.h"
+#include "vfs.h"
 #include "timer.h"
 #include <sys/syscall.h>
 
@@ -45,7 +46,7 @@ typedef struct {
     task_mgr_t task_mgr;
     uint64_t jiffies;
     timer_event_t *timer;
-    void *rootfs;
+    vfs_vnode_t *rootfs;
     /* Architecture specific data */
     void *arch;
 } kvar_t;
