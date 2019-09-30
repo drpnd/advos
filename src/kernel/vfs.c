@@ -77,27 +77,6 @@ vfs_init(void)
 }
 
 /*
- * open
- */
-int
-vfs_open(const char *path, int oflag, ...)
-{
-    const char *dir;
-
-    /* Resolve the filesystem */
-    dir = path;
-    while ( '\0' != *path ) {
-        if ( '/' == *path ) {
-            /* Delimiter */
-            break;
-        }
-        path++;
-    }
-
-    return -1;
-}
-
-/*
  * Register filesystem
  */
 int
