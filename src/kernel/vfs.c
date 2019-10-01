@@ -130,7 +130,7 @@ _search_vnode_rec(vfs_module_t *module, vfs_vnode_t *vnode, const char *dirname)
     }
 
     /* Call find() */
-    ret = module->ifs.find(module->spec, &inode, dirname);
+    ret = module->ifs.find(module->spec, &vnode->inode, &inode, dirname);
     if ( ret < 0 ) {
         return NULL;
     }

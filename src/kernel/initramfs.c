@@ -70,7 +70,9 @@ struct initramfs {
 #define INITRAMFS_ATTR_DIR      0x01
 
 int initramfs_mount(void *, const char *, int , void *);
-int initramfs_find(void *, vfs_inode_storage_t *, const char *);
+int
+initramfs_find(void *, vfs_inode_storage_t *, vfs_inode_storage_t *,
+               const char *);
 
 /*
  * Initialize initramfs
@@ -126,7 +128,8 @@ initramfs_mount(void *spec, const char *mp, int flags, void *data)
  * Find an entry
  */
 int
-initramfs_find(void *spec, vfs_inode_storage_t *inode, const char *name)
+initramfs_find(void *spec, vfs_inode_storage_t *parent,
+               vfs_inode_storage_t *inode, const char *name)
 {
     struct initramfs *fs;
     struct initrd_entry *e;
