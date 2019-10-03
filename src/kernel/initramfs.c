@@ -71,8 +71,8 @@ struct initramfs {
 
 int initramfs_mount(void *, const char *, int , void *);
 int
-initramfs_find(void *, vfs_inode_storage_t *, vfs_inode_storage_t *,
-               const char *);
+initramfs_lookup(void *, vfs_inode_storage_t *, vfs_inode_storage_t *,
+                 const char *);
 
 /*
  * Initialize initramfs
@@ -92,7 +92,7 @@ initramfs_init(void)
     /* Register initramfs to the virtual filesystem management */
     kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
     ifs.mount = initramfs_mount;
-    ifs.find = initramfs_find;
+    ifs.lookup = initramfs_lookup;
     ret = vfs_register("initramfs", &ifs, NULL);
     if ( ret < 0 ) {
         return -1;
@@ -125,11 +125,11 @@ initramfs_mount(void *spec, const char *mp, int flags, void *data)
 }
 
 /*
- * Find an entry
+ * Lookup an entry
  */
 int
-initramfs_find(void *spec, vfs_inode_storage_t *parent,
-               vfs_inode_storage_t *inode, const char *name)
+initramfs_lookup(void *spec, vfs_inode_storage_t *parent,
+                 vfs_inode_storage_t *inode, const char *name)
 {
     struct initramfs *fs;
     struct initrd_entry *e;
