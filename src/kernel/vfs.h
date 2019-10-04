@@ -47,8 +47,7 @@ typedef struct {
     ssize_t (*read)(fildes_t *, void *, size_t);
     ssize_t (*write)(fildes_t *, const void *, size_t);
     ssize_t (*readfile)(const char *, char *, size_t, off_t);
-    int (*lookup)(void *, vfs_inode_storage_t *, vfs_inode_storage_t *,
-                  const char *);
+    vfs_vnode_t * (*lookup)(void *, vfs_vnode_t *, const char *);
     int (*mount)(void *, const char *, int, void *);
 } vfs_interfaces_t;
 
@@ -106,6 +105,7 @@ typedef struct {
 int vfs_init(void);
 int vfs_register(const char *, vfs_interfaces_t *, void *);
 int vfs_mount(const char *, const char *, int, void *);
+vfs_vnode_t * vfs_vnode_alloc(void);
 
 #endif
 

@@ -70,9 +70,7 @@ struct initramfs {
 #define INITRAMFS_ATTR_DIR      0x01
 
 int initramfs_mount(void *, const char *, int , void *);
-int
-initramfs_lookup(void *, vfs_inode_storage_t *, vfs_inode_storage_t *,
-                 const char *);
+vfs_vnode_t * initramfs_lookup(void *, vfs_vnode_t *, const char *);
 
 /*
  * Initialize initramfs
@@ -127,13 +125,13 @@ initramfs_mount(void *spec, const char *mp, int flags, void *data)
 /*
  * Lookup an entry
  */
-int
-initramfs_lookup(void *spec, vfs_inode_storage_t *parent,
-                 vfs_inode_storage_t *inode, const char *name)
+vfs_vnode_t *
+initramfs_lookup(void *spec, vfs_vnode_t *parent, const char *name)
 {
     struct initramfs *fs;
     struct initrd_entry *e;
     struct initramfs_inode *in;
+    vfs_vnode_t *vnode;
     int i;
 
     fs = (struct initramfs *)spec;
@@ -143,20 +141,24 @@ initramfs_lookup(void *spec, vfs_inode_storage_t *parent,
     for ( i = 0; i < 128; i++ ) {
         if ( 0 == kstrcmp(name, e->name) ) {
             /* Found, then create an inode data structure */
-            in = (struct initramfs_inode *)inode;
+            vnode = vfs_vnode_alloc();
+            if ( NULL == vnode ) {
+                return NULL;
+            }
+            in = (struct initramfs_inode *)&vnode->inode;
             in->offset = e->u.file.offset;
             if ( e->attr & INITRAMFS_ATTR_DIR ) {
                 /* Directory */
-                return VFS_DIR;
+                return vnode;
             } else {
                 /* File */
-                return VFS_FILE;
+                return vnode;
             }
         }
         e++;
     }
 
-    return -1;
+    return NULL;
 }
 
 /*

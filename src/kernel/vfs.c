@@ -121,17 +121,16 @@ vfs_register(const char *type, vfs_interfaces_t *ifs, void *spec)
 static vfs_vnode_t *
 _search_vnode_rec(vfs_module_t *module, vfs_vnode_t *vnode, const char *dirname)
 {
-    int ret;
-    vfs_inode_storage_t inode;
+    vfs_vnode_t *nvnode;
 
-    if ( NULL == module->ifs.find ) {
+    if ( NULL == module->ifs.lookup ) {
         /* find() is not defined. */
         return NULL;
     }
 
     /* Call find() */
-    ret = module->ifs.find(module->spec, &vnode->inode, &inode, dirname);
-    if ( ret < 0 ) {
+    nvnode = module->ifs.lookup(module->spec, vnode, dirname);
+    if ( NULL == nvnode ) {
         return NULL;
     }
 
@@ -240,6 +239,15 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     vnode->mount = mount;
 
     return 0;
+}
+
+/*
+ * Allocate a vnode
+ */
+vfs_vnode_t *
+vfs_vnode_alloc(void)
+{
+    return kmem_slab_alloc(SLAB_VNODE);
 }
 
 /*
