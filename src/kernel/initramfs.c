@@ -70,7 +70,7 @@ struct initramfs {
 #define INITRAMFS_ATTR_DIR      0x01
 
 int initramfs_mount(void *, const char *, int , void *);
-vfs_vnode_t * initramfs_lookup(void *, vfs_vnode_t *, const char *);
+vfs_vnode_t * initramfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
 
 /*
  * Initialize initramfs
@@ -126,7 +126,7 @@ initramfs_mount(void *spec, const char *mp, int flags, void *data)
  * Lookup an entry
  */
 vfs_vnode_t *
-initramfs_lookup(void *spec, vfs_vnode_t *parent, const char *name)
+initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
 {
     struct initramfs *fs;
     struct initrd_entry *e;

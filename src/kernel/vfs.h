@@ -36,6 +36,8 @@
 
 typedef struct _vfs_vnode vfs_vnode_t;
 typedef struct _vfs_inode_storage vfs_inode_storage_t;
+typedef void vfs_module_spec_t;
+typedef void vfs_mount_spec_t;
 
 /*
  * Virtual filesystem interfaces
@@ -47,7 +49,7 @@ typedef struct {
     ssize_t (*read)(fildes_t *, void *, size_t);
     ssize_t (*write)(fildes_t *, const void *, size_t);
     ssize_t (*readfile)(const char *, char *, size_t, off_t);
-    vfs_vnode_t * (*lookup)(void *, vfs_vnode_t *, const char *);
+    vfs_vnode_t * (*lookup)(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
     int (*mount)(void *, const char *, int, void *);
 } vfs_interfaces_t;
 
@@ -64,6 +66,8 @@ typedef struct {
  * Virtual filesystem mount point
  */
 typedef struct {
+    /* Filesystem specific data structure */
+    void *spec;
     /* Vnode of the mount point */
     vfs_vnode_t *vnode;
     /* Filesystem specific information */

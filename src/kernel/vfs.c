@@ -134,7 +134,7 @@ _search_vnode_rec(vfs_module_t *module, vfs_vnode_t *vnode, const char *dirname)
         return NULL;
     }
 
-    return NULL;
+    return nvnode;
 }
 
 /*
