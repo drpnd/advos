@@ -69,7 +69,7 @@ struct initramfs {
 
 #define INITRAMFS_ATTR_DIR      0x01
 
-int initramfs_mount(void *, const char *, int , void *);
+int initramfs_mount(vfs_module_spec_t *, const char *, int , void *);
 vfs_vnode_t * initramfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
 
 /*
@@ -103,7 +103,7 @@ initramfs_init(void)
  * Mount initramfs
  */
 int
-initramfs_mount(void *spec, const char *mp, int flags, void *data)
+initramfs_mount(vfs_module_spec_t *spec, const char *mp, int flags, void *data)
 {
     struct initramfs *fs;
 
