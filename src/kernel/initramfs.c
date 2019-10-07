@@ -53,15 +53,24 @@ struct initramfs_fildes {
     uint64_t size;
 };
 
+/*
+ * inode
+ */
 struct initramfs_inode {
     uint64_t offset;
 };
 
 /*
- * File system
+ * File system instance
  */
-struct initramfs {
+struct initramfs_instance {
     void *base;
+};
+
+/*
+ * File system module
+ */
+struct initramfs_module {
 };
 
 #define INITRAMFS_TYPE          "initramfs"
@@ -105,11 +114,11 @@ initramfs_init(void)
 int
 initramfs_mount(vfs_module_spec_t *spec, const char *mp, int flags, void *data)
 {
-    struct initramfs *fs;
+    struct initramfs_instance *fs;
 
     if ( 0 == kstrcmp(mp, "/") ) {
         /* Rootfs */
-        fs = kmalloc(sizeof(struct initramfs));
+        fs = kmalloc(sizeof(struct initramfs_instance));
         if ( NULL == fs ) {
             return -1;
         }
@@ -128,13 +137,13 @@ initramfs_mount(vfs_module_spec_t *spec, const char *mp, int flags, void *data)
 vfs_vnode_t *
 initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
 {
-    struct initramfs *fs;
+    struct initramfs_instance *fs;
     struct initrd_entry *e;
     struct initramfs_inode *in;
     vfs_vnode_t *vnode;
     int i;
 
-    fs = (struct initramfs *)spec;
+    fs = (struct initramfs_instance *)spec;
 
     /* Search the specified file */
     e = (void *)INITRAMFS_BASE;
