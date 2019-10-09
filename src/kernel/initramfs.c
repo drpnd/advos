@@ -61,9 +61,9 @@ struct initramfs_inode {
 };
 
 /*
- * File system instance
+ * File system device
  */
-struct initramfs_instance {
+struct initramfs_device {
     void *base;
 };
 
@@ -82,7 +82,7 @@ int initramfs_mount(vfs_module_spec_t *, const char *, int , void *);
 vfs_vnode_t * initramfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
 
 /*
- * Initialize initramfs
+ * Initialize initramfs module
  */
 int
 initramfs_init(void)
@@ -114,11 +114,11 @@ initramfs_init(void)
 int
 initramfs_mount(vfs_module_spec_t *spec, const char *mp, int flags, void *data)
 {
-    struct initramfs_instance *fs;
+    struct initramfs_device *fs;
 
     if ( 0 == kstrcmp(mp, "/") ) {
         /* Rootfs */
-        fs = kmalloc(sizeof(struct initramfs_instance));
+        fs = kmalloc(sizeof(struct initramfs_device));
         if ( NULL == fs ) {
             return -1;
         }
@@ -137,13 +137,13 @@ initramfs_mount(vfs_module_spec_t *spec, const char *mp, int flags, void *data)
 vfs_vnode_t *
 initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
 {
-    struct initramfs_instance *fs;
+    struct initramfs_device *fs;
     struct initrd_entry *e;
     struct initramfs_inode *in;
     vfs_vnode_t *vnode;
     int i;
 
-    fs = (struct initramfs_instance *)spec;
+    fs = (struct initramfs_device *)spec;
 
     /* Search the specified file */
     e = (void *)INITRAMFS_BASE;
