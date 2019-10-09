@@ -50,7 +50,7 @@ typedef struct {
     ssize_t (*write)(fildes_t *, const void *, size_t);
     ssize_t (*readfile)(const char *, char *, size_t, off_t);
     vfs_vnode_t * (*lookup)(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
-    int (*mount)(vfs_module_spec_t *, const char *, int, void *);
+    vfs_mount_spec_t * (*mount)(vfs_module_spec_t *, const char *, int, void *);
 } vfs_interfaces_t;
 
 /*

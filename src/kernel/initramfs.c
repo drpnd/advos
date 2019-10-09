@@ -78,7 +78,8 @@ struct initramfs_module {
 
 #define INITRAMFS_ATTR_DIR      0x01
 
-int initramfs_mount(vfs_module_spec_t *, const char *, int , void *);
+vfs_mount_spec_t *
+initramfs_mount(vfs_module_spec_t *, const char *, int , void *);
 vfs_vnode_t * initramfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
 
 /*
@@ -111,7 +112,7 @@ initramfs_init(void)
 /*
  * Mount initramfs
  */
-int
+vfs_mount_spec_t *
 initramfs_mount(vfs_module_spec_t *spec, const char *mp, int flags, void *data)
 {
     struct initramfs_device *fs;
@@ -120,14 +121,14 @@ initramfs_mount(vfs_module_spec_t *spec, const char *mp, int flags, void *data)
         /* Rootfs */
         fs = kmalloc(sizeof(struct initramfs_device));
         if ( NULL == fs ) {
-            return -1;
+            return NULL;
         }
         fs->base = (void *)INITRAMFS_BASE;
 
-        return 0;
+        return (vfs_mount_spec_t *)fs;
     } else {
         /* ToDo: Search the mount point */
-        return -1;
+        return NULL;
     }
 }
 

@@ -191,6 +191,7 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
 {
     int i;
     vfs_module_t *e;
+    vfs_mount_spec_t *spec;
     vfs_mount_t *mount;
     vfs_vnode_t *vnode;
     int ret;
@@ -228,11 +229,12 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     }
 
     /* Perform mount to the module */
-    ret = e->ifs.mount(e->spec, dir, flags, data);
-    if ( ret < 0 ) {
+    spec = e->ifs.mount(e->spec, dir, flags, data);
+    if ( NULL == spec ) {
         /* Failed to mount */
         return -1;
     }
+    mount->spec = spec;
     mount->vnode = vnode;
     mount->module = e;
     mount->vnode_cache = NULL;
