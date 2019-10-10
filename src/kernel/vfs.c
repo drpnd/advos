@@ -194,7 +194,6 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     vfs_mount_spec_t *spec;
     vfs_mount_t *mount;
     vfs_vnode_t *vnode;
-    int ret;
 
     e = NULL;
     for ( i = 0; i < VFS_MAXFS; i++ ) {
