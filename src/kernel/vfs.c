@@ -228,7 +228,7 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     }
 
     /* Perform mount to the module */
-    spec = e->ifs.mount(e->spec, dir, flags, data);
+    spec = e->ifs.mount(e->spec, flags, data);
     if ( NULL == spec ) {
         /* Failed to mount */
         return -1;

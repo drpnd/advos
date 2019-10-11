@@ -71,6 +71,7 @@ struct initramfs_device {
  * File system module
  */
 struct initramfs_module {
+    int lock;
 };
 
 #define INITRAMFS_TYPE          "initramfs"
@@ -79,8 +80,10 @@ struct initramfs_module {
 #define INITRAMFS_ATTR_DIR      0x01
 
 vfs_mount_spec_t *
-initramfs_mount(vfs_module_spec_t *, const char *, int , void *);
+initramfs_mount(vfs_module_spec_t *, int , void *);
 vfs_vnode_t * initramfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
+
+static struct initramfs_module initramfs;
 
 /*
  * Initialize initramfs module
@@ -105,6 +108,7 @@ initramfs_init(void)
     if ( ret < 0 ) {
         return -1;
     }
+    initramfs.lock = 0;
 
     return 0;
 }
@@ -113,23 +117,18 @@ initramfs_init(void)
  * Mount initramfs
  */
 vfs_mount_spec_t *
-initramfs_mount(vfs_module_spec_t *spec, const char *mp, int flags, void *data)
+initramfs_mount(vfs_module_spec_t *spec, int flags, void *data)
 {
     struct initramfs_device *fs;
 
-    if ( 0 == kstrcmp(mp, "/") ) {
-        /* Rootfs */
-        fs = kmalloc(sizeof(struct initramfs_device));
-        if ( NULL == fs ) {
-            return NULL;
-        }
-        fs->base = (void *)INITRAMFS_BASE;
-
-        return (vfs_mount_spec_t *)fs;
-    } else {
-        /* ToDo: Search the mount point */
+    /* Rootfs */
+    fs = kmalloc(sizeof(struct initramfs_device));
+    if ( NULL == fs ) {
         return NULL;
     }
+    fs->base = (void *)INITRAMFS_BASE;
+
+    return (vfs_mount_spec_t *)fs;
 }
 
 /*
