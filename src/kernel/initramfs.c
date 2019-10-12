@@ -37,10 +37,6 @@ struct initrd_entry {
             uint64_t offset;
             uint64_t size;
         } file;
-        struct {
-            uint64_t offset;
-            uint64_t reserved;
-        } dir;
     } u;
 };
 
@@ -76,8 +72,6 @@ struct initramfs_module {
 
 #define INITRAMFS_TYPE          "initramfs"
 #define INITRAMFS_BASE          0xc0030000
-
-#define INITRAMFS_ATTR_DIR      0x01
 
 vfs_mount_spec_t *
 initramfs_mount(vfs_module_spec_t *, int , void *);
@@ -156,13 +150,7 @@ initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
             }
             in = (struct initramfs_inode *)&vnode->inode;
             in->offset = e->u.file.offset;
-            if ( e->attr & INITRAMFS_ATTR_DIR ) {
-                /* Directory */
-                return vnode;
-            } else {
-                /* File */
-                return vnode;
-            }
+            return vnode;
         }
         e++;
     }
