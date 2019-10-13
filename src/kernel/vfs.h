@@ -43,8 +43,6 @@ typedef void vfs_mount_spec_t;
  * Virtual filesystem interfaces
  */
 typedef struct {
-    int (*open)(fildes_t *, const char *, int, ...);
-    int (*close)(fildes_t *);
     int (*fstat)(fildes_t *, struct stat *);
     ssize_t (*read)(fildes_t *, void *, size_t);
     ssize_t (*write)(fildes_t *, const void *, size_t);

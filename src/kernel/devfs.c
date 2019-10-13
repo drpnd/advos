@@ -86,8 +86,7 @@ struct devfs {
 struct devfs devfs;
 
 /* Prototype declarations */
-int devfs_mount(void *, const char *, int, void *);
-int devfs_open(fildes_t *, const char *, int, ...);
+vfs_mount_spec_t * devfs_mount(vfs_module_spec_t *, int, void *);
 ssize_t devfs_read(fildes_t *, void *, size_t);
 ssize_t devfs_write(fildes_t *, const void *, size_t);
 
@@ -270,7 +269,6 @@ devfs_init(void)
     /* Register devfs to the virtual filesystem management */
     kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
     ifs.mount = devfs_mount;
-    ifs.open = devfs_open;
     ret = vfs_register("devfs", &ifs, NULL);
     if ( ret < 0 ) {
         return -1;
@@ -282,10 +280,10 @@ devfs_init(void)
 /*
  * Mount devfs
  */
-int
-devfs_mount(void *spec, const char *dir, int flags, void *data)
+vfs_mount_spec_t *
+devfs_mount(vfs_module_spec_t *spec, int flags, void *data)
 {
-    return -1;
+    return NULL;
 }
 
 /*
@@ -492,20 +490,6 @@ devfs_recv_msg(int index, proc_t *proc, msg_t *msg)
     }
 
     return -1;
-}
-
-/*
- * open
- */
-int
-devfs_open(fildes_t *fildes, const char *path, int oflag, ...)
-{
-    /* This should be already checked in the devfs_init() function. */
-    if ( sizeof(fildes_storage_t) < sizeof(struct devfs_fildes) ) {
-        return -1;
-    }
-
-    return 0;
 }
 
 /*
