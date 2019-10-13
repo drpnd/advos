@@ -159,57 +159,6 @@ initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
 }
 
 /*
- * open
- */
-int
-initramfs_open(fildes_t *fildes, const char *path, int oflag, ...)
-{
-    struct initramfs_fildes *spec;
-    struct initrd_entry *e;
-    int i;
-
-#if 0
-    /* Allocate a VFS-specific file descriptor */
-    fildes = kmem_slab_alloc(SLAB_FILDES);
-    if ( NULL == fildes ) {
-        return NULL;
-    }
-    fildes->head = NULL;
-    fildes->refs = 1;
-#endif
-
-    /* Search the specified file */
-    e = (void *)INITRAMFS_BASE;
-    for ( i = 0; i < 128; i++ ) {
-        if ( 0 == kstrcmp(path, e->name) ) {
-            /* Found */
-            spec = (struct initramfs_fildes *)&fildes->fsdata;
-            spec->inode = i;
-            spec->offset = e->u.file.offset;
-            spec->size = e->u.file.size;
-            return 0;
-        }
-        e++;
-    }
-
-    /* Not found */
-    kmem_slab_free(SLAB_FILDES, fildes);
-
-    return -1;
-}
-
-/*
- * close
- */
-int
-initramfs_close(fildes_t *fildes)
-{
-    kmem_slab_free(SLAB_FILDES, fildes);
-
-    return 0;
-}
-
-/*
  * fstat
  */
 int
