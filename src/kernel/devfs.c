@@ -287,6 +287,15 @@ devfs_mount(vfs_module_spec_t *spec, int flags, void *data)
 }
 
 /*
+ * Lookup
+ */
+vfs_vnode_t *
+devfs_lookup(vfs_mount_spect_t *spec, vfs_vnode_t *parent, const char *name)
+{
+    return NULL;
+}
+
+/*
  * Add an entry
  */
 int
