@@ -83,6 +83,13 @@ struct devfs {
     struct devfs_entry *entries[DEVFS_MAXDEVS];
 };
 
+/*
+ * inode
+ */
+struct devfs_inode {
+    struct devfs_entry *e;
+};
+
 struct devfs devfs;
 
 /* Prototype declarations */
@@ -290,8 +297,30 @@ devfs_mount(vfs_module_spec_t *spec, int flags, void *data)
  * Lookup
  */
 vfs_vnode_t *
-devfs_lookup(vfs_mount_spect_t *spec, vfs_vnode_t *parent, const char *name)
+devfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
 {
+    int i;
+    struct devfs_entry *e;
+    vfs_vnode_t *vnode;
+    struct devfs_inode *in;
+
+    for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
+        e = devfs.entries[i];
+        if ( NULL == e ) {
+            continue;
+        }
+        if ( 0 == kstrcmp(name, e->name) ) {
+            /* Found, then create an inode data structure */
+            vnode = vfs_vnode_alloc();
+            if ( NULL == vnode ) {
+                return NULL;
+            }
+            in = (struct devfs_inode *)&vnode->inode;
+            in->e = e;
+            return vnode;
+        }
+    }
+
     return NULL;
 }
 
