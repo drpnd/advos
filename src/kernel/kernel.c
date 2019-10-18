@@ -119,6 +119,8 @@ kernel_init(void)
     }
     syscalls[SYS_exit] = sys_exit;
     syscalls[SYS_fork] = sys_fork;
+    syscalls[SYS_read] = sys_read;
+    syscalls[SYS_write] = sys_write;
     syscalls[SYS_execve] = sys_execve;
     syscalls[SYS_nanosleep] = sys_nanosleep;
     syscalls[SYS_initexec] = sys_initexec;

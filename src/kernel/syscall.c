@@ -114,6 +114,50 @@ sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
 }
 
 /*
+ * Read input
+ *
+ * SYNOPSIS
+ *      ssize_t
+ *      sys_read(int fildes, void *buf, size_t nbyte);
+ *
+ * DESCRIPTION
+ *      The sys_read() function attempts to read nbyte bytes of data from the
+ *      object referenced by the descriptor fildes into the buffer pointed by
+ *      buf.
+ *
+ * RETURN VALUES
+ *      If success, the number of bytes actually read is returned.  Upon reading
+ *      end-of-file, zero is returned.  Otherwise, a -1 is returned.
+ */
+ssize_t
+sys_read(int fildes, void *buf, size_t nbyte)
+{
+    return -1;
+}
+
+/*
+ * Write output
+ *
+ * SYNOPSIS
+ *      ssize_t
+ *      sys_write(int fildes, const void *buf, size_t nbyte);
+ *
+ * DESCRIPTION
+ *      The sys_write() function attempts to write nbyte bytes of data to the
+ *      object referenced by the descriptor fildes from the buffer pointed by
+ *      buf.
+ *
+ * RETURN VALUES
+ *      Upon successful completion, the number of bytes which were written is
+ *      returned.  Otherwise, a -1 is returned.
+ */
+ssize_t
+sys_write(int fildes, const void *buf, size_t nbyte)
+{
+    return -1;
+}
+
+/*
  * Execute a file
  *
  * SYNOPSIS

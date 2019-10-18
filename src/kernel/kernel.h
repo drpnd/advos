@@ -97,6 +97,8 @@ int ksnprintf(char *, size_t, const char *, ...);
 /* Defined in syscall.c */
 void sys_exit(int);
 pid_t sys_fork(void);
+ssize_t sys_read(int, void *, size_t);
+ssize_t sys_write(int, const void *, size_t);
 int sys_execve(const char *, char *const [], char *const []);
 int sys_open(const char *, int, ...);
 void * sys_mmap(void *, size_t, int, int, int, off_t);
