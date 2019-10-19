@@ -132,6 +132,20 @@ sys_fork_c(void **task, pid_t *ret0, pid_t *ret1)
 ssize_t
 sys_read(int fildes, void *buf, size_t nbyte)
 {
+    task_t *t;
+    fildes_t *fd;
+
+    /* Resolve the corresponding fildes_t from the file descriptor number */
+    t = this_task();
+    if ( NULL == t || NULL == t->proc ) {
+        return -1;
+    }
+    if ( NULL == t->proc->fds[fildes] ) {
+        /* Not opened */
+        return -1;
+    }
+    fd = t->proc->fds[fildes];
+
     return -1;
 }
 
@@ -154,6 +168,20 @@ sys_read(int fildes, void *buf, size_t nbyte)
 ssize_t
 sys_write(int fildes, const void *buf, size_t nbyte)
 {
+    task_t *t;
+    fildes_t *fd;
+
+    /* Resolve the corresponding fildes_t from the file descriptor number */
+    t = this_task();
+    if ( NULL == t || NULL == t->proc ) {
+        return -1;
+    }
+    if ( NULL == t->proc->fds[fildes] ) {
+        /* Not opened */
+        return -1;
+    }
+    fd = t->proc->fds[fildes];
+
     return -1;
 }
 
