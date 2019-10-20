@@ -115,6 +115,9 @@ struct _fildes {
 
     /* Filesystem-specific data structure */
     fildes_storage_t fsdata;
+
+    /* Pointer to the vnode */
+    void *vnode;
 };
 
 /*
