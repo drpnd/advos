@@ -26,6 +26,7 @@
 
 #include "kernel.h"
 #include "memory.h"
+#include "vfs.h"
 
 #define SLAB_TASK               "task"
 #define SLAB_TASK_LIST          "task_list"

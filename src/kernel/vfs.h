@@ -25,7 +25,6 @@
 #define _ADVOS_VFS_H
 
 #include "kernel.h"
-#include "proc.h"
 #include <sys/stat.h>
 
 #define VFS_MAXTYPE     64
@@ -43,9 +42,6 @@ typedef void vfs_mount_spec_t;
  * Virtual filesystem interfaces
  */
 typedef struct {
-    int (*fstat)(fildes_t *, struct stat *);
-    ssize_t (*read)(fildes_t *, void *, size_t);
-    ssize_t (*write)(fildes_t *, const void *, size_t);
     ssize_t (*readfile)(const char *, char *, size_t, off_t);
     vfs_vnode_t * (*lookup)(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
     vfs_mount_spec_t * (*mount)(vfs_module_spec_t *, int, void *);
