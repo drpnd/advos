@@ -73,8 +73,7 @@ struct initramfs_module {
 #define INITRAMFS_TYPE          "initramfs"
 #define INITRAMFS_BASE          0xc0030000
 
-vfs_mount_spec_t *
-initramfs_mount(vfs_module_spec_t *, int , void *);
+vfs_mount_spec_t * initramfs_mount(vfs_module_spec_t *, int , void *);
 vfs_vnode_t * initramfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
 
 static struct initramfs_module initramfs;
