@@ -81,6 +81,7 @@ struct devfs_entry {
 struct devfs {
     struct devfs_entry *head;
     struct devfs_entry *entries[DEVFS_MAXDEVS];
+    int lock;
 };
 
 /*
@@ -257,6 +258,9 @@ devfs_init(void)
     int ret;
     int i;
     vfs_interfaces_t ifs;
+
+    /* Clear the lock */
+    devfs.lock = 0;
 
     for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
         devfs.entries[i] = NULL;
