@@ -305,10 +305,16 @@ devfs_mount(vfs_module_spec_t *spec, int flags, void *data)
 vfs_vnode_t *
 devfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
 {
+    struct devfs *fs;
     int i;
     struct devfs_entry *e;
     vfs_vnode_t *vnode;
     struct devfs_inode *in;
+
+    fs = (struct devfs *)spec;
+
+    /* Lock */
+    spin_lock(&fs->lock);
 
     for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
         e = devfs.entries[i];
@@ -319,14 +325,17 @@ devfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
             /* Found, then create an inode data structure */
             vnode = vfs_vnode_alloc();
             if ( NULL == vnode ) {
+                spin_unlock(&fs->lock);
                 return NULL;
             }
             in = (struct devfs_inode *)&vnode->inode;
             in->e = e;
+            spin_unlock(&fs->lock);
             return vnode;
         }
     }
 
+    spin_unlock(&fs->lock);
     return NULL;
 }
 
@@ -338,11 +347,15 @@ devfs_register(const char *name, int type, proc_t *proc)
 {
     struct devfs_entry *e;
     int i;
+    struct devfs *fs;
 
     /* Check the device type */
     if ( DEVFS_CHAR != type && DEVFS_BLOCK != type ) {
         return -1;
     }
+
+    fs = (struct devfs *)&devfs;
+    spin_lock(&fs->lock);
 
     for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
         if ( NULL == devfs.entries[i] ) {
@@ -352,12 +365,14 @@ devfs_register(const char *name, int type, proc_t *proc)
     }
     if ( i >= DEVFS_MAXDEVS ) {
         /* No available entry */
+        spin_unlock(&fs->lock);
         return -1;
     }
 
     /* Allocate an entry */
     e = kmem_slab_alloc(SLAB_DEVFS_ENTRY);
     if ( NULL == e ) {
+        spin_unlock(&fs->lock);
         return -1;
     }
     kstrlcpy(e->name, name, PATH_MAX);
@@ -365,6 +380,8 @@ devfs_register(const char *name, int type, proc_t *proc)
     e->flags = 0;
     e->proc = proc;
     devfs.entries[i] = e;
+
+    spin_unlock(&fs->lock);
 
     return i;
 }
@@ -376,22 +393,30 @@ int
 devfs_unregister(int index, proc_t *proc)
 {
     struct devfs_entry *e;
+    struct devfs *fs;
+
+    fs = (struct devfs *)&devfs;
 
     /* Range check */
     if ( index >= DEVFS_MAXDEVS ) {
         return -1;
     }
 
+    spin_lock(&fs->lock);
     e = devfs.entries[index];
     if ( NULL == e ) {
+        spin_unlock(&fs->lock);
         return -1;
     }
     if ( proc != e->proc ) {
+        spin_unlock(&fs->lock);
         return -1;
     }
 
     kmem_slab_free(SLAB_DEVFS_ENTRY, e);
     devfs.entries[index] = NULL;
+
+    spin_unlock(&fs->lock);
 
     return 0;
 }
