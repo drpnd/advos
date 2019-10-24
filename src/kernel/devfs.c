@@ -296,7 +296,7 @@ devfs_init(void)
 vfs_mount_spec_t *
 devfs_mount(vfs_module_spec_t *spec, int flags, void *data)
 {
-    return NULL;
+    return (vfs_mount_spec_t *)&devfs;
 }
 
 /*
