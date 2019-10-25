@@ -73,6 +73,8 @@ struct devfs_entry {
     struct devfs_device device;
     /* Owner process (driver) */
     proc_t *proc;
+    /* Lock */
+    int lock;
 };
 
 /*
@@ -379,6 +381,7 @@ devfs_register(const char *name, int type, proc_t *proc)
     e->device.type = type;
     e->flags = 0;
     e->proc = proc;
+    e->lock = 0;
     devfs.entries[i] = e;
 
     spin_unlock(&fs->lock);
@@ -448,8 +451,10 @@ devfs_driver_putc(int index, proc_t *proc, char c)
         return -1;
     }
 
+    spin_lock(&e->lock);
     ret = _chr_ibuf_putc(&e->device, c);
     if ( ret < 0 ) {
+        spin_unlock(&e->lock);
         return -1;
     }
 
@@ -484,12 +489,16 @@ devfs_driver_write(int index, proc_t *proc, char *buf, size_t n)
         return -1;
     }
 
+    spin_lock(&e->lock);
     for ( i = 0; i < (ssize_t)n; i++ ) {
         ret = _chr_ibuf_putc(&e->device, buf[i]);
         if ( ret < 0 ) {
+            spin_unlock(&e->lock);
             return i;
         }
     }
+
+    spin_unlock(&e->lock);
 
     return i;
 }
@@ -521,7 +530,9 @@ devfs_driver_getc(int index, proc_t *proc)
         return -1;
     }
 
+    spin_lock(&e->lock);
     ret = _chr_obuf_getc(&e->device);
+    spin_unlock(&e->lock);
     return ret;
 }
 
