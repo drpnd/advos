@@ -138,6 +138,7 @@ initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
 
     fs = (struct initramfs_device *)spec;
 
+    spin_lock(&initramfs.lock);
     /* Search the specified file */
     e = (void *)INITRAMFS_BASE;
     for ( i = 0; i < 128; i++ ) {
@@ -145,15 +146,18 @@ initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
             /* Found, then create an inode data structure */
             vnode = vfs_vnode_alloc();
             if ( NULL == vnode ) {
+                spin_unlock(&initramfs.lock);
                 return NULL;
             }
             in = (struct initramfs_inode *)&vnode->inode;
             in->offset = e->u.file.offset;
+            spin_unlock(&initramfs.lock);
             return vnode;
         }
         e++;
     }
 
+    spin_unlock(&initramfs.lock);
     return NULL;
 }
 
