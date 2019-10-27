@@ -72,6 +72,7 @@ struct initramfs_module {
 
 #define INITRAMFS_TYPE          "initramfs"
 #define INITRAMFS_BASE          0xc0030000
+#define INITRAMFS_NUM_ENTRIES   128
 
 vfs_mount_spec_t * initramfs_mount(vfs_module_spec_t *, int , void *);
 vfs_vnode_t * initramfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
@@ -141,7 +142,7 @@ initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
     spin_lock(&initramfs.lock);
     /* Search the specified file */
     e = (void *)INITRAMFS_BASE;
-    for ( i = 0; i < 128; i++ ) {
+    for ( i = 0; i < INITRAMFS_NUM_ENTRIES; i++ ) {
         if ( 0 == kstrcmp(name, e->name) ) {
             /* Found, then create an inode data structure */
             vnode = vfs_vnode_alloc();
@@ -187,7 +188,7 @@ initramfs_readfile(const char *path, char *buf, size_t size, off_t off)
     int i;
 
     e = (void *)INITRAMFS_BASE;
-    for ( i = 0; i < 128; i++ ) {
+    for ( i = 0; i < INITRAMFS_NUM_ENTRIES; i++ ) {
         if ( 0 == kstrcmp(path, e->name) ) {
             /* Found */
             ptr = (void *)INITRAMFS_BASE + e->u.file.offset;
