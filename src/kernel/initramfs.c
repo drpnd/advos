@@ -61,6 +61,7 @@ struct initramfs_inode {
  */
 struct initramfs_device {
     void *base;
+    int lock;
 };
 
 /*
@@ -121,6 +122,7 @@ initramfs_mount(vfs_module_spec_t *spec, int flags, void *data)
         return NULL;
     }
     fs->base = (void *)INITRAMFS_BASE;
+    fs->lock = 0;
 
     return (vfs_mount_spec_t *)fs;
 }
