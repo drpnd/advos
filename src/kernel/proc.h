@@ -26,7 +26,8 @@
 
 #include "kernel.h"
 #include "memory.h"
-#include "vfs.h"
+#include "fildes.h"
+#include "task.h"
 
 #define SLAB_TASK               "task"
 #define SLAB_TASK_LIST          "task_list"
@@ -41,85 +42,7 @@
 
 #define FD_MAX                  1024
 
-typedef enum {
-    TASK_CREATED,
-    TASK_READY,
-    TASK_RUNNING,
-    TASK_BLOCKED,
-    TASK_TERMINATED,
-} task_state_t;
-
-typedef struct _task task_t;
 typedef struct _proc proc_t;
-typedef struct _fildes fildes_t;
-
-/*
- * Task
- */
-struct _task {
-    /* Architecture-specific structure; i.e., struct arch_task */
-    void *arch;
-
-    /* Process */
-    proc_t *proc;
-
-    /* Kernel stack */
-    void *kstack;
-
-    /* Task ID */
-    int id;
-
-    /* State */
-    task_state_t state;
-
-    /* Next scheduled task (runqueue) */
-    task_t *next;
-
-    /* Quantum */
-    int credit;
-
-    /* Signaled? */
-    int signaled;
-};
-
-/*
- * Task list for file descriptors
- */
-typedef struct _task_list task_list_t;
-struct _task_list {
-    task_t *task;
-    task_list_t *next;
-};
-
-/*
- * Storage for filesystem-specific data structure
- */
-typedef struct {
-    union {
-        void *ptr;
-        uint8_t storage[96];
-    } u;
-} fildes_storage_t;
-
-/*
- * File descriptor
- */
-struct _fildes {
-    /* Blocking tasks */
-    task_list_t *head;
-
-    /* Reference counter */
-    int refs;
-
-    /* Filesystem */
-    void *vfs;
-
-    /* Filesystem-specific data structure */
-    fildes_storage_t fsdata;
-
-    /* Pointer to the vnode */
-    void *vnode;
-};
 
 /*
  * Process
