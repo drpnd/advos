@@ -24,6 +24,8 @@
 #ifndef _ADVOS_FILDES_H
 #define _ADVOS_FILDES_H
 
+#include "kernel.h"
+
 typedef struct _task task_t;
 
 typedef enum {
@@ -73,6 +75,23 @@ struct _task_list {
     task_t *task;
     task_list_t *next;
 };
+
+/*
+ * Task manager
+ */
+typedef struct {
+    int lock;
+} task_mgr_t;
+
+/* Defined in task.c */
+int task_mgr_init(size_t);
+task_t * task_alloc(void);
+
+/* Defined in arch/<>architecture/{task.c,asm.S} */
+task_t * this_task(void);
+int task_init(task_t *, void *);
+void task_exec(task_t *);
+void task_switch(void);
 
 #endif
 
