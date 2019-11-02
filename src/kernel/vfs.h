@@ -44,6 +44,7 @@ typedef void vfs_mount_spec_t;
 typedef struct {
     vfs_vnode_t * (*lookup)(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
     vfs_mount_spec_t * (*mount)(vfs_module_spec_t *, int, void *);
+    int (*umount)(vfs_mount_spec_t *, int);
 } vfs_interfaces_t;
 
 /*
