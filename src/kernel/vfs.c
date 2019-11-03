@@ -248,6 +248,26 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
 int
 vfs_unmount(const char *dir, int flags)
 {
+    vfs_vnode_t *vnode;
+
+    /* Search the mount point */
+    vnode = _search_vnode(dir);
+    if ( NULL == vnode ) {
+        return -1;
+    }
+    if ( NULL != vnode->mount ) {
+        /* Already mounted */
+        return -1;
+    }
+
+    if ( NULL == vnode->mount ) {
+        /* Not a mount point */
+        return -1;
+    }
+
+    /* Call the filesystem-specific unmount() */
+    vnode->mount->module->ifs.unmount(vnode->mount->spec, flags);
+
     return 0;
 }
 
