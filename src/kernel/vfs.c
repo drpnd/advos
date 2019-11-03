@@ -243,6 +243,15 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
 }
 
 /*
+ * vfs_unmount
+ */
+int
+vfs_unmount(const char *dir, int flags)
+{
+    return 0;
+}
+
+/*
  * Allocate a vnode
  */
 vfs_vnode_t *
