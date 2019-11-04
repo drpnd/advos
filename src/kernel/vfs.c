@@ -265,6 +265,12 @@ vfs_unmount(const char *dir, int flags)
         return -1;
     }
 
+    /* Pointer check */
+    if ( NULL == vnode->mount->module
+         || NULL == vnode->mount->module->ifs.unmount ) {
+        return -1;
+    }
+
     /* Call the filesystem-specific unmount() */
     vnode->mount->module->ifs.unmount(vnode->mount->spec, flags);
 
