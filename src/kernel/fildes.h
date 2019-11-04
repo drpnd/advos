@@ -56,7 +56,7 @@ struct _fildes {
     fildes_storage_t fsdata;
 
     /* Pointer to the vnode */
-    void *vnode;
+    vfs_vnode_t *vnode;
 };
 
 #endif
