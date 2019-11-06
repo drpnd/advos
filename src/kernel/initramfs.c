@@ -76,6 +76,7 @@ struct initramfs_module {
 #define INITRAMFS_NUM_ENTRIES   128
 
 vfs_mount_spec_t * initramfs_mount(vfs_module_spec_t *, int , void *);
+int initramfs_unmount(vfs_mount_spec_t *, int);
 vfs_vnode_t * initramfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
 
 static struct initramfs_module initramfs;
@@ -98,6 +99,7 @@ initramfs_init(void)
     /* Register initramfs to the virtual filesystem management */
     kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
     ifs.mount = initramfs_mount;
+    ifs.unmount = initramfs_unmount;
     ifs.lookup = initramfs_lookup;
     ret = vfs_register("initramfs", &ifs, NULL);
     if ( ret < 0 ) {
@@ -125,6 +127,20 @@ initramfs_mount(vfs_module_spec_t *spec, int flags, void *data)
     fs->lock = 0;
 
     return (vfs_mount_spec_t *)fs;
+}
+
+/*
+ * Unmount initramfs
+ */
+int
+initramfs_unmount(vfs_mount_spec_t *spec, int flags)
+{
+    struct initramfs_device *fs;
+
+    fs = (struct initramfs_device *)spec;
+    kfree(fs);
+
+    return 0;
 }
 
 /*

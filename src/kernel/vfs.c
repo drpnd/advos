@@ -249,6 +249,7 @@ int
 vfs_unmount(const char *dir, int flags)
 {
     vfs_vnode_t *vnode;
+    int ret;
 
     /* Search the mount point */
     vnode = _search_vnode(dir);
@@ -272,7 +273,12 @@ vfs_unmount(const char *dir, int flags)
     }
 
     /* Call the filesystem-specific unmount() */
-    vnode->mount->module->ifs.unmount(vnode->mount->spec, flags);
+    ret = vnode->mount->module->ifs.unmount(vnode->mount->spec, flags);
+    if ( ret < 0 ) {
+        return -1;
+    }
+    kmem_slab_free(SLAB_VFS_MOUNT, vnode->mount);
+    vnode->mount = NULL;
 
     return 0;
 }
