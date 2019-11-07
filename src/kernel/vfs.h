@@ -42,9 +42,11 @@ typedef void vfs_mount_spec_t;
  * Virtual filesystem interfaces
  */
 typedef struct {
-    vfs_vnode_t * (*lookup)(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
+    /* Module operation */
     vfs_mount_spec_t * (*mount)(vfs_module_spec_t *, int, void *);
+    /* Mounted filesystem operations */
     int (*unmount)(vfs_mount_spec_t *, int);
+    vfs_vnode_t * (*lookup)(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
 } vfs_interfaces_t;
 
 /*
