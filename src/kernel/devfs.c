@@ -97,6 +97,7 @@ struct devfs devfs;
 
 /* Prototype declarations */
 vfs_mount_spec_t * devfs_mount(vfs_module_spec_t *, int, void *);
+int devfs_unmount(vfs_mount_spec_t *, int);
 vfs_vnode_t * devfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
 ssize_t devfs_read(fildes_t *, void *, size_t);
 ssize_t devfs_write(fildes_t *, const void *, size_t);
@@ -283,6 +284,7 @@ devfs_init(void)
     /* Register devfs to the virtual filesystem management */
     kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
     ifs.mount = devfs_mount;
+    ifs.unmount = devfs_unmount;
     ifs.lookup = devfs_lookup;
     ret = vfs_register("devfs", &ifs, NULL);
     if ( ret < 0 ) {
@@ -299,6 +301,15 @@ vfs_mount_spec_t *
 devfs_mount(vfs_module_spec_t *spec, int flags, void *data)
 {
     return (vfs_mount_spec_t *)&devfs;
+}
+
+/*
+ * Unmount devfs
+ */
+int
+devfs_unmount(vfs_mount_spec_t *spec, int flags)
+{
+    return 0;
 }
 
 /*
