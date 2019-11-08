@@ -27,6 +27,8 @@
 #include "../advos/types.h"
 
 struct stat {
+    uid_t st_uid;               /* user-id of owner */
+    gid_t st_gid;               /* group-id of owner */
     off_t st_size;              /* file size, in bytes */
 };
 
