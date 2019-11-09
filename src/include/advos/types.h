@@ -51,6 +51,11 @@ typedef signed int pid_t;
 typedef signed int uid_t;
 typedef signed int gid_t;
 
+/* Filesystem */
+typedef int32_t dev_t;
+typedef int64_t ino_t;
+typedef uint16_t mode_t;
+
 #else
 #error "Unsupported compiler"
 #endif
