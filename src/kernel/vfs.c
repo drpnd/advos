@@ -284,6 +284,23 @@ vfs_unmount(const char *dir, int flags)
 }
 
 /*
+ * Search the corresponding vnode
+ */
+vfs_vnode_t *
+vfs_lookup(const char *dir)
+{
+    vfs_vnode_t *vnode;
+
+    /* Search the mount point */
+    vnode = _search_vnode(dir);
+    if ( NULL == vnode ) {
+        return NULL;
+    }
+
+    return vnode;
+}
+
+/*
  * Allocate a vnode
  */
 vfs_vnode_t *
