@@ -98,7 +98,7 @@ struct devfs devfs;
 /* Prototype declarations */
 vfs_mount_spec_t * devfs_mount(vfs_module_spec_t *, int, void *);
 int devfs_unmount(vfs_mount_spec_t *, int);
-vfs_vnode_t * devfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
+vfs_vnode_t * devfs_lookup(vfs_mount_t *, vfs_vnode_t *, const char *);
 ssize_t devfs_read(fildes_t *, void *, size_t);
 ssize_t devfs_write(fildes_t *, const void *, size_t);
 
@@ -316,7 +316,7 @@ devfs_unmount(vfs_mount_spec_t *spec, int flags)
  * Lookup
  */
 vfs_vnode_t *
-devfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
+devfs_lookup(vfs_mount_t *mount, vfs_vnode_t *parent, const char *name)
 {
     struct devfs *fs;
     int i;
@@ -324,7 +324,7 @@ devfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
     vfs_vnode_t *vnode;
     struct devfs_inode *in;
 
-    fs = (struct devfs *)spec;
+    fs = (struct devfs *)mount->spec;
 
     /* Lock */
     spin_lock(&fs->lock);
@@ -341,6 +341,7 @@ devfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
                 spin_unlock(&fs->lock);
                 return NULL;
             }
+            vnode->module = mount->module;
             in = (struct devfs_inode *)&vnode->inode;
             in->e = e;
             spin_unlock(&fs->lock);

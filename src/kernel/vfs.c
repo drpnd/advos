@@ -119,17 +119,17 @@ vfs_register(const char *type, vfs_interfaces_t *ifs, void *spec)
  * Search the vnode corresponding to the specified directory name
  */
 static vfs_vnode_t *
-_search_vnode_rec(vfs_module_t *module, vfs_vnode_t *vnode, const char *dirname)
+_search_vnode_rec(vfs_mount_t *mount, vfs_vnode_t *vnode, const char *dirname)
 {
     vfs_vnode_t *nvnode;
 
-    if ( NULL == module->ifs.lookup ) {
+    if ( NULL == mount->module->ifs.lookup ) {
         /* find() is not defined. */
         return NULL;
     }
 
     /* Call find() */
-    nvnode = module->ifs.lookup(module->spec, vnode, dirname);
+    nvnode = mount->module->ifs.lookup(mount, vnode, dirname);
     if ( NULL == nvnode ) {
         return NULL;
     }
@@ -143,7 +143,6 @@ _search_vnode_rec(vfs_module_t *module, vfs_vnode_t *vnode, const char *dirname)
 static vfs_vnode_t *
 _search_vnode(const char *path, vfs_vnode_t *cur)
 {
-    vfs_mount_t *mount;
     vfs_vnode_t *vnode;
     const char *dir;
     char name[PATH_MAX];
@@ -151,17 +150,13 @@ _search_vnode(const char *path, vfs_vnode_t *cur)
     if ( NULL == cur ) {
         /* Rootfs */
         if ( NULL == g_kvar->rootfs ) {
-            /* Create a cache for the root directory */
-            vnode = kmem_slab_alloc(SLAB_VNODE);
-            if ( NULL == vnode ) {
-                return NULL;
-            }
-            kmemset(vnode, 0, sizeof(vfs_vnode_t));
-            g_kvar->rootfs = vnode;
+            /* Rootfs is not mounted. */
+            return NULL;
         }
         vnode = g_kvar->rootfs;
+    } else {
+        vnode = cur;
     }
-    mount = vnode->mount;
 
     /* Resolve the filesystem */
     dir = path;
@@ -171,7 +166,9 @@ _search_vnode(const char *path, vfs_vnode_t *cur)
             if ( path - dir >= 1 ) {
                 kmemcpy(name, (void *)dir, path - dir);
                 name[path - dir] = '\0';
-                vnode = _search_vnode_rec(mount->module, vnode, name);
+#if 0
+                vnode = _search_vnode_rec(mount, vnode, name);
+#endif
                 panic("FIXME: Implement vnode search %s", name);
             }
             /* Skip the delimiter */

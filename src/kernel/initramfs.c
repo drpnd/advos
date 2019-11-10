@@ -77,7 +77,7 @@ struct initramfs_module {
 
 vfs_mount_spec_t * initramfs_mount(vfs_module_spec_t *, int , void *);
 int initramfs_unmount(vfs_mount_spec_t *, int);
-vfs_vnode_t * initramfs_lookup(vfs_mount_spec_t *, vfs_vnode_t *, const char *);
+vfs_vnode_t * initramfs_lookup(vfs_mount_t *, vfs_vnode_t *, const char *);
 
 static struct initramfs_module initramfs;
 
@@ -147,7 +147,7 @@ initramfs_unmount(vfs_mount_spec_t *spec, int flags)
  * Lookup an entry
  */
 vfs_vnode_t *
-initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
+initramfs_lookup(vfs_mount_t *mount, vfs_vnode_t *parent, const char *name)
 {
     struct initramfs_device *fs;
     struct initrd_entry *e;
@@ -155,7 +155,7 @@ initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
     vfs_vnode_t *vnode;
     int i;
 
-    fs = (struct initramfs_device *)spec;
+    fs = (struct initramfs_device *)mount->spec;
 
     spin_lock(&initramfs.lock);
     /* Search the specified file */
@@ -168,6 +168,7 @@ initramfs_lookup(vfs_mount_spec_t *spec, vfs_vnode_t *parent, const char *name)
                 spin_unlock(&initramfs.lock);
                 return NULL;
             }
+            vnode->module = mount->module;
             in = (struct initramfs_inode *)&vnode->inode;
             in->offset = e->u.file.offset;
             spin_unlock(&initramfs.lock);
