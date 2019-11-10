@@ -141,24 +141,26 @@ _search_vnode_rec(vfs_module_t *module, vfs_vnode_t *vnode, const char *dirname)
  * Search the vnode corresponding to the specified path
  */
 static vfs_vnode_t *
-_search_vnode(const char *path)
+_search_vnode(const char *path, vfs_vnode_t *cur)
 {
     vfs_mount_t *mount;
     vfs_vnode_t *vnode;
     const char *dir;
     char name[PATH_MAX];
 
-    /* Rootfs */
-    if ( NULL == g_kvar->rootfs ) {
-        /* Create a cache for the root directory */
-        vnode = kmem_slab_alloc(SLAB_VNODE);
-        if ( NULL == vnode ) {
-            return NULL;
+    if ( NULL == cur ) {
+        /* Rootfs */
+        if ( NULL == g_kvar->rootfs ) {
+            /* Create a cache for the root directory */
+            vnode = kmem_slab_alloc(SLAB_VNODE);
+            if ( NULL == vnode ) {
+                return NULL;
+            }
+            kmemset(vnode, 0, sizeof(vfs_vnode_t));
+            g_kvar->rootfs = vnode;
         }
-        kmemset(vnode, 0, sizeof(vfs_vnode_t));
-        g_kvar->rootfs = vnode;
+        vnode = g_kvar->rootfs;
     }
-    vnode = g_kvar->rootfs;
     mount = vnode->mount;
 
     /* Resolve the filesystem */
@@ -212,7 +214,7 @@ vfs_mount(const char *type, const char *dir, int flags, void *data)
     }
 
     /* Search the mount point */
-    vnode = _search_vnode(dir);
+    vnode = _search_vnode(dir, NULL);
     if ( NULL == vnode ) {
         return -1;
     }
@@ -252,7 +254,7 @@ vfs_unmount(const char *dir, int flags)
     int ret;
 
     /* Search the mount point */
-    vnode = _search_vnode(dir);
+    vnode = _search_vnode(dir, NULL);
     if ( NULL == vnode ) {
         return -1;
     }
@@ -287,12 +289,12 @@ vfs_unmount(const char *dir, int flags)
  * Search the corresponding vnode
  */
 vfs_vnode_t *
-vfs_lookup(const char *dir)
+vfs_lookup(const char *dir, vfs_vnode_t *cur)
 {
     vfs_vnode_t *vnode;
 
     /* Search the mount point */
-    vnode = _search_vnode(dir);
+    vnode = _search_vnode(dir, cur);
     if ( NULL == vnode ) {
         return NULL;
     }
