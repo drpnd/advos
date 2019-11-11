@@ -47,7 +47,12 @@ typedef struct {
     vfs_mount_spec_t * (*mount)(vfs_module_spec_t *, int, void *);
     /* Mounted filesystem operations */
     int (*unmount)(vfs_mount_spec_t *, int);
+    /* Lookup */
     vfs_vnode_t * (*lookup)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    /* Name creation */
+    vfs_vnode_t * (*create)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    /* Object interpretation */
+    vfs_vnode_t * (*open)(vfs_mount_t *, vfs_vnode_t *, const char *);
 } vfs_interfaces_t;
 
 /*
