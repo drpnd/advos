@@ -27,4 +27,5 @@ clean:
 	$(MAKE) -C kernel clean
 	$(MAKE) -C servers/init clean
 	rm -f libc.a
+	rm -f initrd
 	rm -f advos.img
