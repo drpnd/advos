@@ -47,6 +47,14 @@ do
     offset=`wc -c < $outfile | tr -d ' '`
     fsize=`wc -c < $target | tr -d ' '`
 
+    ## Check the filename length
+    len=`printf "$fname" | wc -c`
+    if [ $len -ge 31 ];
+    then
+	echo "Error: Filename $fname exceeds the maximum allowed length." 1>&2
+	exit -1
+    fi
+
     ## Write the filename
     pos=`expr $entry \* 32`
     printf "$fname\000" | dd of=$outfile seek=$pos bs=1 conv=notrunc > /dev/null 2>&1
