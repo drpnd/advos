@@ -6,6 +6,21 @@
 ## Save the number of arguments
 argc=$#
 
+## Tool check
+toolcheck()
+{
+    name=$1
+    which $name > /dev/null 2>&1 
+    if [ $? -ne 0 ];
+    then
+	echo "Error: $name not found." 1>&2
+	return -1
+    fi
+    return 0
+}
+toolcheck 'xxd' || exit
+toolcheck 'sed' || exit
+
 if [ -z "$1" ];
 then
     echo "Usage: $0 <output> [list of <path:filename>]" >& 2
