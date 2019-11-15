@@ -10,7 +10,7 @@ argc=$#
 toolcheck()
 {
     name=$1
-    which $name > /dev/null 2>&1 
+    which $name > /dev/null 2>&1
     if [ $? -ne 0 ];
     then
 	echo "Error: $name not found." 1>&2
