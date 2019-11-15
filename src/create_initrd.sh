@@ -6,6 +6,18 @@
 ## Save the number of arguments
 argc=$#
 
+if [ -z "$1" ];
+then
+    echo "Usage: $0 <output> [list of <path:filename>]" >& 2
+fi
+
+## Output file
+outfile=$1
+shift
+
+## Source directory (working directory)
+srcdir="./src"
+
 ## Tool check
 toolcheck()
 {
@@ -20,18 +32,7 @@ toolcheck()
 }
 toolcheck 'xxd' || exit
 toolcheck 'sed' || exit
-
-if [ -z "$1" ];
-then
-    echo "Usage: $0 <output> [list of <path:filename>]" >& 2
-fi
-
-## Output file
-outfile=$1
-shift
-
-## Source directory (working directory)
-srcdir="./src"
+toolcheck 'dd' || exit
 
 ## Reset the file entries
 rm -f $outfile
