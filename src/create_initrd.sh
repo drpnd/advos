@@ -30,9 +30,9 @@ toolcheck()
     fi
     return 0
 }
-toolcheck 'xxd' || exit
-toolcheck 'sed' || exit
-toolcheck 'dd' || exit
+toolcheck 'xxd' || exit -1
+toolcheck 'sed' || exit -1
+toolcheck 'dd' || exit -1
 
 ## Reset the file entries
 rm -f $outfile
