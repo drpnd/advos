@@ -25,7 +25,7 @@ toolcheck()
     which $name > /dev/null 2>&1
     if [ $? -ne 0 ];
     then
-	echo "Error: $name not found." 1>&2
+	echo "Error: $name not found." >& 2
 	return -1
     fi
     return 0
@@ -67,7 +67,7 @@ do
     len=`printf "$fname" | wc -c`
     if [ $len -ge 31 ];
     then
-	echo "Error: Filename $fname exceeds the maximum allowed length." 1>&2
+	echo "Error: Filename $fname exceeds the maximum allowed length." >& 2
 	exit -1
     fi
 
