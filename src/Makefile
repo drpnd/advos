@@ -3,7 +3,7 @@
 #      Hirochika Asai  <asai@jar.jp>
 #
 
-.PHONY: all clean initrd
+.PHONY: all clean
 
 all: initrd
 	$(MAKE) -C boot mbr
