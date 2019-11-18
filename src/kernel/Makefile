@@ -3,8 +3,6 @@
 #      Hirochika Asai  <asai@jar.jp>
 #
 
-.PHONY: clean
-
 CFLAGS=-g -O3 -fleading-underscore -mcmodel=large -nostdlib -nodefaultlibs -fno-builtin -fno-stack-protector -fno-pie -mno-sse -mno-sse2 -mno-avx -I../include
 
 # header dependencies
@@ -23,7 +21,10 @@ kernel: arch/x86_64/asm.o \
 	$(LD) -N -T kernel.ld -o $@ $^
 	$(LD) -N -T kerneldebug.ld -o kernel.dbg $^
 
+PHONY=clean
 clean:
 	find . -name "*.o" | xargs rm -f
 	find . -name "*.a" | xargs rm -f
 	rm -f kernel
+
+.PHONY: $(PHONY)

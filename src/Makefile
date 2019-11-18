@@ -3,8 +3,7 @@
 #      Hirochika Asai  <asai@jar.jp>
 #
 
-.PHONY: all clean
-
+PHONY=all
 all: initrd
 	$(MAKE) -C boot mbr
 	$(MAKE) -C boot bootmon
@@ -22,6 +21,7 @@ initrd: $(LIBCOBJS) lib/crt0.o
 	$(MAKE) -C drivers/tty
 	./create_initrd.sh initrd servers/init/init:init drivers/tty/tty:tty
 
+PHONY+=clean
 clean:
 	$(MAKE) -C boot clean
 	$(MAKE) -C kernel clean
@@ -29,3 +29,5 @@ clean:
 	rm -f libc.a
 	rm -f initrd
 	rm -f advos.img
+
+.PHONY: $(PHONY)
