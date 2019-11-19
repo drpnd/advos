@@ -10,14 +10,37 @@ CFLAGS=-g -O3 -fleading-underscore -mcmodel=large -nostdlib -nodefaultlibs -fno-
 	arch/x86_64/arch.h
 
 # kernel
-kernel: arch/x86_64/asm.o \
-	kernel.o memory.o kmem.o physmem.o slab.o kmalloc.o strfmt.o msg.o \
-	proc.o task.o sched.o tree.o syscall.o sysdriver.o \
-	vfs.o initramfs.o devfs.o \
-	arch/x86_64/trampoline.o arch/x86_64/ap_entry32.o arch/x86_64/ap_entry64.o \
-	arch/x86_64/arch.o arch/x86_64/acpi.o arch/x86_64/apic.o \
-	arch/x86_64/desc.o arch/x86_64/i8254.o arch/x86_64/pgt.o \
-	arch/x86_64/vconsole.o arch/x86_64/tsc.o arch/x86_64/task.o
+KERNEL_SOURCES=arch/x86_64/asm.o
+KERNEL_SOURCES+=kernel.o
+KERNEL_SOURCES+=memory.o
+KERNEL_SOURCES+=kmem.o
+KERNEL_SOURCES+=physmem.o
+KERNEL_SOURCES+=slab.o
+KERNEL_SOURCES+=kmalloc.o
+KERNEL_SOURCES+=strfmt.o
+KERNEL_SOURCES+=msg.o
+KERNEL_SOURCES+=proc.o
+KERNEL_SOURCES+=task.o
+KERNEL_SOURCES+=sched.o
+KERNEL_SOURCES+=tree.o
+KERNEL_SOURCES+=syscall.o
+KERNEL_SOURCES+=sysdriver.o
+KERNEL_SOURCES+=vfs.o
+KERNEL_SOURCES+=initramfs.o
+KERNEL_SOURCES+=devfs.o
+KERNEL_SOURCES+=arch/x86_64/trampoline.o
+KERNEL_SOURCES+=arch/x86_64/ap_entry32.o
+KERNEL_SOURCES+=arch/x86_64/ap_entry64.o
+KERNEL_SOURCES+=arch/x86_64/arch.o
+KERNEL_SOURCES+=arch/x86_64/acpi.o
+KERNEL_SOURCES+=arch/x86_64/apic.o
+KERNEL_SOURCES+=arch/x86_64/desc.o
+KERNEL_SOURCES+=arch/x86_64/i8254.o
+KERNEL_SOURCES+=arch/x86_64/pgt.o
+KERNEL_SOURCES+=arch/x86_64/vconsole.o
+KERNEL_SOURCES+=arch/x86_64/tsc.o
+KERNEL_SOURCES+=arch/x86_64/task.o
+kernel: $(KERNEL_SOURCES)
 	$(LD) -N -T kernel.ld -o $@ $^
 	$(LD) -N -T kerneldebug.ld -o kernel.dbg $^
 
