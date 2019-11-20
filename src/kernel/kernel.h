@@ -24,6 +24,7 @@
 #ifndef _ADVOS_KERNEL_H
 #define _ADVOS_KERNEL_H
 
+#include "kconfig.h"
 #include <stdint.h>
 #include <time.h>
 
@@ -43,8 +44,6 @@ typedef __builtin_va_list va_list;
 #ifndef __BYTE_ORDER__
 #error "__BYTE_ORDER__ is not defined."
 #endif
-
-#define HZ      100
 
 /* Maximum bytes in the path name */
 #define PATH_MAX                1024
