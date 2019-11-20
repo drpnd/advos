@@ -6,8 +6,12 @@
 CFLAGS=-g -O3 -fleading-underscore -mcmodel=large -nostdlib -nodefaultlibs -fno-builtin -fno-stack-protector -fno-pie -mno-sse -mno-sse2 -mno-avx -I../include
 
 # header dependencies
-%.o: kernel.h memory.h proc.h tree.h \
-	arch/x86_64/arch.h
+HEADERS=kernel.h
+HEADERS+=memory.h
+HEADERS+=proc.h
+HEADERS+=tree.h
+HEADERS+=arch/x86_64/arch.h
+%.o: $(HEADERS)
 
 # kernel
 KOBJS=arch/x86_64/asm.o
