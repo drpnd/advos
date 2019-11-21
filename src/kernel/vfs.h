@@ -51,6 +51,14 @@ typedef struct {
     vfs_vnode_t * (*lookup)(vfs_mount_t *, vfs_vnode_t *, const char *);
     /* Name creation */
     vfs_vnode_t * (*create)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    vfs_vnode_t * (*mknod)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    vfs_vnode_t * (*link)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    vfs_vnode_t * (*symlink)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    vfs_vnode_t * (*mkdir)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    /* Name change/deletion */
+    vfs_vnode_t * (*rename)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    vfs_vnode_t * (*remove)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    vfs_vnode_t * (*rmdir)(vfs_mount_t *, vfs_vnode_t *, const char *);
     /* Object interpretation */
     vfs_vnode_t * (*open)(vfs_mount_t *, vfs_vnode_t *, const char *);
 } vfs_interfaces_t;

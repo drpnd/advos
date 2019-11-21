@@ -26,6 +26,10 @@
 #include "memory.h"
 #include "kvar.h"
 
+#define INITRAMFS_TYPE          "initramfs"
+#define INITRAMFS_BASE          0xc0030000
+#define INITRAMFS_NUM_ENTRIES   128
+
 /*
  * initrd
  */
@@ -38,7 +42,7 @@ struct initrd_entry {
             uint64_t size;
         } file;
     } u;
-};
+} __attribute__((packed));
 
 /*
  * File descriptor
@@ -71,14 +75,12 @@ struct initramfs_module {
     int lock;
 };
 
-#define INITRAMFS_TYPE          "initramfs"
-#define INITRAMFS_BASE          0xc0030000
-#define INITRAMFS_NUM_ENTRIES   128
-
+/* Prototype declarations */
 vfs_mount_spec_t * initramfs_mount(vfs_module_spec_t *, int , void *);
 int initramfs_unmount(vfs_mount_spec_t *, int);
 vfs_vnode_t * initramfs_lookup(vfs_mount_t *, vfs_vnode_t *, const char *);
 
+/* Static variables for this module */
 static struct initramfs_module initramfs;
 
 /*
