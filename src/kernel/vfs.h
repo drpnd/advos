@@ -59,6 +59,10 @@ typedef struct {
     vfs_vnode_t * (*rename)(vfs_mount_t *, vfs_vnode_t *, const char *);
     vfs_vnode_t * (*remove)(vfs_mount_t *, vfs_vnode_t *, const char *);
     vfs_vnode_t * (*rmdir)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    /* Attribute maniplulation */
+    vfs_vnode_t * (*access)(vfs_mount_t *, vfs_vnode_t *, int, int *);
+    vfs_vnode_t * (*getattr)(vfs_mount_t *, vfs_vnode_t *, int, int *);
+    vfs_vnode_t * (*setattr)(vfs_mount_t *, vfs_vnode_t *, int, int *);
     /* Object interpretation */
     vfs_vnode_t * (*open)(vfs_mount_t *, vfs_vnode_t *, const char *);
 } vfs_interfaces_t;
