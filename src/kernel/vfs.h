@@ -65,6 +65,10 @@ typedef struct {
     vfs_vnode_t * (*setattr)(vfs_mount_t *, vfs_vnode_t *, int, int *);
     /* Object interpretation */
     vfs_vnode_t * (*open)(vfs_mount_t *, vfs_vnode_t *, const char *);
+    vfs_vnode_t * (*readdir)(vfs_mount_t *, vfs_vnode_t *);
+    vfs_vnode_t * (*readlink)(vfs_mount_t *, vfs_vnode_t *);
+    vfs_vnode_t * (*mmap)(vfs_mount_t *, vfs_vnode_t *);
+    vfs_vnode_t * (*close)(vfs_mount_t *, vfs_vnode_t *);
 } vfs_interfaces_t;
 
 /*
