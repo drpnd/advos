@@ -84,35 +84,6 @@ vfs_vnode_t * initramfs_lookup(vfs_mount_t *, vfs_vnode_t *, const char *);
 static struct initramfs_module initramfs;
 
 /*
- * Initialize initramfs module
- */
-int
-initramfs_init(void)
-{
-    int ret;
-    vfs_interfaces_t ifs;
-
-    /* Ensure the filesystem-specific data structure is smaller than
-       fildes_storage_t */
-    if ( sizeof(fildes_storage_t) < sizeof(struct initramfs_fildes) ) {
-        return -1;
-    }
-
-    /* Register initramfs to the virtual filesystem management */
-    kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
-    ifs.mount = initramfs_mount;
-    ifs.unmount = initramfs_unmount;
-    ifs.lookup = initramfs_lookup;
-    ret = vfs_register("initramfs", &ifs, NULL);
-    if ( ret < 0 ) {
-        return -1;
-    }
-    initramfs.lock = 0;
-
-    return 0;
-}
-
-/*
  * Mount initramfs
  */
 vfs_mount_spec_t *
@@ -232,6 +203,55 @@ initramfs_readfile(const char *path, char *buf, size_t size, off_t off)
 
     /* Not found */
     return -1;
+}
+
+/*
+ * lock
+ */
+int
+initramfs_lock(vfs_mount_t *mount, vfs_vnode_t *vnode)
+{
+    return 0;
+}
+
+/*
+ * unlock
+ */
+int
+initramfs_unlock(vfs_mount_t *mount, vfs_vnode_t *vnode)
+{
+    return 0;
+}
+
+/*
+ * Initialize initramfs module
+ */
+int
+initramfs_init(void)
+{
+    int ret;
+    vfs_interfaces_t ifs;
+
+    /* Ensure the filesystem-specific data structure is smaller than
+       fildes_storage_t */
+    if ( sizeof(fildes_storage_t) < sizeof(struct initramfs_fildes) ) {
+        return -1;
+    }
+
+    /* Register initramfs to the virtual filesystem management */
+    kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
+    ifs.mount = initramfs_mount;
+    ifs.unmount = initramfs_unmount;
+    ifs.lookup = initramfs_lookup;
+    ifs.lock = initramfs_lock;
+    ifs.unlock = initramfs_unlock;
+    ret = vfs_register("initramfs", &ifs, NULL);
+    if ( ret < 0 ) {
+        return -1;
+    }
+    initramfs.lock = 0;
+
+    return 0;
 }
 
 /*
