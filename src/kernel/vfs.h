@@ -70,11 +70,11 @@ typedef struct {
     vfs_vnode_t * (*mmap)(vfs_mount_t *, vfs_vnode_t *);
     vfs_vnode_t * (*close)(vfs_mount_t *, vfs_vnode_t *);
     /* Process control (+advlock) */
-    int * (*ioctl)(vfs_mount_t *, vfs_vnode_t *, int, void *);
-    int * (*poll)(vfs_mount_t *, vfs_vnode_t *);
+    int (*ioctl)(vfs_mount_t *, vfs_vnode_t *, int, void *);
+    int (*poll)(vfs_mount_t *, vfs_vnode_t *);
     /* Object management (+inactive, reclaim) */
-    int * (*lock)(vfs_mount_t *, vfs_vnode_t *);
-    int * (*unlock)(vfs_mount_t *, vfs_vnode_t *);
+    int (*lock)(vfs_mount_t *, vfs_vnode_t *);
+    int (*unlock)(vfs_mount_t *, vfs_vnode_t *);
 } vfs_interfaces_t;
 
 /*
