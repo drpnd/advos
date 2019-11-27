@@ -79,6 +79,8 @@ struct initramfs_module {
 vfs_mount_spec_t * initramfs_mount(vfs_module_spec_t *, int , void *);
 int initramfs_unmount(vfs_mount_spec_t *, int);
 vfs_vnode_t * initramfs_lookup(vfs_mount_t *, vfs_vnode_t *, const char *);
+int initramfs_lock(vfs_mount_t *, vfs_vnode_t *);
+int initramfs_unlock(vfs_mount_t *, vfs_vnode_t *);
 
 /* Static variables for this module */
 static struct initramfs_module initramfs;
