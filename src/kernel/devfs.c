@@ -253,48 +253,6 @@ _chr_obuf_available(struct devfs_device *dev)
 }
 
 /*
- * Initialize devfs
- */
-int
-devfs_init(void)
-{
-    int ret;
-    int i;
-    vfs_interfaces_t ifs;
-
-    /* Clear the lock */
-    devfs.lock = 0;
-
-    for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
-        devfs.entries[i] = NULL;
-    }
-
-    /* Ensure the filesystem-specific data structure is smaller than
-       fildes_storage_t */
-    if ( sizeof(fildes_storage_t) < sizeof(struct devfs_fildes) ) {
-        return -1;
-    }
-
-    /* Prepare devfs slab */
-    ret = kmem_slab_create_cache(SLAB_DEVFS_ENTRY, sizeof(struct devfs_entry));
-    if ( ret < 0 ) {
-        return -1;
-    }
-
-    /* Register devfs to the virtual filesystem management */
-    kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
-    ifs.mount = devfs_mount;
-    ifs.unmount = devfs_unmount;
-    ifs.lookup = devfs_lookup;
-    ret = vfs_register("devfs", &ifs, NULL);
-    if ( ret < 0 ) {
-        return -1;
-    }
-
-    return 0;
-}
-
-/*
  * Mount devfs
  */
 vfs_mount_spec_t *
@@ -693,6 +651,48 @@ devfs_write(fildes_t *fildes, const void *buf, size_t nbyte)
     }
 
     return -1;
+}
+
+/*
+ * Initialize devfs
+ */
+int
+devfs_init(void)
+{
+    int ret;
+    int i;
+    vfs_interfaces_t ifs;
+
+    /* Clear the lock */
+    devfs.lock = 0;
+
+    for ( i = 0; i < DEVFS_MAXDEVS; i++ ) {
+        devfs.entries[i] = NULL;
+    }
+
+    /* Ensure the filesystem-specific data structure is smaller than
+       fildes_storage_t */
+    if ( sizeof(fildes_storage_t) < sizeof(struct devfs_fildes) ) {
+        return -1;
+    }
+
+    /* Prepare devfs slab */
+    ret = kmem_slab_create_cache(SLAB_DEVFS_ENTRY, sizeof(struct devfs_entry));
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    /* Register devfs to the virtual filesystem management */
+    kmemset(&ifs, 0, sizeof(vfs_interfaces_t));
+    ifs.mount = devfs_mount;
+    ifs.unmount = devfs_unmount;
+    ifs.lookup = devfs_lookup;
+    ret = vfs_register("devfs", &ifs, NULL);
+    if ( ret < 0 ) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /*
