@@ -296,19 +296,20 @@ devfs_lookup(vfs_mount_t *mount, vfs_vnode_t *parent, const char *name)
             /* Found, then create an inode data structure */
             vnode = vfs_vnode_alloc();
             if ( NULL == vnode ) {
-                spin_unlock(&fs->lock);
-                return NULL;
+                goto error;
             }
             vnode->module = mount->module;
             in = (struct devfs_inode *)&vnode->inode;
             in->e = e;
-            spin_unlock(&fs->lock);
-            return vnode;
+            goto success;
         }
     }
 
+error:
+    vnode = NULL;
+success:
     spin_unlock(&fs->lock);
-    return NULL;
+    return vnode;
 }
 
 /*
