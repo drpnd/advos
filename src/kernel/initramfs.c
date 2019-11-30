@@ -157,6 +157,24 @@ initramfs_lookup(vfs_mount_t *mount, vfs_vnode_t *parent, const char *name)
 }
 
 /*
+ * open
+ */
+vfs_vnode_t *
+initramfs_open(vfs_mount_t *mount, vfs_vnode_t *vnode, const char *name)
+{
+    return NULL;
+}
+
+/*
+ * close
+ */
+int
+initramfs_close(vfs_mount_t *mount, vfs_vnode_t *vnode)
+{
+    return 0;
+}
+
+/*
  * fstat
  */
 int

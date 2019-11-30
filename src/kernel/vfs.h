@@ -68,7 +68,7 @@ typedef struct {
     vfs_vnode_t * (*readdir)(vfs_mount_t *, vfs_vnode_t *);
     vfs_vnode_t * (*readlink)(vfs_mount_t *, vfs_vnode_t *);
     vfs_vnode_t * (*mmap)(vfs_mount_t *, vfs_vnode_t *);
-    vfs_vnode_t * (*close)(vfs_mount_t *, vfs_vnode_t *);
+    int (*close)(vfs_mount_t *, vfs_vnode_t *);
     /* Process control (+advlock) */
     int (*ioctl)(vfs_mount_t *, vfs_vnode_t *, int, void *);
     int (*poll)(vfs_mount_t *, vfs_vnode_t *);
